@@ -69,4 +69,4 @@ for idx, (latitude, longitude, azimut) in tqdm(enumerate(punkte), total=len(punk
 
 # Am Ende alle Einzelresultate aufsummieren:
 total_energy_kwh = sum(annual_energies)
-print(f"\nGesamterwarteter Energieertrag entlang der Solarautobahn: {total_energy_kwh:.2f} kWh")
+print(f"\nGesamterwarteter Energieertrag entlang der Solarautobahn für das Jahr: {total_energy_kwh:.2f} kWh")
