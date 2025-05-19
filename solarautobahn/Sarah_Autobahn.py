@@ -57,9 +57,10 @@ for i in range(len(points) - 1): # Zwischen je zwei Punkten wird der Winkel bere
     theta_deg = math.degrees(theta_rad) # Umrechnung von Radiant auf Grad
 
     # Umrechnen, sodass Süden 180° ist, Norden = 0°, Osten = 90°, Westen = 270°
-    azimut = (90 - theta_deg) % 360 # Das % 360 sorgt dafür, dass der Winkel immer zwischen 0° und 360° bleibt.
+    azimut_tangent = (90 - theta_deg) % 360
+    azimut_normal = (azimut_tangent + 90) % 360  # oder -90 je nach gewünschter Richtung
 
-    angles.append(azimut)
+    angles.append(azimut_normal)
 
 
 # ----- 6. Ausgabe: Punkte + Winkel -----
@@ -111,6 +112,19 @@ fig, ax = plt.subplots(figsize=(12, 8))
 clipped_road_gdf.plot(ax=ax, color='gray', linewidth=2, label='Autobahn A44')
 
 geo_points.plot(ax=ax, color='red', markersize=5, label='Messpunkte')
+
+# Pfeile (Richtungsvektoren) anzeigen
+import numpy as np
+
+# Richtungspfeile berechnen (Azimut → Richtung in X/Y)
+arrow_length = 5  # Länge der Pfeile in Metern (anpassbar)
+arrow_dx = [arrow_length * math.cos(math.radians((90 - a))) for a in angles]
+arrow_dy = [arrow_length * math.sin(math.radians((90 - a))) for a in angles]
+
+# Pfeile an jedem Punkt zeichnen (nur jeden n-ten für bessere Lesbarkeit)
+for i in range(0, len(points)-1, 10):  # z. B. jeden 10. Punkt
+    ax.arrow(points[i].x, points[i].y, arrow_dx[i], arrow_dy[i],
+             head_width=2, head_length=3, fc='blue', ec='blue')
 
 # Achsenbeschriftung und Titel
 ax.set_title('Messpunkte entlang der Solarautobahn', fontsize=16)
