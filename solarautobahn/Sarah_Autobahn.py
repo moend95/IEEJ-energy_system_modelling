@@ -37,7 +37,7 @@ total_length = merged_line.length
 print(f"Gesamtlänge der Linie: {total_length:.2f} Meter")
 
 # Punkte alle 2 - 5 Meter
-step_size = 5
+step_size = 4
 points = [merged_line.interpolate(distance) for distance in range(0, int(total_length), step_size)]
 
 print(f"Anzahl erzeugter Punkte: {len(points)}")

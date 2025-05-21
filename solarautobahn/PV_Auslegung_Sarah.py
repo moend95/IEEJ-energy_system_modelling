@@ -86,7 +86,7 @@ for idx, (latitude, longitude, azimut) in tqdm(enumerate(punkte), total=len(punk
         module_parameters=sandia_module,
         inverter_parameters=cec_inverter,
         temperature_model_parameters=temperature_model_parameters,
-        modules_per_string=5,
+        modules_per_string=4,
         strings_per_inverter=1
     )
 
