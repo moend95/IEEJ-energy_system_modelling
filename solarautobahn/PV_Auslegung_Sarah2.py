@@ -23,14 +23,13 @@ request = DwdObservationRequest(
 )
 
 # 3. Beste Station im Umkreis von Solarautobahn auswählen
-stations_info = request.filter_by_rank(latlon=latlon, rank=1)
-print(stations_info.df.to_pandas()[["station_id", "name", "distance"]])
+stations_info = request.filter_by_rank(latlon=latlon, rank=20)
+df_stations = stations_info.df.to_pandas()
+df_top20 = df_stations.head(20)  # nur Top 20 behalten
+print(df_top20[["station_id", "name", "distance"]])
 
-# 4. Wetterdaten abrufen
-df = stations_info.values.all().df.to_pandas()
-
-station_id = "02968"  # z.B. Köln-Stammheim
-stations = request.filter_by_station_id(station_id)
+stations = request.filter_by_station_id("05064")
+df = stations.values.all().df.to_pandas()
 
 # 5. Fehlerprüfung
 if df.empty:
