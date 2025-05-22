@@ -48,11 +48,15 @@ def eingabe_bounding_box():
         try:
             minx, miny, maxx, maxy = map(float, eingabe.split(','))
             geom = box(minx, miny, maxx, maxy)
-            
+             
+            # Eingabe Zusatzinformationen zur Geometrie
             richtung = input("Fahrtrichtung (beide / nord / süd / ost / west): ").strip().lower()
+            pv_installation = input("PV-Installation (böschung / wand / beides): ").strip().lower()
+
             info = {
                 "geometry": geom,
-                "richtung": richtung
+                "richtung": richtung,
+                "pv_installation": pv_installation
             }
             bounding_boxes.append(info)
         except ValueError:
