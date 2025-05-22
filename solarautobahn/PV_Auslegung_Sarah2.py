@@ -29,6 +29,9 @@ print(stations_info.df.to_pandas()[["station_id", "name", "distance"]])
 # 4. Wetterdaten abrufen
 df = stations_info.values.all().df.to_pandas()
 
+station_id = "02968"  # z.B. Köln-Stammheim
+stations = request.filter_by_station_id(station_id)
+
 # 5. Fehlerprüfung
 if df.empty:
     raise ValueError("Keine Wetterdaten verfügbar für den angegebenen Standort.")
