@@ -28,7 +28,7 @@ df_stations = stations_info.df.to_pandas()
 df_top20 = df_stations.head(20)  # nur Top 20 behalten
 print(df_top20[["station_id", "name", "distance"]])
 
-stations = request.filter_by_station_id("05064")
+stations = request.filter_by_station_id("02667")
 df = stations.values.all().df.to_pandas()
 
 # 5. Fehlerprüfung
