@@ -57,4 +57,4 @@ df = df.loc["2022-01-01 00:00:00":"2022-12-31 23:45:00"]
 
 # 10. Ergebnis anzeigen
 df.to_csv("wetterdaten_solarautobahn_2022.csv")
-print("✅ Datei wurde gespeichert als 'wetterdaten_solarautobahn_2022.csv'")
+print("Datei wurde gespeichert als 'wetterdaten_solarautobahn_2022.csv'")
