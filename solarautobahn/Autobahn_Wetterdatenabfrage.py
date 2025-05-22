@@ -10,7 +10,13 @@ from wetterdienst.provider.dwd.observation import (
 # 1. Standort: Solarautobahn (Koordinaten)
 latlon = (51.08579, 6.47554)
 
-# 2. Anfrage definieren
+# Zeige alle verfügbaren Parameter für MINUTE_10
+#for group in DwdObservationParameter.MINUTE_10:
+#    print(f"Gruppe: {group}")
+#    for param in group:
+#        print(f"   → {param}")
+
+# 2. Anfrage definieren - da muss noch direkte Strahlung berechnet werden!
 request = DwdObservationRequest(
     parameter=[
         DwdObservationParameter.MINUTE_10.SOLAR.RADIATION_GLOBAL,
@@ -22,7 +28,7 @@ request = DwdObservationRequest(
     period=DwdObservationPeriod.HISTORICAL
 )
 
-# 3. Beste Station im Umkreis von Solarautobahn auswählen
+# 3. Beste Station im Umkreis von Solarautobahn auswählen - Filter hinzufügen: -9.9999999 = fehlerhafte Daten, J/cm^2 in Watt umrechnen! Interpolieren-Code Moritz als Vorlage!
 stations_info = request.filter_by_rank(latlon=latlon, rank=20)
 df_stations = stations_info.df.to_pandas()
 df_top20 = df_stations.head(20)  # nur Top 20 behalten
@@ -49,12 +55,12 @@ df.rename(columns={
     "wind_speed": "wind_speed"
 }, inplace=True)
 
-# 8. Auf 15-Minuten-Auflösung resamplen
-df = df.resample("15T").interpolate("time")
+# 8. Auf 10-Minuten-Auflösung resamplen
+df = df.resample("10T").interpolate("time")
 
 # 9. Optional: Auf Jahr 2022 beschränken
 df = df.loc["2022-01-01 00:00:00":"2022-12-31 23:45:00"]
 
-# 10. Ergebnis anzeigen
-df.to_csv("wetterdaten_solarautobahn_2022.csv")
-print("Datei wurde gespeichert als 'wetterdaten_solarautobahn_2022.csv'")
+# 10. Ergebnis - noch in Input Ordner speichern
+df.to_csv(r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv", index=False)
+print("Datei wurde gespeichert als 'wetterdaten_solarautobahn_2022.csv' im Ordner Input")

@@ -9,52 +9,11 @@ import os
 import math
 from tqdm import tqdm
 
-# Wetterdaten über "Wetterdienst" importieren, hierfür muss "wetterdienst" mit "pip install wetterdienst" installiert werden
-from wetterdienst import DwdObservationRequest, Resolution, Period, Parameter
-import pandas as pd
-
-# DWD-Request vorbereiten
-request = DwdObservationRequest(
-    parameter=[
-        Parameter.SOLAR.GLOBAL,           # Globalstrahlung (W/m²)
-        Parameter.SOLAR.DIRECT_NORMAL,    # Direktstrahlung
-        Parameter.SOLAR.DIFFUSE,          # Diffusstrahlung
-        Parameter.CLIMATE.TEMPERATURE_AIR_200,
-        Parameter.WIND.WIND_SPEED
-    ],
-    resolution=Resolution.MINUTE_10,
-    period=Period.HISTORICAL
-)
-
-# Stationsauswahl (nach Name oder ID, hier mit Name)
-stations = request.filter_by_name("Koeln")
-values = stations.values.all().df
-
-# Index setzen
-values["date"] = pd.to_datetime(values["date"])
-values.set_index("date", inplace=True)
-
-# Optional: Nach Jahr 2022 filtern
-weather_data = values.loc["2022-01-01 00:00:00":"2022-12-31 23:50:00"]
-
-# Breite aufbereitete Strukturierung notwendig, ggf. Umbenennung und Aufbereitung der Spalten:
-weather_data = weather_data.pivot(columns="parameter", values="value")
-weather_data.columns.name = None
-
-# Spaltennamen für Wetterdaten
-weather_data.rename(columns={
-    "solar_global": "ghi",
-    "solar_direct_normal": "dni",
-    "solar_diffuse": "dhi",
-    "temperature_air_200": "temp_air",
-    "wind_speed": "wind_speed"
-}, inplace=True)
-
-# Wetterdaten importieren (BACKUP)
-#base_dir = os.path.dirname(os.path.abspath(__file__))
-#weather_data_path = os.path.join(base_dir, '..', 'Input', 'dwd_data_solar_10min_koeln_2020-2023.csv')
-#weather_data = pd.read_csv(weather_data_path, index_col='datetime', parse_dates=True)
-#weather_data = weather_data.loc["2022-01-01 00:00:00":"2022-12-31 23:50:00"]
+#Wetterdaten importieren (BACKUP)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+weather_data_path = os.path.join(base_dir, '..', 'Input', 'dwd_data_solar_10min_koeln_2020-2023.csv')
+weather_data = pd.read_csv(weather_data_path, index_col='datetime', parse_dates=True)
+weather_data = weather_data.loc["2022-01-01 00:00:00":"2022-12-31 23:50:00"]
 
 # PV-Modul- und Inverter-Daten laden
 temperature_model_parameters = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
