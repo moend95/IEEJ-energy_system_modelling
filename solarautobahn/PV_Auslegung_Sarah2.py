@@ -23,10 +23,11 @@ request = DwdObservationRequest(
 )
 
 # 3. Beste Station im Umkreis von Solarautobahn auswählen
-stations = request.filter_by_rank(latlon=latlon, rank=1)
+stations_info = request.filter_by_rank(latlon=latlon, rank=1)
+print(stations_info.df.to_pandas()[["station_id", "name", "distance"]])
 
 # 4. Wetterdaten abrufen
-df = stations.values.all().df.to_pandas()
+df = stations_info.values.all().df.to_pandas()
 
 # 5. Fehlerprüfung
 if df.empty:
@@ -53,4 +54,5 @@ df = df.resample("15T").interpolate("time")
 df = df.loc["2022-01-01 00:00:00":"2022-12-31 23:45:00"]
 
 # 10. Ergebnis anzeigen
-print(df.head())
+df.to_csv("wetterdaten_solarautobahn_2022.csv")
+print("✅ Datei wurde gespeichert als 'wetterdaten_solarautobahn_2022.csv'")
