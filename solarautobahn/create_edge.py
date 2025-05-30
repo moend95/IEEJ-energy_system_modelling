@@ -13,10 +13,10 @@ from shapely.geometry import box
 from shapely.ops import unary_union
 import geopandas as gpd
 import math
-import matplotlib.pyplot as plt
 import folium
 import webbrowser
-import numpy as np
+
+
 
 def apply_oneway_orientation(geom, oneway):
     coords = list(geom.coords)
@@ -48,8 +48,8 @@ def richtung_to_angle(richtung):
     return mapping.get(richtung, None)
 
 
- # Funktion Eingabe bounding box mit Zusatzinfos
-def eingabe_bounding_box():
+
+def eingabe_bounding_box():  # Funktion Eingabe bounding box mit Zusatzinfos
     bounding_boxes = []
     print("Gib Bounding-Box-Koordinaten ein (Format: minx, miny, maxx, maxy). Tippe 'fertig' zum Beenden.")
     while True:
@@ -74,7 +74,7 @@ def eingabe_bounding_box():
             print("Ungültiges Format. Bitte nutze: minx, miny, maxx, maxy")
     return bounding_boxes   
  
-def highway_gdf_in_bb(list_indiv_bb):
+def highway_gdf_in_bb(list_indiv_bb): # Autobahn GeoDataFrames werden aus Bounding Boxen herausgesucht ( Feste Filter: NRW, Autobahn, A44/A46)
     highways = ox.graph_from_place("Nordrhein-Westfalen, Germany", network_type='drive', custom_filter='["highway"~"motorway"]')
     highway_edges = ox.graph_to_gdfs(highways, nodes=False, edges=True)
     highway_edges = highway_edges[(highway_edges['ref'] == 'A 46') | (highway_edges['ref'] == 'A 44')]
@@ -129,8 +129,8 @@ def highway_gdf_in_bb(list_indiv_bb):
         print("⚠️ Keine passenden Autobahnabschnitte in den Bounding Boxes gefunden.")
         return gpd.GeoDataFrame(columns=["geometry", "richtung", "pv_installation"])
 
-# Funktion Plotting der Geometrie auf OSM Kartenabschnitt
-def plot_geometry_on_map(gdf, map_filename="karte.html"):
+
+def plot_geometry_on_map(gdf, map_filename="karte.html"): # Funktion Plotting der Geometrie auf OSM Kartenabschnitt
    # gdf -> GeoDataFrame, das dargestellt werden soll
    # map_filename -> standard: karte.html, kann verändert werden falls gewollt
    
@@ -152,22 +152,24 @@ def plot_geometry_on_map(gdf, map_filename="karte.html"):
    # Karte speichern und öffnen
    m.save("autobahn_karte.html")
    webbrowser.open("autobahn_karte.html")
-  
-# Nutzung der Funktion eingabe_bounding_box() zur manuellen Eingabe 
+
+
+
+#lokale run.py
 bb_highway = eingabe_bounding_box()
 gdf_highway = highway_gdf_in_bb(bb_highway)
 gdf = gdf_highway.to_crs(epsg=4326)  # Folium braucht WGS84 (EPSG:4326)
 plot_geometry_on_map(gdf) 
 
 # Boundary Boxen für die Autobahn-Abschnitte, händisch aus OSM ermittelt verglichen mit Machbarkeitsstudie Abbildung 2   
-#bb_A46 =[ 
-#    box(6.44730, 51.09131, 6.46292, 51.09533),
-#    box(6.49446, 51.09495, 6.51060, 51.09845),
-#    box(6.51206, 51.09495, 6.52021, 51.09786)
-#]
-#bb_A44 =[ 
-#    box(6.474917, 51.03384, 6.50147, 51.085915)
-#]
+#bb_A46 
+#6.44730, 51.09131, 6.46292, 51.09533
+#6.49446, 51.09495, 6.51060, 51.09845
+#6.51206, 51.09495, 6.52021, 51.09786
+#
+#bb_A44 
+#6.474917, 51.03384, 6.50147, 51.085915
+
 
 
 
