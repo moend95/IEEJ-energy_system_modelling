@@ -9,11 +9,24 @@ import os
 import math
 from tqdm import tqdm
 
-#Wetterdaten importieren (BACKUP)
-base_dir = os.path.dirname(os.path.abspath(__file__))
-weather_data_path = os.path.join(base_dir, '..', 'Input', 'dwd_data_solar_10min_koeln_2020-2023.csv')
-weather_data = pd.read_csv(weather_data_path, index_col='datetime', parse_dates=True)
-weather_data = weather_data.loc["2022-01-01 00:00:00":"2022-12-31 23:50:00"]
+# 1. CSV laden – NICHT mit parse_dates, weil wir es gleich selbst machen
+df = pd.read_csv(
+    r"C:\Users\sarah\OneDrive\Dokumenty\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv"
+)
+
+# 2. Datum in datetime konvertieren, mit Zeitzone erkennen
+df["date"] = pd.to_datetime(df["date"], utc=True)  # Das erkennt +02:00 und wandelt es in UTC
+
+# 3. Zeitzone entfernen (pandas braucht tz-naive Zeiten für viele Funktionen)
+df["date"] = df["date"].dt.tz_localize(None)
+
+# 4. Setze 'date' als Index
+df.set_index("date", inplace=True)
+df.index.name = "datetime"
+
+# Jetzt ist df bereit für pvlib!
+weather_data = df
+
 
 # PV-Modul- und Inverter-Daten laden
 temperature_model_parameters = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
@@ -26,7 +39,7 @@ cec_inverter = cec_inverters['ABB__UNO_2_0_I_OUTD_S_US__277V_']
 # Punkte und Ausrichtungen laden
 # Reihenfolge (Latitude (Breitengrad), Longitude (Längengrad), Ausrichtung (Azimut)
 # Punkte und Ausrichtungen aus CSV laden
-punkte_df = pd.read_csv(os.path.join(base_dir, '..', 'Input', 'punkte_mit_azimut.csv'))
+punkte_df = pd.read_csv(r"C:\Users\sarah\OneDrive\Dokumenty\GitHub\IEEJ-energy_system_modelling\Input\punkte_mit_azimut.csv")
 punkte = list(punkte_df.itertuples(index=False, name=None))
 
 # PV-System an jedem Punkt simulieren
