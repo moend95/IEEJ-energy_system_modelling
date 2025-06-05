@@ -56,7 +56,7 @@ def get_valid_station_df(request, station_ids, min_quality=0.8): # definierte Fu
             if df.empty:                                            # wenn keine Daten vorliegen wird Station wieder übersprungen
                 continue
 
-            df["value"] = df["value"].replace(-9.9999990, np.nan)  # Die fehlerhaften Werte -9.9999990 werden durch NaN ersetzt
+            df["value"] = df["value"].replace(-999, np.nan)  # Die fehlerhaften Werte -9.9999990 werden durch NaN ersetzt
 
             # Prüfen, ob alle geforderten Parameter mit ausreichender Qualität vorhanden sind:
             grouped = df.groupby("parameter")["value"].apply(lambda x: x.notna().mean())            # gruppiert die Daten nach Wetterparameter (ghi, dhi, temp), "x.notna().mean()": berechnet für jeden Parameter den Anteil an gültigen Werten
@@ -89,14 +89,30 @@ df.rename(columns={
     "wind_speed": "wind_speed"
 }, inplace=True)
 
-# 8. Einheitenumrechnung: J/cm² → W/m² (bei 600s = 10min)
+# 8. Einheitenumrechnung: Temperatur von Kelvin in Celsius umrechnen, falls nötig
+
+if df["temp_air"].mean() > 100:
+    df["temp_air"] = df["temp_air"] - 273.15
+
+# 8. Einheitenumrechnung:  J/cm² → W/m² (bei 600s = 10min)
+# 1 J/cm² = 10,000 J/m²
+# 10 Minuten = 600 Sekunden
+# ⇒ W/m² = (J/cm² × 10,000) / 600
+
 for col in ["ghi", "dhi"]:
     if col in df.columns:
-        df[col] = df[col] * 10000 / 600  # = 16.67
+        df[col] = df[col] * 16.67 # 10000 / 600 = 16.67
+#df[col] = df[col] * 10000 / 600 / 1000  # → kW/m² - pvlib brauch W/m^2
+
+# 8.1 Filter Negative Strahlungswerte ausschließen (physikalisch nicht möglich)
+df[["ghi", "dhi"]] = df[["ghi", "dhi"]].where(df[["ghi", "dhi"]] >= 0, np.nan)
+
+# 8.3 Interpolieren (für NaNs, z.B. nachts oder bei Ausfällen)
+df[["ghi", "dhi", "temp_air", "wind_speed"]] = df[["ghi", "dhi", "temp_air", "wind_speed"]].interpolate("time")
+
 
 # 9. Resample auf 10-Minuten-Zeitraster und lineare Interpolation
 df = df.resample("10T").interpolate("time")
-
 
 # 10. Zenitwinkel (Sonnenstand) korrekt berechnen
 from pvlib.solarposition import get_solarposition
@@ -108,9 +124,9 @@ df.index = df.index.tz_convert("Europe/Berlin")
 solpos = get_solarposition(df.index, latitude=latlon[0], longitude=latlon[1])
 df["zenith"] = solpos["zenith"]
 
-# 12. DNI nur berechnen, wenn zenith < 90 und Daten gültig
+# 12. DNI berechnen, wenn zenith < 90 und Daten gültig;
 mask = df[["ghi", "dhi", "zenith"]].notna().all(axis=1)
-df["dni"] = np.where(
+df["dni"] = np.where(                   # pvlib-Funktion zur DNI-Berechnung verwenden, sonst NaN
     mask,
     dni(ghi=df["ghi"], dhi=df["dhi"], zenith=df["zenith"]),
     np.nan
