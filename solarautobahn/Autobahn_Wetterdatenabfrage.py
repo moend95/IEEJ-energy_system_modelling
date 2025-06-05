@@ -125,21 +125,25 @@ print(df.index.tz)  # Muss z.B. Europe/Berlin anzeigen
 
 import matplotlib.pyplot as plt
 
+
+# Erster einfacher Plot: zeigt die Strahlungswerte (ghi, dhi, dni) im Tagesverlauf
 df[["ghi", "dhi", "dni"]].loc["2022-06-21 04:00":"2022-06-21 22:00"].plot()
 plt.ylabel("W/m²")
 plt.title("Strahlungsdaten am 21. Juni 2022 (Solarautobahn)")
-plt.grid()
-plt.show()
+plt.grid() # Raster hinzufügen
+plt.show() # plot anzeigen
 
-
+#Zweiter Plot: Strahlung und Zenitwinkel (Sonnenstand) gleichzeitig darstellen
 fig, ax1 = plt.subplots()
 
 ax1.set_ylabel("Strahlung [W/m²]")
 df[["ghi", "dhi", "dni"]].loc["2022-06-21"].plot(ax=ax1)
 
-ax2 = ax1.twinx()
+#zweite Y-Achse – für Zenitwinkel in Grad
+ax2 = ax1.twinx() # 0° = Sonne steht am höchsten (bei 0= im Zenith = in den Tropne möglich), <90° Sonne ist über dem Horizont, > 90° Sonne ist unter dem Horizont (Nacht)
 ax2.set_ylabel("Zenitwinkel [°]")
-df["zenith"].loc["2022-06-21"].plot(ax=ax2, color="gray", style="--")
+# Zenitwinkel als gestrichelte graue Linie über den Tag
+df["zenith"].loc["2022-06-21"].plot(ax=ax2, color="gray", style="--") #graue gestrichelte Linie
 
 plt.title("Solarstrahlung und Sonnenstand am 21. Juni 2022")
 plt.grid()
