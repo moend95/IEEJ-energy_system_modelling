@@ -7,6 +7,7 @@ from wetterdienst.provider.dwd.observation import (
     DwdObservationParameter
 )
 
+from datetime import datetime
 from pvlib.solarposition import get_solarposition
 from pvlib.irradiance import dni
 
@@ -29,10 +30,14 @@ request = DwdObservationRequest(
         DwdObservationParameter.MINUTE_10.WIND.WIND_SPEED
     ],
     resolution=DwdObservationResolution.MINUTE_10,
-    period=DwdObservationPeriod.HISTORICAL
+    period=DwdObservationPeriod.HISTORICAL,
+
+    start_date=datetime(2022, 1, 1),
+    end_date=datetime(2022, 12, 31)
 )
 
-# 3. Station im Umkreis von Solarautobahn auswählen - Filter hinzufügen: -9.9999999 = fehlerhafte Daten, J/cm^2 in Watt umrechnen! Interpolieren-Code Moritz als Vorlage!
+
+# 3. Station im Umkreis von Solarautobahn auswählen
 stations_info = request.filter_by_rank(latlon=latlon, rank=15)
 df_stations = stations_info.df.to_pandas()
 df_top = df_stations.head(15)  # nur Top 15 behalten oder so
@@ -47,7 +52,7 @@ required_parameters = [
 ]
 
 # 5. Station im Umkreis automatisch nach Datenqualität auswählen
-def get_valid_station_df(request, station_ids, min_quality=0.8): # definierte Funktion: prüft eine Liste von Stationen (station_ids) und gibt die erste zurück, die alle geforderten Parameter mit mindestens 80% gültigen Werten hat.
+def get_valid_station_df(request, station_ids, min_quality=0.95): # definierte Funktion: prüft eine Liste von Stationen (station_ids) und gibt die erste zurück, die alle geforderten Parameter mit mindestens 90% gültigen Werten hat.
     for station_id in station_ids:                               # Die Funktion geht alle Stationen nacheinander durch (momentan top 15)
         try:
             station_data = request.filter_by_station_id(station_id) #try-Block damit Code bei Fehler nicht abbricht und zur nächsten Station springt
@@ -56,7 +61,7 @@ def get_valid_station_df(request, station_ids, min_quality=0.8): # definierte Fu
             if df.empty:                                            # wenn keine Daten vorliegen wird Station wieder übersprungen
                 continue
 
-            df["value"] = df["value"].replace(-999, np.nan)  # Die fehlerhaften Werte -9.9999990 werden durch NaN ersetzt
+            df["value"] = df["value"].replace(-999, np.nan)  # Die fehlerhaften Werte -999 werden durch NaN ersetzt
 
             # Prüfen, ob alle geforderten Parameter mit ausreichender Qualität vorhanden sind:
             grouped = df.groupby("parameter")["value"].apply(lambda x: x.notna().mean())            # gruppiert die Daten nach Wetterparameter (ghi, dhi, temp), "x.notna().mean()": berechnet für jeden Parameter den Anteil an gültigen Werten
@@ -89,30 +94,14 @@ df.rename(columns={
     "wind_speed": "wind_speed"
 }, inplace=True)
 
-# 8. Einheitenumrechnung: Temperatur von Kelvin in Celsius umrechnen, falls nötig
-
-if df["temp_air"].mean() > 100:
-    df["temp_air"] = df["temp_air"] - 273.15
-
-# 8. Einheitenumrechnung:  J/cm² → W/m² (bei 600s = 10min)
-# 1 J/cm² = 10,000 J/m²
-# 10 Minuten = 600 Sekunden
-# ⇒ W/m² = (J/cm² × 10,000) / 600
-
+# 8. Einheitenumrechnung: J/cm² → W/m² (bei 600s = 10min)
 for col in ["ghi", "dhi"]:
     if col in df.columns:
-        df[col] = df[col] * 16.67 # 10000 / 600 = 16.67
-#df[col] = df[col] * 10000 / 600 / 1000  # → kW/m² - pvlib brauch W/m^2
-
-# 8.1 Filter Negative Strahlungswerte ausschließen (physikalisch nicht möglich)
-df[["ghi", "dhi"]] = df[["ghi", "dhi"]].where(df[["ghi", "dhi"]] >= 0, np.nan)
-
-# 8.3 Interpolieren (für NaNs, z.B. nachts oder bei Ausfällen)
-df[["ghi", "dhi", "temp_air", "wind_speed"]] = df[["ghi", "dhi", "temp_air", "wind_speed"]].interpolate("time")
-
+        df[col] = df[col] * 10000 / 600  # = 16.67
 
 # 9. Resample auf 10-Minuten-Zeitraster und lineare Interpolation
 df = df.resample("10T").interpolate("time")
+
 
 # 10. Zenitwinkel (Sonnenstand) korrekt berechnen
 from pvlib.solarposition import get_solarposition
@@ -124,9 +113,9 @@ df.index = df.index.tz_convert("Europe/Berlin")
 solpos = get_solarposition(df.index, latitude=latlon[0], longitude=latlon[1])
 df["zenith"] = solpos["zenith"]
 
-# 12. DNI berechnen, wenn zenith < 90 und Daten gültig;
+# 12. DNI nur berechnen, wenn zenith < 90 und Daten gültig
 mask = df[["ghi", "dhi", "zenith"]].notna().all(axis=1)
-df["dni"] = np.where(                   # pvlib-Funktion zur DNI-Berechnung verwenden, sonst NaN
+df["dni"] = np.where(
     mask,
     dni(ghi=df["ghi"], dhi=df["dhi"], zenith=df["zenith"]),
     np.nan
@@ -134,32 +123,27 @@ df["dni"] = np.where(                   # pvlib-Funktion zur DNI-Berechnung verw
 # 13. Ergebnis speichern
 df.to_csv(r"C:\Users\sarah\OneDrive\Dokumenty\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv", index=True)
 print("Datei gespeichert: wetterdaten_solarautobahn_2022.csv")
-
 print(df.index[:5])
 print(df.index.tz)  # Muss z.B. Europe/Berlin anzeigen
 
 
 import matplotlib.pyplot as plt
 
-
-# Erster einfacher Plot: zeigt die Strahlungswerte (ghi, dhi, dni) im Tagesverlauf
 df[["ghi", "dhi", "dni"]].loc["2022-06-21 04:00":"2022-06-21 22:00"].plot()
 plt.ylabel("W/m²")
 plt.title("Strahlungsdaten am 21. Juni 2022 (Solarautobahn)")
-plt.grid() # Raster hinzufügen
-plt.show() # plot anzeigen
+plt.grid()
+plt.show()
 
-#Zweiter Plot: Strahlung und Zenitwinkel (Sonnenstand) gleichzeitig darstellen
+
 fig, ax1 = plt.subplots()
 
 ax1.set_ylabel("Strahlung [W/m²]")
 df[["ghi", "dhi", "dni"]].loc["2022-06-21"].plot(ax=ax1)
 
-#zweite Y-Achse – für Zenitwinkel in Grad
-ax2 = ax1.twinx() # 0° = Sonne steht am höchsten (bei 0= im Zenith = in den Tropne möglich), <90° Sonne ist über dem Horizont, > 90° Sonne ist unter dem Horizont (Nacht)
+ax2 = ax1.twinx()
 ax2.set_ylabel("Zenitwinkel [°]")
-# Zenitwinkel als gestrichelte graue Linie über den Tag
-df["zenith"].loc["2022-06-21"].plot(ax=ax2, color="gray", style="--") #graue gestrichelte Linie
+df["zenith"].loc["2022-06-21"].plot(ax=ax2, color="gray", style="--")
 
 plt.title("Solarstrahlung und Sonnenstand am 21. Juni 2022")
 plt.grid()
