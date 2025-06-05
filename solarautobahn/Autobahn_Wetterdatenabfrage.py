@@ -116,7 +116,7 @@ df["dni"] = np.where(
     np.nan
 )
 # 13. Ergebnis speichern
-df.to_csv(r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv", index=True)
+df.to_csv(r"C:\Users\sarah\OneDrive\Dokumenty\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv", index=True)
 print("Datei gespeichert: wetterdaten_solarautobahn_2022.csv")
 
 print(df.index[:5])
