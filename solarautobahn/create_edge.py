@@ -15,6 +15,7 @@ import geopandas as gpd
 import math
 import folium
 import webbrowser
+import numpy as np
 
 
 
@@ -153,6 +154,30 @@ def plot_geometry_on_map(gdf, map_filename="karte.html"): # Funktion Plotting de
    m.save("autobahn_karte.html")
    webbrowser.open("autobahn_karte.html")
 
+def calculate_azimuth(p1, p2):
+    """
+    Berechnet den Azimutwinkel zwischen zwei Punkten p1 und p2.
+    Punkte als Shapely Point (x,y) = (longitude, latitude)
+    Ergebnis in Grad (0-360°), 0° = Norden, im Uhrzeigersinn.
+    """
+    dx = p2.x - p1.x
+    dy = p2.y - p1.y
+    angle_rad = np.arctan2(dx, dy)  # Achtung Reihenfolge dx, dy!
+    angle_deg = np.degrees(angle_rad)
+    if angle_deg < 0:
+        angle_deg += 360
+    return angle_deg
+
+def add_azimut_to_gdf(gdf):
+    gdf['azimut'] = np.nan  # Spalte für Azimut anlegen
+
+    for i in range(len(gdf)-1):
+        p1 = gdf.geometry.iloc[i]
+        p2 = gdf.geometry.iloc[i+1]
+        gdf.at[i, 'azimut'] = calculate_azimuth(p1, p2)
+
+    # Optional: Für letzten Punkt z.B. NaN oder 0
+    gdf.at[len(gdf)-1, 'azimut'] = np.nan
 
 
 #lokale run.py
@@ -160,6 +185,10 @@ bb_highway = eingabe_bounding_box()
 gdf_highway = highway_gdf_in_bb(bb_highway)
 gdf = gdf_highway.to_crs(epsg=4326)  # Folium braucht WGS84 (EPSG:4326)
 plot_geometry_on_map(gdf) 
+
+
+
+
 
 # Boundary Boxen für die Autobahn-Abschnitte, händisch aus OSM ermittelt verglichen mit Machbarkeitsstudie Abbildung 2   
 #bb_A46 
