@@ -6,3 +6,4 @@
 Input: Flächen aus OSM (Area_Import_OSM), Traktor Breite (und Länge?), Sicherheitsfaktor (wenn nicht intern vorgegeben)
 Output: Map Plot mit Linien eingezeichnet, Anzahl an PV Modulen, Flächennutzung Anteile
 '''
+
