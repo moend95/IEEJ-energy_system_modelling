@@ -13,7 +13,7 @@ from shapely.geometry import Polygon
 from pyproj import CRS
 
 # OSM way ID
-way_id = 168868469
+way_id = 822428142
 
 # Overpass API-Abfrage
 overpass_url = "http://overpass-api.de/api/interpreter"

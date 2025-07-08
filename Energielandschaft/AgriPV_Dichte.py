@@ -10,6 +10,7 @@ Output: Map Plot mit Linien eingezeichnet, Anzahl an PV Modulen, Flächennutzung
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon, LineString, Point
 import numpy as np
+import ast
 
 def calculate_intersection_points(polygon, line):
     intersection_points = polygon.intersection(line)
@@ -35,7 +36,7 @@ def plot_line_with_intersections(polygon, centroid, angle_radians, distance, Bg,
     intersection_points = calculate_intersection_points(polygon, line)
     
     if len(intersection_points) < 2:
-        return False, existing_line_segments  # Invalid line, not enough intersection points
+        return False, existing_line_segments
     
     x_vals = [pt[0] for pt in intersection_points]
     y_vals = [pt[1] for pt in intersection_points]
@@ -44,7 +45,6 @@ def plot_line_with_intersections(polygon, centroid, angle_radians, distance, Bg,
     total_length = sum(LineString(seg).length for seg in existing_line_segments) + LineString(line_segment).length
     
     if total_length * Bg > max_area:
-        # Shorten the line to not exceed the max area
         remaining_length = max_area / Bg - sum(LineString(seg).length for seg in existing_line_segments)
         if remaining_length <= 0:
             return False, existing_line_segments
@@ -69,16 +69,17 @@ def plot_line_with_intersections(polygon, centroid, angle_radians, distance, Bg,
 
 def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage):
     polygon = Polygon(coordinates)
-    area = 12345.0  # Fläche in m² manuell eingetragen
+    
+    from Area_Import_OSM import area_m2  # Assuming area_m2 is defined in Area_Import_OSM
+    area = area_m2 # Fläche des Feldes in Quadratmetern
+    
     max_area = max_area_percentage / 100 * area
 
     centroid = polygon.centroid
-
     offset_distance = Lvor + (Bg / 2)
     offset_polygon = polygon.buffer(-offset_distance)
 
     angle_radians = np.radians(An)
-    
     existing_line_segments = []
     num_pv_module_rows = 0
 
@@ -110,7 +111,6 @@ def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percenta
         distances = [(Aarbeits + Bg) * distance_multiplier, -(Aarbeits + Bg) * distance_multiplier]
         for distance in distances:
             result, existing_line_segments = plot_line_with_intersections(offset_polygon, centroid, angle_radians, distance, Bg, max_area, existing_line_segments)
-
             if result:
                 num_pv_module_rows += 1
                 total_length = sum(LineString(seg).length for seg in existing_line_segments)
@@ -118,12 +118,10 @@ def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percenta
                 print(f"Anzahl der Linien: {num_pv_module_rows}")
                 print(f"Flaeche der Gruenstreifen: {Agrun:.2f} Quadratmeter")
                 print(f"Prozentualer Anteil der Flaeche Agrun zur Gesamtflaeche Ag: {Agrun / area * 100:.2f}%")
-
                 if Agrun / area * 100 >= max_area_percentage:
                     print("\nMaximale Flaeche erreicht")
                     plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_segments, Bg)
                     return
-
         distance_multiplier += 1
 
     total_length = sum(LineString(seg).length for seg in existing_line_segments)
@@ -143,21 +141,18 @@ def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percenta
     print(f"Gesamtlänge der PV-Modul Reihen: {total_length} Meter")
     print(f"Flaeche mit Gruenstreifen bedeckt (Agrun): {Agrun:.2f} Quadratmeter")
     print(f"Prozentualer Anteil der Flaeche Agrun zur Gesamtflaeche Ag: {Agrun / area * 100:.2f}%")
-
     plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_segments, Bg)
 
 def plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_segments, Bg):
     plt.figure()
     x, y = polygon.exterior.xy
-    plt.plot(x, y, color='black', )
+    plt.plot(x, y, color='black')
     plt.fill(x, y, alpha=0.5, fc='red', ec='black')
 
     if not offset_polygon.is_empty:
         ox, oy = offset_polygon.exterior.xy
-        plt.plot(ox, oy, color='blue',)
+        plt.plot(ox, oy, color='blue')
         plt.fill(ox, oy, alpha=0.5, fc='green', ec='blue')
-
-    #plt.scatter([centroid.x], [centroid.y], color='blue',)
 
     for seg in existing_line_segments:
         plt.plot([seg[0][0], seg[1][0]], [seg[0][1], seg[1][1]], color='green', linewidth=Bg)
@@ -166,13 +161,14 @@ def plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_seg
     plt.show()
 
 if __name__ == "__main__":
-    #coordinates = input("Geben Sie die Koordinaten des Feldes als Liste von Tupeln ein (z.B. [(0,0), (0,500), ...]): ")
-    #coordinates = eval(coordinates)  # Verwenden Sie eval() vorsichtig und nur mit vertrauenswuerdigen Eingaben
-
-    Lvor = float(input("Geben Sie die Laenge vom Vorgewende ein (in Metern): "))
-    Bg = float(input("Geben Sie die Breite der Gruenstreifen ein (in Metern): "))
-    An = float(input("Geben Sie den Winkel ein (in Grad): "))
-    Aarbeits = float(input("Geben Sie die Arbeitsbreite ein (in Metern): "))
-    max_area_percentage = float(input("Geben Sie den maximalen Flaechenanteil mit PV-Modulen (in Prozent) ein: "))
-
+    from Koordinaten_Import_OSM import coords  # Assuming area_m2 is defined in Koordinaten_Import_OSM
+    coordinates = coords #ast.literal_eval(coordinates_str)  # Convert string representation of coordinates to list of tuples
+	#coordinates = [(0, 0), (0, 150), (200, 100), (200, 50), (0, 0)]  # Beispiel-Polygon
+    #coordiantes = [(0,0), (0,500), ...])
+    Lvor = 1 #float(input("Geben Sie die Laenge vom Vorgewende ein (in Metern): "))
+    Bg = 3 #float(input("Geben Sie die Breite der Gruenstreifen ein (in Metern): "))
+    An = 0 #float(input("Geben Sie den Winkel ein (in Grad): "))
+    Aarbeits = 2 #float(input("Geben Sie die Arbeitsbreite ein (in Metern): "))
+    max_area_percentage = 30 #float(input("Geben Sie den maximalen Flaechenanteil mit PV-Modulen (in Prozent) ein: "))
+    
     plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
