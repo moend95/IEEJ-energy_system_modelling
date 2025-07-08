@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings(action='ignore', module='pvfactors')
 
 # Wetterdaten einlesen
-weather_data = pd.read_csv('../Input/dwd_data_solar_10min_koeln_2020-2023.csv',
+weather_data = pd.read_csv('./Input/dwd_data_solar_10min_koeln_2020-2023.csv',
                            index_col='datetime', parse_dates=['datetime'])
 weather_data = weather_data.loc["2022-01-01 00:00:00":"2022-12-31 23:50:00"]
 weather_data = weather_data.resample('h').mean()
