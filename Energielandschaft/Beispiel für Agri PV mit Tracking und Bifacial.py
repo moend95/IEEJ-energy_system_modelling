@@ -123,7 +123,7 @@ for feld_name, flaeche in felder.items():
 
 feld_df = feld_df.clip(lower=0) # Setze negative Werte auf 0
 
-feld_df.plot()
+feld_df.plot(alpha=0.3, label='Feld DataFrame')
 plt.show()
 
 feld_df.to_csv('IEEJ_Energielandschaft_Agri_PV.csv')
