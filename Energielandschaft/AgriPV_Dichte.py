@@ -168,48 +168,24 @@ def plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_seg
 ## Parameter für Berechnung festlegen 
 ## Per Abfrage oder direkt im Code
 
-# if __name__ == "__main__":
-#     from Koordinaten_Import_OSM import xy_coordinates  # Assuming area_m2 is defined in Koordinaten_Import_OSM
-#     coordinates = xy_coordinates #ast.literal_eval(coordinates_str)  # Convert string representation of coordinates to list of tuples
-# 	#coordinates = [(0, 0), (0, 150), (200, 100), (200, 50), (0, 0)]  # Beispiel-Polygon
-#     #coordiantes = [(0,0), (0,500), ...])
-#     Lvor = 20 #float(input("Geben Sie die Laenge vom Vorgewende ein (in Metern): "))
-#     Bg = 30 #float(input("Geben Sie die Breite der Gruenstreifen ein (in Metern): "))
-#     An = 0 #float(input("Geben Sie den Winkel ein (in Grad): "))
-#     Aarbeits = 20 #float(input("Geben Sie die Arbeitsbreite ein (in Metern): "))
-#     max_area_percentage = 30 #float(input("Geben Sie den maximalen Flaechenanteil mit PV-Modulen (in Prozent) ein: "))
-    
-#     plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
-
-from Area_Import_OSM import xy_coordinates
-
-# Parameter global definieren – außerhalb des __main__-Blocks
-# Festgelegte Parameter für die Berechnung
-# coordinates = xy_coordinates
-# Lvor = 20
-# Bg = 30
-# An = 0
-# Aarbeits = 20
-# max_area_percentage = 30
-
-# def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage):
-#     # Area_Agri_PV_MAIN.py importieren
-#     pass  # Platzhalter
-
-if __name__ == "__main__":
-    from Area_Import_OSM import xy_coordinates  # Koordinaten laden
-    coordinates = xy_coordinates
-
-    Lvor = 20
-    Bg = 30
-    An = 0
-    Aarbeits = 20
-    max_area_percentage = 30
-
-    plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
+from Area_Import_OSM import xy_coordinates  # Koordinaten laden
+coordinates = xy_coordinates
+Lvor = 20
+Bg = 30
+An = 0
+Aarbeits = 20
+max_area_percentage = 30
+#plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 
 # if __name__ == "__main__":
-#     # Nur Aufruf der Funktion, wenn direkt ausgeführt
+#     from Area_Import_OSM import xy_coordinates  # Koordinaten laden
+#     coordinates = xy_coordinates
+
+#     Lvor = 20
+#     Bg = 30
+#     An = 0
+#     Aarbeits = 20
+#     max_area_percentage = 30
 #     plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 
 # # Parameter per Eingabe abfragen
@@ -221,14 +197,3 @@ if __name__ == "__main__":
 #     Aarbeits = float(input("Arbeitsbreite: "))
 #     max_area_percentage = float(input("Maximaler Flaechenanteil: "))
 #     return coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage
-
-# if __name__ == "__main__":
-#     params = get_parameters()
-#     plot_field_with_lines(params)
-
-# def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage):
-#     # Deine Visualisierungs-/Berechnungsfunktion hier
-#     print("Plot wird erzeugt...")
-#     # (Hier: Dummy-Ausgabe zur Veranschaulichung)
-#     print(f"Koordinaten: {coordinates}")
-#     print(f"Lvor: {Lvor}, Bg: {Bg}, An: {An}, Aarbeits: {Aarbeits}, max_area_percentage: {max_area_percentage}")
