@@ -176,6 +176,8 @@ An = 0
 Aarbeits = 20
 max_area_percentage = 30
 #plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
+if __name__ == "__main__":
+    main()
 
 # if __name__ == "__main__":
 #     from Area_Import_OSM import xy_coordinates  # Koordinaten laden
