@@ -157,12 +157,13 @@ def plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_seg
     if not offset_polygon.is_empty:
         ox, oy = offset_polygon.exterior.xy
         plt.plot(ox, oy, color='blue')
-        plt.fill(ox, oy, alpha=0.5, fc='green', ec='blue')
+        plt.fill(ox, oy, alpha=0.5, fc='yellow', ec='blue')
 
     for seg in existing_line_segments:
         plt.plot([seg[0][0], seg[1][0]], [seg[0][1], seg[1][1]], color='green', linewidth=Bg)
 
     plt.legend()
+    plt.axis("equal")
     plt.show()
 
 ## Parameter für Berechnung festlegen 
@@ -170,11 +171,11 @@ def plot_polygons_and_lines(polygon, offset_polygon, centroid, existing_line_seg
 
 from Area_Import_OSM import xy_coordinates  # Koordinaten laden
 coordinates = xy_coordinates
-Lvor = 20
-Bg = 30
-An = 0
-Aarbeits = 20
-max_area_percentage = 30
+Lvor = 5 # Länge des Vorgewendes in Metern (Äußerer rosa Rand auf Plot-Darstellung)
+Bg = 5 # Breite der Grünstreifen in Metern (Hellgrüner Bereich auf Plot-Darstellung)
+An = 0 # Winkel in Grad (Ausrichtung PV, bzw. Grünstreifen)
+Aarbeits = 50 # Arbeitsbreite in Metern (Breite der PV-Module)
+max_area_percentage = 30 # Maximale Fläche mit PV-Modulen in Prozent 
 #plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 if __name__ == "__main__":
     main()
