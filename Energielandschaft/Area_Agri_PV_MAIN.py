@@ -4,8 +4,8 @@
 ## Output: Plot, Werte für PV-Dichte, Fläche, Anzahl der Module
 
 ## Input: OSM Way-ID
-way_id = 822428142
-# way_id = 168868469
+# way_id = 822428142
+way_id = 168868469
 
 ## Output: Plot, Werte für PV-Dichte, Fläche, Anzahl der Module
 if __name__ == "__main__":
