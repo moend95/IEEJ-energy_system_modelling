@@ -6,7 +6,7 @@ df = fetch_weather_data(
     coords=(51.08579, 6.47554),                # Solarautobahn-Koordinaten
     start="2022-01-01",
     end="2022-12-31",
-    station_id=None,                           # Automatische Stationswahl
+    station_id=None,                           # station_id=None, auto_select=False = eigene Stationswahl;  station_id=None, auto_select=True = Automatische Stationswahl; oder direkt station Id angeben
     auto_select=True,
     min_quality=0.95,
     save_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
