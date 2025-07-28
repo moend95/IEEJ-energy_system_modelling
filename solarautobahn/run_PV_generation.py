@@ -1,3 +1,25 @@
+# Wetterdatenfunktion starten
+from solarautobahn.functions_weather_data import fetch_weather_data
+
+# Wetterdaten abrufen und als CSV speichern
+df = fetch_weather_data(
+    coords=(51.08579, 6.47554),                # Solarautobahn-Koordinaten
+    start="2022-01-01",
+    end="2022-12-31",
+    station_id=None,                           # Automatische Stationswahl
+    auto_select=True,
+    min_quality=0.95,
+    save_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
+    plot_date="2022-06-21"                     # Optionaler Plot für einen bestimmten Tag
+)
+
+print("Wetterdaten erfolgreich geladen und gespeichert.")
+
+
+
+
+
+
 
 # 1. CSV laden – NICHT mit parse_dates, weil wir es gleich selbst machen
 df = pd.read_csv(
