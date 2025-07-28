@@ -1,150 +1,149 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from wetterdienst.provider.dwd.observation import (
     DwdObservationRequest,
     DwdObservationResolution,
     DwdObservationPeriod,
     DwdObservationParameter
 )
-
-from datetime import datetime
 from pvlib.solarposition import get_solarposition
 from pvlib.irradiance import dni
+import matplotlib.pyplot as plt
 
+def fetch_weather_data(
+    coords=(51.08579, 6.47554),
+    start="2022-01-01",
+    end="2022-12-31",
+    station_id=None,    # Stations ID angeben; Wenn = None, wird die Station automatisch bestimmt
+    auto_select=True,
+    min_quality=0.95,
+    save_path=None,     # Ort zum Abspeichern hier angeben
+    plot_date=None      # hier Datum eingeben das geplottet werden soll wenn man Strahlungsdaten ansehen möchte
+):
+    start_date = datetime.fromisoformat(start)
+    end_date = datetime.fromisoformat(end)
 
-# 1. Standort: Solarautobahn (Koordinaten)
-latlon = (51.08579, 6.47554)
-
-# Zeige alle verfügbaren Parameter für MINUTE_10
-#for group in DwdObservationParameter.MINUTE_10:
-#    print(f"Gruppe: {group}")
-#    for param in group:
-#        print(f"   → {param}")
-
-# 2. Anfrage definieren - da muss noch direkte Strahlung berechnet werden!
-request = DwdObservationRequest(
-    parameter=[
+    parameters = [
         DwdObservationParameter.MINUTE_10.SOLAR.RADIATION_GLOBAL,
         DwdObservationParameter.MINUTE_10.SOLAR.RADIATION_SKY_SHORT_WAVE_DIFFUSE,
         DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.TEMPERATURE_AIR_MEAN_200,
         DwdObservationParameter.MINUTE_10.WIND.WIND_SPEED
-    ],
-    resolution=DwdObservationResolution.MINUTE_10,
-    period=DwdObservationPeriod.HISTORICAL,
+    ]
 
-    start_date=datetime(2022, 1, 1),
-    end_date=datetime(2022, 12, 31)
-)
+    request = DwdObservationRequest(
+        parameter=parameters,
+        resolution=DwdObservationResolution.MINUTE_10,
+        period=DwdObservationPeriod.HISTORICAL,
+        start_date=start_date,
+        end_date=end_date
+    )
 
+# Wenn Station ID angegeben werden dessen Daten direkt verwendet und rest übersprungen
+    if station_id:
+        stations_info = request.filter_by_station_id(station_id)
+        valid_station_id = station_id
+# Falls keine Station ID übergeben wurde, wird anhand der Koordinaten (coords)
+# welche die 15 (rank = 15) nächstliegenden Stationen sind und ausgewertet:
+    else:
+        stations_info = request.filter_by_rank(latlon=coords, rank=15)
+        df_top = stations_info.df.to_pandas().head(15)
+# Benutzer wird Liste angezeigt, wenn auto_select = False
+# Station manuell eintippen:
+        if not auto_select:
+            print(df_top[["station_id", "name", "distance"]])
+            valid_station_id = input("Bitte geben Sie eine station_id ein: ")
+# Wenn auto_select = True, dann wählt das Programm automatisch die beste Station aus:
+        else:
+            required_parameters = [
+                "radiation_global",
+                "radiation_sky_short_wave_diffuse",
+                "temperature_air_mean_200",
+                "wind_speed"
+            ]
+# geht alle 15 Stationen nacheinander durch:
+            for sid in df_top["station_id"]:
+                try:
+                    station_data = request.filter_by_station_id(sid)
+                    df = station_data.values.all().df.to_pandas()
+                    if df.empty:
+                        continue
+                    # Fehlerhafte Daten (z.B. -999) werden durch NaN ersetzt (also "nicht vorhanden")
+                    df["value"] = df["value"].replace(-999, np.nan)
+                    # genug  gültige Werte vorhanden? min_quality=0.95, dann wird Station ausgewählt; Schleife wird abgebrochen (break)
+                    grouped = df.groupby("parameter")["value"].apply(lambda x: x.notna().mean())
+                    if all(p in grouped.index and grouped[p] >= min_quality for p in required_parameters):
+                        valid_station_id = sid
+                        break
+                # Wenn nicht erfüllt wird Fehler ausgegeben:
+                except:
+                    continue
+            else:
+                raise ValueError("Keine geeignete Wetterstation gefunden.")
 
-# 3. Station im Umkreis von Solarautobahn auswählen
-stations_info = request.filter_by_rank(latlon=latlon, rank=15)
-df_stations = stations_info.df.to_pandas()
-df_top = df_stations.head(15)  # nur Top 15 behalten oder so
-print(df_top[["station_id", "name", "distance"]])
+        stations_info = request.filter_by_station_id(valid_station_id)
 
-# 4. Funktion zur Auswahl der besten Station
-required_parameters = [
-    "radiation_global",
-    "radiation_sky_short_wave_diffuse",
-    "temperature_air_mean_200",
-    "wind_speed"
-]
+# lädt alle Wetterdaten für die gewählte Station und Zeitraum als DataFrame
+    df = stations_info.values.all().df.to_pandas()
+    df["value"] = df["value"].replace(-999, np.nan)
+    df["date"] = pd.to_datetime(df["date"]) # Konvertiert Datumsspalte zu einem datetime-Objekt
+    df.set_index("date", inplace=True)
+    df = df.pivot(columns="parameter", values="value")
+    df.rename(columns={
+        "radiation_global": "ghi",
+        "radiation_sky_short_wave_diffuse": "dhi",
+        "temperature_air_mean_200": "temp_air",
+        "wind_speed": "wind_speed"
+    }, inplace=True)
+    # Umrechnung der Strahlungsdaten von J/cm² → W/m² (bei 600s = 10min) wobei ich denke die Daten sind bereits in J/m^2, deswegen nur /600 nicht * 16,67
+    for col in ["ghi", "dhi"]:
+        if col in df.columns:
+            df[col] = df[col] / 600
 
-# 5. Station im Umkreis automatisch nach Datenqualität auswählen
-def get_valid_station_df(request, station_ids, min_quality=0.95): # definierte Funktion: prüft eine Liste von Stationen (station_ids) und gibt die erste zurück, die alle geforderten Parameter mit mindestens 90% gültigen Werten hat.
-    for station_id in station_ids:                               # Die Funktion geht alle Stationen nacheinander durch (momentan top 15)
-        try:
-            station_data = request.filter_by_station_id(station_id) #try-Block damit Code bei Fehler nicht abbricht und zur nächsten Station springt
-            df = station_data.values.all().df.to_pandas()           # Hier wird die aktuelle Station abgefragt
+# Zeitreihe auf ein neues Zeitraster umrechnen ("10T") = alle 10 Minuten
+    df = df.resample("10T").interpolate("time")
+    if df.index.tz is None:
+        df.index = df.index.tz_localize("UTC").tz_convert("Europe/Berlin")
+    else:
+        df.index = df.index.tz_convert("Europe/Berlin")
+    # get_solarposition(...) = Funktion aus der pvlib-Bibliothek berechnet zu jedem Zeitstempel den Sonnenstand basierend auf: Zeit (df.index)
+    solpos = get_solarposition(df.index, latitude=coords[0], longitude=coords[1])
+    # Zenith Wert wird gespeichert in neuen Spalte:
+    df["zenith"] = solpos["zenith"]
+    # DNI = Direct Normal Irradiance = direkte Sonnenstrahlung berechnen aus ghi, dhi und zenith:
+    # mask = ...notna().all(axis=1) Filtert alle Zeilen, wo ghi, dhi und zenith nicht leer sind und berechnet dann, Sonst → np.nan (also „kein Wert“)
+    mask = df[["ghi", "dhi", "zenith"]].notna().all(axis=1)
+    df["dni"] = np.where(
+        mask,
+        dni(ghi=df["ghi"], dhi=df["dhi"], zenith=df["zenith"]),
+        np.nan
+    )
 
-            if df.empty:                                            # wenn keine Daten vorliegen wird Station wieder übersprungen
-                continue
+    if save_path:
+        df.to_csv(save_path)
+        print(f"Datei gespeichert: {save_path}")
 
-            df["value"] = df["value"].replace(-999, np.nan)  # Die fehlerhaften Werte -999 werden durch NaN ersetzt
+    if plot_date:
+        day = pd.to_datetime(plot_date)
+        df_day = df.loc[day.strftime("%Y-%m-%d")]
+        fig, ax1 = plt.subplots()
+        ax1.set_ylabel("Strahlung [W/m²]")
+        df_day[["ghi", "dhi", "dni"]].plot(ax=ax1)
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Zenitwinkel [°]")
+        df_day["zenith"].plot(ax=ax2, color="gray", style="--")
+        plt.title(f"Solarstrahlung und Sonnenstand am {plot_date}")
+        plt.grid()
+        plt.show()
 
-            # Prüfen, ob alle geforderten Parameter mit ausreichender Qualität vorhanden sind:
-            grouped = df.groupby("parameter")["value"].apply(lambda x: x.notna().mean())            # gruppiert die Daten nach Wetterparameter (ghi, dhi, temp), "x.notna().mean()": berechnet für jeden Parameter den Anteil an gültigen Werten
-            if all(p in grouped.index and grouped[p] >= min_quality for p in required_parameters):  # es wird geprüft, ob alle geforderten Parameter vorhanden sind und mind.gualität haben
-                print(f" Station {station_id} erfüllt Kriterien.")                                  # Die erste passende Station wird zurückgegeben
-                return df, station_id
+    return df
 
-        except Exception as e:
-            print(f" ! Fehler bei Station {station_id}: {e}")       # Falls irgendetwas schiefgeht, wird die Fehlermeldung ausgegeben, aber die nächste Station geprüft.
-            continue
-
-    raise ValueError("Keine geeignete Wetterstation mit allen Parametern und ausreichender Qualität gefunden.")     # Wenn keine einzige Station passt, wird ein Fehler ausgelöst.
-
-# 5.2 Auswahl durchführen
-top_station_ids = df_top["station_id"].tolist()                         # df_top = Tabelle mit Top15 Stationen
-df, valid_station_id = get_valid_station_df(request, top_station_ids)   # get_valid_station_df() Funktion aufrufen, um die beste Station zu finden.
-print(f"Verwendete Station: {valid_station_id}")
-
-# 6. Zeitstempel setzen und umstrukturieren
-df["date"] = pd.to_datetime(df["date"])                 # Zeitspalte als Zeitobjekt umwandeln
-df.set_index("date", inplace=True)                      # "date" wird Index (Zeitreihe)
-df = df.pivot(columns="parameter", values="value")      # Spalten: parameter-Namen, Zellen: Werte
-df.columns.name = None                                  # entfernt Zusatznamen aus Spaltenüberschrift
-
-# 7. Spalten sinnvoll benennen
-df.rename(columns={
-    "radiation_global": "ghi",
-    "radiation_sky_short_wave_diffuse": "dhi",
-    "temperature_air_mean_200": "temp_air",
-    "wind_speed": "wind_speed"
-}, inplace=True)
-
-# 8. Einheitenumrechnung: J/cm² → W/m² (bei 600s = 10min)
-for col in ["ghi", "dhi"]:
-    if col in df.columns:
-        df[col] = df[col] * 10000 / 600  # = 16.67
-
-# 9. Resample auf 10-Minuten-Zeitraster und lineare Interpolation
-df = df.resample("10T").interpolate("time")
-
-
-# 10. Zenitwinkel (Sonnenstand) korrekt berechnen
-from pvlib.solarposition import get_solarposition
-from pvlib.irradiance import dni
-
-# 11. Zeitzone korrekt setzen
-df.index = df.index.tz_convert("Europe/Berlin")
-
-solpos = get_solarposition(df.index, latitude=latlon[0], longitude=latlon[1])
-df["zenith"] = solpos["zenith"]
-
-# 12. DNI nur berechnen, wenn zenith < 90 und Daten gültig
-mask = df[["ghi", "dhi", "zenith"]].notna().all(axis=1)
-df["dni"] = np.where(
-    mask,
-    dni(ghi=df["ghi"], dhi=df["dhi"], zenith=df["zenith"]),
-    np.nan
-)
-# 13. Ergebnis speichern
-df.to_csv(r"C:\Users\sarah\OneDrive\Dokumenty\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv", index=True)
-print("Datei gespeichert: wetterdaten_solarautobahn_2022.csv")
-print(df.index[:5])
-print(df.index.tz)  # Muss z.B. Europe/Berlin anzeigen
-
-
-import matplotlib.pyplot as plt
-
-df[["ghi", "dhi", "dni"]].loc["2022-06-21 04:00":"2022-06-21 22:00"].plot()
-plt.ylabel("W/m²")
-plt.title("Strahlungsdaten am 21. Juni 2022 (Solarautobahn)")
-plt.grid()
-plt.show()
-
-
-fig, ax1 = plt.subplots()
-
-ax1.set_ylabel("Strahlung [W/m²]")
-df[["ghi", "dhi", "dni"]].loc["2022-06-21"].plot(ax=ax1)
-
-ax2 = ax1.twinx()
-ax2.set_ylabel("Zenitwinkel [°]")
-df["zenith"].loc["2022-06-21"].plot(ax=ax2, color="gray", style="--")
-
-plt.title("Solarstrahlung und Sonnenstand am 21. Juni 2022")
-plt.grid()
-plt.show()
+# um funktions-skript hier zu testen: muss man rausnehmen wenn run skript steht
+if __name__ == "__main__":
+    df = fetch_weather_data(
+        start="2022-01-01",
+        end="2022-12-31",
+        auto_select=False,
+        save_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\test_solarautobahn.csv",
+        plot_date="2022-06-21"
+    )

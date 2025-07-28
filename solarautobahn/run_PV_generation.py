@@ -1,13 +1,3 @@
-import pandas as pd
-import pvlib
-from pvlib.pvsystem import PVSystem
-from pvlib.location import Location
-from pvlib.modelchain import ModelChain
-from shapely.geometry import LineString
-import matplotlib.pyplot as plt
-import os
-import math
-from tqdm import tqdm
 
 # 1. CSV laden – NICHT mit parse_dates, weil wir es gleich selbst machen
 df = pd.read_csv(
