@@ -1,12 +1,3 @@
-'''
--PV Dichte berechnen (abhängig von Traktorbreite plus Wenderadius, jede Spalte abfahren oder jede zweite wegen wenderadius)
-	- Eingabe: Traktor Breite und Länge bestimmt "freien Randbereich/Randfläche"
-	- Eingabe: Traktor Breite bestimmt "Spalten-Breite plus Sicherheitsabstand"
-
-Input: Flächen aus OSM (Area_Import_OSM), Traktor Breite (und Länge?), Sicherheitsfaktor (wenn nicht intern vorgegeben)
-Output: Map Plot mit Linien eingezeichnet, Anzahl an PV Modulen, Flächennutzung Anteile
-'''
-
 ## Agri-PV Dichte/Flächennutzung berechnen
 ## Import: Koordinaten aus OSM (Koordinaten_Import_OSM), Fläche aus OSM (Area_Import_OSM)
 ## Input: Koordinaten der Fläche, Länge des Vorgewendes, Breite der Grünstreifen, Winkel, Arbeitsbreite, maximaler Flächenanteil mit PV-Modulen
@@ -179,6 +170,14 @@ max_area_percentage = 30 # Maximale Fläche mit PV-Modulen in Prozent
 #plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+## Alte Versionen der Parameterabfrage
 
 # if __name__ == "__main__":
 #     from Area_Import_OSM import xy_coordinates  # Koordinaten laden

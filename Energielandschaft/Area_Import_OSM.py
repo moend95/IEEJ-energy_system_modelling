@@ -67,28 +67,6 @@ print("\nXY-Koordinaten (in Metern, Ursprung = erster Punkt):")
 for x, y in xy_list:
     print(f"({x:.2f}, {y:.2f})")
 
-# # Eingabeaufforderung für den Nutzer
-# print("Bitte geben Sie die Koordinaten als Liste von Tupeln ein (z.B. [(51.078558, 6.484447), (51.079871, 6.490275), (51.073527, 6.494424), (51.072446, 6.489946)]):")
-# user_input = input()
-# try:
-#     # Umwandlung der Eingabe in ein Listenformat
-#     lat_lon_list = eval(user_input)
-#     # Umwandlung der Liste von Längen- und Breitengraden in eine Liste von xy-Koordinaten
-#     xy_list = convert_coordinates(lat_lon_list)
-#     # Ausgabe der Liste von xy-Koordinaten
-#     print("Hier die Koordinaten als Liste von Tupeln:", xy_list)
-# except:
-#     print("Fehler bei der Eingabe. Bitte stellen Sie sicher, dass Ihre Eingabe korrekt formatiert ist.")
-
-'''
--OSM Flächen auslesen (Koordinaten bbox eingabe -> Flächen als Rechtecke vereinfacht)
-	-Mittelpunkt für PV berechnung
-
-Funktion definieren, die aus OSM die Flächen zieht, auf denen Agri PV stattfinden soll
-Input: Koordinaten box (von bis)
-Output: Fläche oder Flächen (Größe und Form Rechteck) und Plot mit markierter Fläche, die als Acker bezeichnet sind (?)
-'''
-
 ## Berechnung der Fläche eines Agri-PV-Feldes aus OSM-Daten
 ## Input: OSM Way-ID
 ## Output: Fläche in Quadratmetern und Hektar
