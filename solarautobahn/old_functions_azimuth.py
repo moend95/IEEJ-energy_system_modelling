@@ -1,6 +1,6 @@
 # simulate_solar_highway.py
 # GDF-Geometrie Punkte mit Abstand der Lärmschutzwände zuweisen und Azmiut für Punkt und Zuweisen 
-# Nächster Schritt: G
+#
 
 import sys
 import os
