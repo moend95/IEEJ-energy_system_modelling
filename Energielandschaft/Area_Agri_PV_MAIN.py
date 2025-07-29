@@ -13,3 +13,4 @@ if __name__ == "__main__":
     coordinates = xy_coordinates
     from AgriPV_Dichte import plot_field_with_lines, Lvor, Bg, An, Aarbeits, max_area_percentage
     plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
+
