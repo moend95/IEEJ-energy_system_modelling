@@ -20,7 +20,7 @@ print("Wetterdaten erfolgreich geladen und gespeichert.")
 
 #----------------------- Geometriefunktion skript starten: -----------------------------------------
 
-from solarautobahn.functions_geometrie_test import run_autobahn_geometrie
+from solarautobahn.functions_geometrie import run_autobahn_geometrie
 
 # Geometrie erzeugen und speichern
 run_autobahn_geometrie(
@@ -39,6 +39,7 @@ run_azimut_berechnung(
 # ---------------------- PV-Ertragssimulation starten ----------------------
 from solarautobahn.functions_PV_Auslegung import simulate_pv_yield
 
+# nötige gespeicherte Daten aus Input Ordner laden:
 simulate_pv_yield(
     weather_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
     points_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\punkte_mit_azimut.csv",

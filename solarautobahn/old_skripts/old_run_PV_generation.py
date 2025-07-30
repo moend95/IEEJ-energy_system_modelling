@@ -11,7 +11,7 @@ df = fetch_weather_data(
     station_id=None,                           # station_id=None, auto_select=False = eigene Stationswahl;  station_id=None, auto_select=True = Automatische Stationswahl; oder direkt station Id angeben
     auto_select=True,
     min_quality=0.95,
-    save_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
+    save_path=r"/Input/wetterdaten_solarautobahn_2022.csv",
     plot_date="2022-06-21"                     # Optionaler Plot für einen bestimmten Tag
 )
 
@@ -19,11 +19,11 @@ print("Wetterdaten erfolgreich geladen und gespeichert.")
 
 #----------------------- Geometriefunktion skript starten: -----------------------------------------
 
-from solarautobahn.functions_geometrie_test import run_autobahn_geometrie
+from solarautobahn.functions_geometrie import run_autobahn_geometrie
 
 # Geometrie erzeugen und speichern
 run_autobahn_geometrie(
-    base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
+    base_path=r"/Input"
 )
 
 
@@ -32,15 +32,15 @@ run_autobahn_geometrie(
 from solarautobahn.functions_PV_Modul_und_Azimuth import run_azimut_berechnung
 
 run_azimut_berechnung(
-    base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
+    base_path=r"/Input"
 )
 
 # ---------------------- PV-Ertragssimulation starten ----------------------
 from solarautobahn.functions_pv_simulation import simulate_pv_yield
 
 simulate_pv_yield(
-    weather_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
-    points_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\punkte_mit_azimut.csv",
+    weather_csv_path=r"/Input/wetterdaten_solarautobahn_2022.csv",
+    points_csv_path=r"/Input/punkte_mit_azimut.csv",
     save_results_to=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\pv_ertrag_ergebnisse.csv"
 )
 

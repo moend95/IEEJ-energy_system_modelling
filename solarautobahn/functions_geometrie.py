@@ -136,8 +136,8 @@ def run_autobahn_geometrie(base_path):
         print("Keine Daten gefunden.")
 
 
-# # um funktions-skript hier zu testen: muss man rausnehmen wenn run skript steht
-# if __name__ == "__main__":
-#     run_autobahn_geometrie(
-#         base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
-#     )
+ # um funktions-skript hier zu testen: muss man rausnehmen wenn run skript steht
+if __name__ == "__main__":
+     run_autobahn_geometrie(
+         base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
+     )
