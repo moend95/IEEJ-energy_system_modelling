@@ -1,8 +1,16 @@
 # Agri-PV Fläche berechnung 
-# Import: OSM Way-ID
-# Output: Plot, Werte für PV-Dichte, Fläche, Anzahl der Module
 # Input: OSM Way-ID
-# Agri-PV Fläche Berechnung – Way-ID Eingabe
+# Agri-PV Fläche Berechnung – OSM-Way-ID Eingabe
+
+# Import der benötigten Bibliotheken
+import requests
+import math
+import geopandas as gpd
+from shapely.geometry import Polygon, LineString, Point
+from pyproj import CRS, Transformer
+import numpy as np
+import folium
+import webbrowser
 
 # Standard-Way-ID
 default_way_id = 168868469
@@ -19,11 +27,6 @@ else:
         print("Ungültige Eingabe. Es wird der Standardwert verwendet.")
         way_id = default_way_id
 
-# Import Koordinaten aus OSM
-# Input: OSM Way-ID
-# Output: Koordinaten der Fläche in xy-Koordinaten (Umwandlung von Längen- und Breitengraden in xy-Koordinaten)
-import requests
-
 # Overpass-API-Abfrage
 query = f"""
 [out:json];
@@ -37,8 +40,7 @@ response = requests.get(url, params={'data': query})
 response.raise_for_status()
 data = response.json()
 
-# Geometrie extrahieren und in gewünschtes Format bringen (x = lon, y = lat)
-# "coords" sind geographische Koordianten in lon, lat
+# Geometrie extrahieren und in gewünschtes Format bringen (x = lon, y = lat), "coords" sind geographische Koordianten in lon, lat
 coords = [(round(node['lon'], 6), round(node['lat'], 6)) for node in data['elements'][0]['geometry']]
 
 # Falls nicht geschlossen, Anfangspunkt am Ende anhängen
@@ -47,10 +49,6 @@ if coords[0] != coords[-1]:
 
 # Ausgabe im gewünschten Format
 coordinates_str = "coordinates = [" + ", ".join(f"({x}, {y})" for x, y in coords) + "]"
-print(coordinates_str)
-
-# Koordinaten Umwandlung in xy-Koordianten
-import math
 
 # Funktion zur Umwandlung von Längen- und Breitengraden in xy-Koordinaten
 def lat_lon_to_xy(lat1, lon1, lat2, lon2):
@@ -70,26 +68,12 @@ def convert_coordinates(lat_lon_list):
             xy_list.append((x, y))
     return xy_list
 
-# Umwandlung von (lon, lat) → (lat, lon) zur Weiterverarbeitung
+# Umwandlung von (lon, lat) zu (lat, lon) zur Weiterverarbeitung
 lat_lon_list = [(lat, lon) for lon, lat in coords]
 
 # Koordinaten konvertieren
 xy_list = convert_coordinates(lat_lon_list)
 xy_coordinates = xy_list
-
-# Ausgabe der XY-Koordinaten
-print("\nXY-Koordinaten (in Metern, Ursprung = erster Punkt):")
-for x, y in xy_list:
-    print(f"({x:.2f}, {y:.2f})")
-
-# Berechnung der Fläche eines Agri-PV-Feldes aus OSM-Daten
-# Input: OSM Way-ID
-# Output: Fläche in Quadratmetern und Hektar
-import requests
-import geopandas as gpd
-from shapely.geometry import Polygon
-from pyproj import CRS
-from pyproj import Transformer
 
 # Overpass API-Abfrage
 overpass_url = "http://overpass-api.de/api/interpreter"
@@ -99,7 +83,6 @@ way({way_id});
 (._;>;);
 out body;
 """
-
 response = requests.get(overpass_url, params={'data': query})
 data = response.json()
 
@@ -129,14 +112,6 @@ area_ha = area_m2 / 10_000
 print(f"Fläche: {area_m2:.2f} m² ({area_ha:.4f} ha)")
 
 # Agri-PV Dichte/Flächennutzung berechnen
-# Import: Koordinaten aus OSM (Koordinaten_Import_OSM), Fläche aus OSM
-# Input: Koordinaten der Fläche, Länge des Vorgewendes, Breite der Grünstreifen, Winkel, Arbeitsbreite, maximaler Flächenanteil mit PV-Modulen
-# Output: Anzahl der PV-Modul Reihen, Fläche mit Grünstreifen bedeckt, prozentualer Anteil der Fläche Agrun zur Gesamtfläche Ag, Plot der Fläche mit eingezeichneten Linien
-import matplotlib.pyplot as plt
-from shapely.geometry import Polygon, LineString, Point
-import numpy as np
-import ast
-
 def calculate_intersection_points(polygon, line):
     intersection_points = polygon.intersection(line)
     if isinstance(intersection_points, Point):
@@ -193,9 +168,6 @@ def plot_line_with_intersections(polygon, centroid, angle_radians, distance, Bg,
     return total_length * Bg <= max_area, existing_line_segments
 
 def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage):
-    from shapely.geometry import Polygon, LineString, Point
-    import numpy as np
-
     polygon = Polygon(coordinates)
     area = polygon.area  # Fläche in Quadratmetern
     max_area = max_area_percentage / 100 * area
@@ -241,9 +213,6 @@ def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percenta
                 num_pv_module_rows += 1
                 total_length = sum(LineString(seg).length for seg in existing_line_segments)
                 Agrun = total_length * Bg
-                print(f"Anzahl der Linien: {num_pv_module_rows}")
-                print(f"Flaeche der Gruenstreifen: {Agrun:.2f} Quadratmeter")
-                print(f"Prozentualer Anteil der Flaeche Agrun zur Gesamtflaeche Ag: {Agrun / area * 100:.2f}%")
                 if Agrun / area * 100 >= max_area_percentage:
                     print("\nMaximale Flaeche erreicht")
                     export_plot_to_osm_html(polygon, offset_polygon, existing_line_segments)
@@ -251,22 +220,14 @@ def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percenta
         distance_multiplier += 1
 
 # Plot auf OSM-Karte
-import folium
-from shapely.geometry import mapping
-import geopandas as gpd
-from pyproj import Transformer
-
 def transform_coords_to_latlon(coords):
-    # Hier EPSG:25832 (UTM Zone 32N) → WGS84 (EPSG:4326), ggf. anpassen
     transformer = Transformer.from_crs("EPSG:32632", "EPSG:4326", always_xy=True)
     return [transformer.transform(x, y) for x, y in coords]
 
 def export_plot_to_osm_html(polygon, offset_polygon, existing_line_segments, filename="agri_pv_plot.html"):
-    # Polygon-Koordinaten transformieren
     polygon_coords_latlon = transform_coords_to_latlon(list(polygon.exterior.coords))
     offset_coords_latlon = transform_coords_to_latlon(list(offset_polygon.exterior.coords)) if not offset_polygon.is_empty else []
 
-    # Mittelpunkt für Karten-Zoom
     center = np.mean(polygon_coords_latlon, axis=0)[::-1]
 
     m = folium.Map(location=center, zoom_start=17, control_scale=True)
@@ -328,11 +289,6 @@ max_area_percentage = get_float_input("Maximale PV-Fläche in Prozent", 50)
 coordinates = xy_coordinates
 plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 
-# Import der benötigten Bibliotheken
-from shapely.geometry import Polygon
-import geopandas as gpd
-from pyproj import CRS
-
 # coords: Liste aus (lon, lat), direkt aus Overpass-API
 polygon_wgs84 = Polygon(coords)
 
@@ -346,7 +302,6 @@ polygon_utm = gdf_utm.geometry[0]
 # Fläche berechnen
 area_m2 = polygon_utm.area
 area_ha = area_m2 / 10_000
-print(f"Fläche: {area_m2:.2f} m² ({area_ha:.4f} ha)")
 
 # Für weitere Berechnungen: polygon_utm verwenden
 coordinates = list(polygon_utm.exterior.coords)
@@ -354,16 +309,7 @@ coordinates = list(polygon_utm.exterior.coords)
 # Plot und Analyse
 plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 
-from pyproj import Transformer
-import folium
-import numpy as np
-import folium
-from shapely.geometry import mapping
-import geopandas as gpd
-from pyproj import Transformer
-import webbrowser
-
-# EPSG:32632 → EPSG:4326
+# EPSG:32632 zu EPSG:4326
 transformer = Transformer.from_crs("EPSG:32632", "EPSG:4326", always_xy=True)
 
 def transform_coords_to_latlon(coords):
