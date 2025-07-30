@@ -220,52 +220,52 @@ def plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percenta
         distance_multiplier += 1
 
 # Plot auf OSM-Karte
-def transform_coords_to_latlon(coords):
-    transformer = Transformer.from_crs("EPSG:32632", "EPSG:4326", always_xy=True)
-    return [transformer.transform(x, y) for x, y in coords]
+# def transform_coords_to_latlon(coords):
+#     transformer = Transformer.from_crs("EPSG:32632", "EPSG:4326", always_xy=True)
+#     return [transformer.transform(x, y) for x, y in coords]
 
-def export_plot_to_osm_html(polygon, offset_polygon, existing_line_segments, filename="agri_pv_plot.html"):
-    polygon_coords_latlon = transform_coords_to_latlon(list(polygon.exterior.coords))
-    offset_coords_latlon = transform_coords_to_latlon(list(offset_polygon.exterior.coords)) if not offset_polygon.is_empty else []
+# def export_plot_to_osm_html(polygon, offset_polygon, existing_line_segments, filename="agri_pv_plot.html"):
+#     polygon_coords_latlon = transform_coords_to_latlon(list(polygon.exterior.coords))
+#     offset_coords_latlon = transform_coords_to_latlon(list(offset_polygon.exterior.coords)) if not offset_polygon.is_empty else []
 
-    center = np.mean(polygon_coords_latlon, axis=0)[::-1]
+#     center = np.mean(polygon_coords_latlon, axis=0)[::-1]
 
-    m = folium.Map(location=center, zoom_start=17, control_scale=True)
+#     m = folium.Map(location=center, zoom_start=17, control_scale=True)
 
-    # Ursprüngliches Polygon (rot)
-    folium.Polygon(
-        locations=[(lat, lon) for lon, lat in polygon_coords_latlon],
-        color="black",
-        fill=True,
-        fill_color="red",
-        fill_opacity=0.5,
-        tooltip="Feldpolygon"
-    ).add_to(m)
+#     # Ursprüngliches Polygon (rot)
+#     folium.Polygon(
+#         locations=[(lat, lon) for lon, lat in polygon_coords_latlon],
+#         color="black",
+#         fill=True,
+#         fill_color="red",
+#         fill_opacity=0.5,
+#         tooltip="Feldpolygon"
+#     ).add_to(m)
 
-    # Offset-Polygon (gelb)
-    if offset_coords_latlon:
-        folium.Polygon(
-            locations=[(lat, lon) for lon, lat in offset_coords_latlon],
-            color="blue",
-            fill=True,
-            fill_color="yellow",
-            fill_opacity=0.5,
-            tooltip="Offset (Vorgewende + Grünstreifen)"
-        ).add_to(m)
+#     # Offset-Polygon (gelb)
+#     if offset_coords_latlon:
+#         folium.Polygon(
+#             locations=[(lat, lon) for lon, lat in offset_coords_latlon],
+#             color="blue",
+#             fill=True,
+#             fill_color="yellow",
+#             fill_opacity=0.5,
+#             tooltip="Offset (Vorgewende + Grünstreifen)"
+#         ).add_to(m)
 
-    # Liniensegmente (grün, dicke = Bg)
-    for seg in existing_line_segments:
-        seg_latlon = transform_coords_to_latlon(seg)
-        folium.PolyLine(
-            locations=[(lat, lon) for lon, lat in seg_latlon],
-            color="green",
-            weight=Bg,
-            tooltip="PV-Reihe"
-        ).add_to(m)
+#     # Liniensegmente (grün, dicke = Bg)
+#     for seg in existing_line_segments:
+#         seg_latlon = transform_coords_to_latlon(seg)
+#         folium.PolyLine(
+#             locations=[(lat, lon) for lon, lat in seg_latlon],
+#             color="green",
+#             weight=Bg,
+#             tooltip="PV-Reihe"
+#         ).add_to(m)
 
-    # Speichern als HTML
-    m.save(filename)
-    print(f"Karte gespeichert unter: {filename}")
+#     # Speichern als HTML
+#     m.save(filename)
+#     print(f"Karte gespeichert unter: {filename}")
 
 # Parameter für Berechnung festlegen 
 coordinates = xy_coordinates
@@ -309,51 +309,51 @@ coordinates = list(polygon_utm.exterior.coords)
 # Plot und Analyse
 plot_field_with_lines(coordinates, Lvor, Bg, An, Aarbeits, max_area_percentage)
 
-# EPSG:32632 zu EPSG:4326
-transformer = Transformer.from_crs("EPSG:32632", "EPSG:4326", always_xy=True)
+# # EPSG:32632 zu EPSG:4326
+# transformer = Transformer.from_crs("EPSG:32632", "EPSG:4326", always_xy=True)
 
-def transform_coords_to_latlon(coords):
-    return [transformer.transform(x, y) for x, y in coords]
+# def transform_coords_to_latlon(coords):
+#     return [transformer.transform(x, y) for x, y in coords]
 
-def export_plot_to_osm_html(polygon, offset_polygon, existing_line_segments, filename="agri_pv_plot.html"):
-    polygon_coords_latlon = transform_coords_to_latlon(list(polygon.exterior.coords))
-    offset_coords_latlon = transform_coords_to_latlon(list(offset_polygon.exterior.coords)) if not offset_polygon.is_empty else []
+# def export_plot_to_osm_html(polygon, offset_polygon, existing_line_segments, filename="agri_pv_plot.html"):
+#     polygon_coords_latlon = transform_coords_to_latlon(list(polygon.exterior.coords))
+#     offset_coords_latlon = transform_coords_to_latlon(list(offset_polygon.exterior.coords)) if not offset_polygon.is_empty else []
 
-    center = np.mean(polygon_coords_latlon, axis=0)[::-1]
-    m = folium.Map(location=center, zoom_start=17, control_scale=True)
+#     center = np.mean(polygon_coords_latlon, axis=0)[::-1]
+#     m = folium.Map(location=center, zoom_start=17, control_scale=True)
 
-    # Ursprüngliches Polygon
-    folium.Polygon(
-        locations=[(lat, lon) for lon, lat in polygon_coords_latlon],
-        color="black",
-        fill=True,
-        fill_color="red",
-        fill_opacity=0.5,
-        tooltip="Feldpolygon"
-    ).add_to(m)
+#     # Ursprüngliches Polygon
+#     folium.Polygon(
+#         locations=[(lat, lon) for lon, lat in polygon_coords_latlon],
+#         color="black",
+#         fill=True,
+#         fill_color="red",
+#         fill_opacity=0.5,
+#         tooltip="Feldpolygon"
+#     ).add_to(m)
 
-    # Offset-Polygon
-    if offset_coords_latlon:
-        folium.Polygon(
-            locations=[(lat, lon) for lon, lat in offset_coords_latlon],
-            color="blue",
-            fill=True,
-            fill_color="yellow",
-            fill_opacity=0.5,
-            tooltip="Offset (Vorgewende + Grünstreifen)"
-        ).add_to(m)
+#     # Offset-Polygon
+#     if offset_coords_latlon:
+#         folium.Polygon(
+#             locations=[(lat, lon) for lon, lat in offset_coords_latlon],
+#             color="blue",
+#             fill=True,
+#             fill_color="yellow",
+#             fill_opacity=0.5,
+#             tooltip="Offset (Vorgewende + Grünstreifen)"
+#         ).add_to(m)
 
-    # PV-Reihen
-    for seg in existing_line_segments:
-        seg_latlon = transform_coords_to_latlon(seg)
-        folium.PolyLine(
-            locations=[(lat, lon) for lon, lat in seg_latlon],
-            color="green",
-            weight=Bg,
-            tooltip="PV-Reihe"
-        ).add_to(m)
+#     # PV-Reihen
+#     for seg in existing_line_segments:
+#         seg_latlon = transform_coords_to_latlon(seg)
+#         folium.PolyLine(
+#             locations=[(lat, lon) for lon, lat in seg_latlon],
+#             color="green",
+#             weight=Bg,
+#             tooltip="PV-Reihe"
+#         ).add_to(m)
 
-    m.save(filename)
-    print(f"Karte gespeichert unter: {filename}")
+#     m.save(filename)
+#     print(f"Karte gespeichert unter: {filename}")
 
 webbrowser.open("agri_pv_plot.html")
