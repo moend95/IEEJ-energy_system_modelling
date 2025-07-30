@@ -37,7 +37,7 @@ run_azimut_berechnung(
 )
 
 # ---------------------- PV-Ertragssimulation starten ----------------------
-from solarautobahn.functions_PV_Auslegung import simulate_pv_yield
+from solarautobahn.functions_PV_Auslegung_test import simulate_pv_yield
 
 simulate_pv_yield(
     weather_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",

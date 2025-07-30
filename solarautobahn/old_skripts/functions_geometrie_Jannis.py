@@ -152,7 +152,7 @@ def plot_geometry_on_map(gdf, map_filename="karte.html"): # Funktion Plotting de
 
    # Karte speichern und öffnen
    m.save("autobahn_karte.html")
-   webbrowser.open("autobahn_karte.html")
+   webbrowser.open("../autobahn_karte.html")
 
 def calculate_azimuth(p1, p2):
     """

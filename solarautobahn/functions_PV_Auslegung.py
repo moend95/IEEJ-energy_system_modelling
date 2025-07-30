@@ -74,15 +74,16 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
     if save_results_to:
         df_points["annual_energy_kwh"] = energies + [None] * (len(df_points) - len(energies))
         df_points.to_csv(save_results_to, index=False)
-        print(f"📁 Ergebnisse gespeichert unter: {save_results_to}")
+        print(f" Ergebnisse gespeichert unter: {save_results_to}")
 
         # Visualisierung hinzufügen
-        gdf = gpd.GeoDataFrame(df_points, geometry=gpd.points_from_xy(df_points.longitude, df_points.latitude), crs="EPSG:4326")
-        fig, ax = plt.subplots(figsize=(10, 8))
-        gdf.plot(column="annual_energy_kwh", cmap="viridis", legend=True, ax=ax, markersize=10)
-        ax.set_title("PV-Jahresertrag pro Punkt (kWh)")
+        df_ertrag.plot(y="energy_kwh", x="datetime")
+        plt.title("PV-Ertrag über das Jahr")
+        plt.ylabel("Energieertrag [kWh]")
+        plt.xlabel("Datum")
         plt.grid(True)
         plt.show()
+
 
 # ------------------ Lokale Testausführung ------------------
 if __name__ == "__main__":

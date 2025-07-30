@@ -90,6 +90,11 @@ def fetch_weather_data(
         "wind_speed": "wind_speed"
     }, inplace=True)
 
+    # Temperatur fest von Kelvin in °C umrechnen (DWD liefert in K)
+    for col in ["temp_air"]:
+        if col in df.columns:
+            df[col] = df[col] - 273.15
+
     for col in ["ghi", "dhi"]:
         if col in df.columns:
             df[col] = df[col] / 600  # J/m² auf W/m² umrechnen
