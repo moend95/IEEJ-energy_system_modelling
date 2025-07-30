@@ -19,7 +19,7 @@ print("Wetterdaten erfolgreich geladen und gespeichert.")
 
 #----------------------- Geometriefunktion skript starten: -----------------------------------------
 
-from solarautobahn.functions_geometrie_test import run_autobahn_geometrie
+from solarautobahn.functions_geometrie import run_autobahn_geometrie
 
 # Geometrie erzeugen und speichern
 run_autobahn_geometrie(
