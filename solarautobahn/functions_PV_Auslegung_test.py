@@ -33,20 +33,16 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
     module_mapping = {
         "aufgesetzt": sandia_modules['Canadian_Solar_CS6X_300M__2013_'],
         "senkrecht": sandia_modules['Canadian_Solar_CS6X_300M__2013_'],
-        "bifazial": sandia_modules['LONGi_Green_Energy_Technology_Co___Ltd__LR6_72HBD_370M'],
-        "böschung": sandia_modules['Canadian_Solar_Inc__CS6X_300M__2013_']  # Beispiel: klassisches Glas-Glas-Modul
+        "bifazial": sandia_modules['Canadian_Solar_CS6X_300M__2013_'],
+        "böschung": sandia_modules['Canadian_Solar_CS6X_300M__2013_']
     }
 
     inverter_mapping = {
         # unterschiedliche Inverter je Typ, nochmal anpassen!:
-        # "aufgesetzt": klassische String-Inverter, mittlere Leistung
-        "aufgesetzt": cec_inverters['SMA_America__SB5000TL_US__240V_'],
-        # "senkrecht": ggf. Mikro- oder kleine String-Inverter bei hoher Segmentierung
+        "aufgesetzt": cec_inverters['ABB__PVI_3_0_OUTD_S_US__208V_'],
         "senkrecht": cec_inverters['ABB__MICRO_0_25_I_OUTD_US_208__208V_'],
-        # "bifazial": passende Inverter für beidseitig einspeisende Module wählen
-        "bifazial": cec_inverters['Fronius__Symo_10_0_3_M__208_240V_'],
-        # "böschung": größere String-Inverter für Freiflächenanlagen (hohe Gesamtleistung)
-        "böschung": cec_inverters['ABB__PVI_12_5_OUTD_S__480V_']
+        "bifazial": cec_inverters['ABB__PVI_3_0_OUTD_S_US__208V_'],
+        "böschung": cec_inverters['ABB__PVI_3_0_OUTD_S_US__208V_']
     }
 
     temp_models = {
@@ -64,13 +60,13 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
         "böschung": pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']['close_mount_glass_glass']
     }
 
-    # Technisch sinnvolle Anzahl Module pro String je nach PV-Typ
-    # (z.B. abhängig von Modulspannung, Umgebungstemperatur und Anlagenform)
+    # Technisch sinnvolle Anzahl Module pro String je nach PV-Typ wählen
+    # (abhängig von Modulspannung, Umgebungstemperatur und Anlagenform)
     modules_per_string_config = {
-        "aufgesetzt": 10,  # gut belüftet → meist höhere Strings möglich
-        "senkrecht": 8,  # abhängig vom Senkrechtendesign
-        "bifazial": 9,  # abhängig vom bifazialen Design
-        "böschung": 12  # flache Böschungen → oft mehr Module pro String möglich
+        "aufgesetzt": 4,  # abhängig vom Design
+        "senkrecht": 4,  # abhängig vom Senkrechtendesign
+        "bifazial": 4,  # abhängig vom bifazialen Design
+        "böschung": 5  # flache Böschungen → oft mehr Module pro String möglich?
     }
 
     strings_per_inverter_config = {
@@ -80,7 +76,8 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
         "böschung": 3
     }
 
-    # 4. Simulation starten
+    # ------------ 4. Simulation starten ----------------
+    # 4.1 Simulation für jedes PV-Punkt starten
     all_results = []
 
     for idx, row in tqdm(df_points.iterrows(), total=len(df_points), desc="Simuliere PV-Punkte"):
@@ -101,13 +98,13 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
             module_parameters=module_mapping[typ],
             inverter_parameters=inverter_mapping[typ],
             temperature_model_parameters=temp_models[typ],
-            modules_per_string=modules_per_string_config[typ],                               # Wie viele PV-Module werden in Reihe geschaltet (also wie viele in einem String)?
-            strings_per_inverter=strings_per_inverter_config[typ]                              # Wie viele solcher Strings (Reihenschaltungen) werden dann parallel an einen Wechselrichter angeschlossen?
+            modules_per_string=modules_per_string_config[typ],          # Wie viele PV-Module werden in Reihe geschaltet (also wie viele in einem String)?
+            strings_per_inverter=strings_per_inverter_config[typ]       # Wie viele solcher Strings (Reihenschaltungen) werden dann parallel an einen Wechselrichter angeschlossen?
         )
 
         mc = ModelChain(system, location)
         mc.run_model(weather_data)
-        results = mc.results.ac
+        results = mc.results.ac # Erzeugung in kWh
 
         result_df = pd.DataFrame({
             "datetime": results.index,
@@ -136,11 +133,11 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
         plt.legend()
         plt.show()
 
-
-# ------------------ Lokale Testausführung ------------------
-if __name__ == "__main__":
-    simulate_pv_yield(
-        weather_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
-        points_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\punkte_mit_azimut.csv",
-        save_results_to=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\pv_ertrag_ergebnisse.csv"
-    )
+#
+# # ------------------ Lokale Testausführung ------------------
+# if __name__ == "__main__":
+#     simulate_pv_yield(
+#         weather_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\wetterdaten_solarautobahn_2022.csv",
+#         points_csv_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\punkte_mit_azimut.csv",
+#         save_results_to=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\pv_ertrag_ergebnisse.csv"
+#     )
