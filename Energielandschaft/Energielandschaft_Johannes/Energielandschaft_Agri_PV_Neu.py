@@ -1,4 +1,7 @@
+# -- Energielandschaft Agri-PV --
 
+
+# -- Importe -- #
 from typing import List, Tuple, Optional
 import math
 import requests
@@ -366,11 +369,11 @@ def main():
     area_m2, area_ha = calculate_area(polygon_utm)
 
     # Parameter abfragen
-    Lvor = ask_float("Länge des Vorgewendes in Metern", 5.0)
-    Bg = ask_float("Breite der Grünstreifen in Metern (Bg)", 5.0)
+    Lvor = ask_float("Länge des Vorgewendes in Metern", 10.0)
+    Bg = ask_float("Breite der Grünstreifen in Metern (Bg)", 10.0)
     An = ask_float("Ausrichtungswinkel in Grad (An)", 0.0)
-    Aarbeits = ask_float("Arbeitsbreite der PV-Module in Metern (Aarbeits)", 50.0)
-    max_area_percentage = ask_float("Maximale PV-Fläche in Prozent", 50.0)
+    Aarbeits = ask_float("Arbeitsbreite der PV-Module in Metern (Aarbeits)", 10.0)
+    max_area_percentage = ask_float("Maximale PV-Fläche in Prozent", 70.0)
 
     # PV-Layout berechnen
     segments, covered_area = calculate_pv_layout(
