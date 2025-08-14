@@ -278,9 +278,9 @@ def export_plot_to_osm_html(
         locations=[(lat, lon) for lon, lat in poly_coords_latlon],
         color="black",
         fill=True,
-        fill_color="red",
+        fill_color="#bab8b9", #red now grey
         fill_opacity=0.35,
-        tooltip="Feldpolygon"
+        tooltip="Offset (Vorgewende)"
     ).add_to(m)
 
     # Offset polygon
@@ -288,11 +288,11 @@ def export_plot_to_osm_html(
         off_coords_latlon = to_latlon_coords(list(offset_polygon_utm.exterior.coords))
         folium.Polygon(
             locations=[(lat, lon) for lon, lat in off_coords_latlon],
-            color="blue",
+            color="#850296", #blue now dark purple
             fill=True,
-            fill_color="yellow",
-            fill_opacity=0.25,
-            tooltip="Offset (Vorgewende + Grünstreifen)"
+            fill_color="#429925", #yellow now dark green
+            fill_opacity=0.8,#0.25,
+            tooltip="Grünstreifen"
         ).add_to(m)
 
     # Liniensegmente
@@ -300,7 +300,7 @@ def export_plot_to_osm_html(
         seg_latlon = to_latlon_coords(list(seg))
         folium.PolyLine(
             locations=[(lat, lon) for lon, lat in seg_latlon],
-            color="green",
+            color="#0552ab", #green
             weight=max(1, int(line_weight_scale)),  # mind. 1
             tooltip="PV-Reihe"
         ).add_to(m)
