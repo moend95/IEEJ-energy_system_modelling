@@ -43,38 +43,41 @@ def fetch_weather_data(
         end_date=end_date
     )
 
+# Wenn station_id gegeben wird diese direkt als Abfrageobjekt weiter verwendet und unter request.filter_by_station_id() aufgerufen um dessen Wetterdaten zu bekommen.
     if station_id:
         stations_info = request.filter_by_station_id(station_id)
         valid_station_id = station_id
+# Wenn keine Station-ID übergeben wurde, werden jetzt 15 nächstgelegene Wetterstationen zu den gegebenen Koordinaten gesucht:
     else:
         stations_info = request.filter_by_rank(latlon=coords, rank=15)
-        df_top = stations_info.df.to_pandas().head(15)
-
+        df_top = stations_info.df.to_pandas().head(15) # Konvertiere die Ergebnisliste in ein pandas-DataFrame
         if not auto_select:
             print(df_top[["station_id", "name", "distance"]])
             valid_station_id = input("Bitte geben Sie eine station_id ein: ")
+# Wenn auto_select=True, dann soll selbst eine geeignete Station ausgewählt werden – basierend auf Datenqualität
         else:
+            # Definierte Liste von Wetterparametern, die verfügbar und qualitativ gut sein müssen:
             required_parameters = [
                 "radiation_global",
                 "radiation_sky_short_wave_diffuse",
                 "temperature_air_mean_200",
                 "wind_speed"
             ]
-            for sid in df_top["station_id"]:
-                try:
-                    station_data = request.filter_by_station_id(sid)
-                    df = station_data.values.all().df.to_pandas()
-                    if df.empty:
+            for sid in df_top["station_id"]: #  Starte eine Schleife über die 15 besten Stationen
+                try:                         # Versuche, für jede Station die Wetterdaten zu laden. (Falls ein Fehler auftritt, geh zur nächsten Station)
+                    station_data = request.filter_by_station_id(sid)        # Lade die Messdaten der aktuellen Station
+                    df = station_data.values.all().df.to_pandas()           # Alle Wetterwerte als DataFrame laden
+                    if df.empty:                                            # Wenn die Station gar keine Daten liefert, gehe zur nächsten (continue)
                         continue
-                    df["value"] = df["value"].replace(-999, np.nan)
-                    grouped = df.groupby("parameter")["value"].apply(lambda x: x.notna().mean())
-                    if all(p in grouped.index and grouped[p] >= min_quality for p in required_parameters):
+                    df["value"] = df["value"].replace(-999, np.nan)                                             #  Ersetze fehlerhafte Daten (hier: -999) durch NaN (fehlender Wert)
+                    grouped = df.groupby("parameter")["value"].apply(lambda x: x.notna().mean())                # Für jeden Wetterparameter: Berechne den Prozentsatz gültiger Werte (z.B. 95% der Datenpunkte für radiation_global sind gültig)
+                    if all(p in grouped.index and grouped[p] >= min_quality for p in required_parameters):      # Prüfung auf Qualität der Werte: Alle geforderten Werte sind für mindestens 95% der Datenpunkte gültig?
                         valid_station_id = sid
-                        break
-                except:
+                        break                                                                                   # Diese Station ist geeignet → Station-ID speichern und Schleife abbrechen
+                except:                                                                                         # falls nicht überspringen und nächste Station anschauen
                     continue
             else:
-                raise ValueError("Keine geeignete Wetterstation gefunden.")
+                raise ValueError("Keine geeignete Wetterstation gefunden.")     # Falls keine einzige Station geeignet ist → Fehlermeldung ausgeben.
 
         stations_info = request.filter_by_station_id(valid_station_id)
 
@@ -90,11 +93,12 @@ def fetch_weather_data(
         "wind_speed": "wind_speed"
     }, inplace=True)
 
-    # Temperatur fest von Kelvin in °C umrechnen (DWD liefert in K)
+    # Temperatur von Kelvin in °C umrechnen (DWD liefert in K) - PVlib erwartet °C später
     for col in ["temp_air"]:
         if col in df.columns:
             df[col] = df[col] - 273.15
 
+    # Strahlung in W/m² umrechnen (DWD liefert in J/m²), (600s = 10min), (cm^2 - m^2 = * 10.000) - wenn J/cm^2 wären = * 16.67 W/m^2
     for col in ["ghi", "dhi"]:
         if col in df.columns:
             df[col] = df[col] / 600  # J/m² auf W/m² umrechnen
@@ -110,13 +114,15 @@ def fetch_weather_data(
     solpos = get_solarposition(df.index, latitude=coords[0], longitude=coords[1])
     df["zenith"] = solpos["zenith"]
 
-    # DNI berechnen
-    cos_zenith = np.cos(np.radians(df["zenith"]))
-    cos_zenith = np.where(cos_zenith <= 0, np.nan, cos_zenith)  # keine negativen oder 0-Werte
+    # DNI ( DNI = Direct Normal Irradiance) berechnen: DNI = (GHI - DHI)/ cos(zenith) berechnung:
+    #Umrechnung und Bedingung für cos(zenith):
+    cos_zenith = np.cos(np.radians(df["zenith"]))               # df["zenith"] ist in Grad, np.radians(...) wandelt Grad in Bogenmaß um, weil np.cos() nur Bogenmaß versteht, cos_zenith enthält jetzt den Anteil der Sonnenstrahlung, der "gerade nach unten" trifft
+    cos_zenith = np.where(cos_zenith <= 0, np.nan, cos_zenith)  # keine negativen oder 0-Werte / Bei 90° (Sonne am Horizont): cos(90°) = 0
 
+    # DNI berechnen:
     df["dni"] = (df["ghi"] - df["dhi"]) / cos_zenith
 
-    # Begrenzung: DNI darf niemals größer sein als GHI
+    # Bedingung: np.where(condition, if_true, if_false) ist wie eine wenn-dann-sonst-Anweisung: DNI darf niemals größer sein als GHI
     df["dni"] = df["dni"].where(df["dni"] <= df["ghi"], np.nan)
 
     if save_path:
@@ -155,12 +161,13 @@ def fetch_weather_data(
 
     return df
 
+# Testdurchlauf:
 if __name__ == "__main__":
     df = fetch_weather_data(
         start="2022-01-01",
         end="2022-12-31",
         auto_select=False,
         save_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input\test_solarautobahn.csv",
-        plot_date="2022-06-21",
+        plot_date="2022-07-20",
         plot_range=("2022-01-01", "2022-12-31")
     )

@@ -94,7 +94,7 @@ df.rename(columns={
     "wind_speed": "wind_speed"
 }, inplace=True)
 
-# 8. Einheitenumrechnung: J/cm² → W/m² (bei 600s = 10min)
+# 8. Einheitenumrechnung: J/cm² → W/m² (bei 600s = 10min) / (cm^2 - m^2 = * 10.000) - wenn es J/cm^2 wären = * 16.67 W/m^2
 for col in ["ghi", "dhi"]:
     if col in df.columns:
         df[col] = df[col] / 600  # = 16.67

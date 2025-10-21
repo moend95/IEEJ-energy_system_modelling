@@ -38,7 +38,7 @@ def simulate_pv_yield(weather_csv_path, points_csv_path, save_results_to=None):
     }
 
     inverter_mapping = {
-        # unterschiedliche Inverter je Typ, nochmal anpassen!:
+        # unterschiedliche Inverter je Typ, nochmal anpassen:
         "aufgesetzt": cec_inverters['ABB__PVI_3_0_OUTD_S_US__208V_'],
         "senkrecht": cec_inverters['ABB__MICRO_0_25_I_OUTD_US_208__208V_'],
         "bifazial": cec_inverters['ABB__PVI_3_0_OUTD_S_US__208V_'],

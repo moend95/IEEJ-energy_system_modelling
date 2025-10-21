@@ -3,6 +3,146 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\BEV_charging_data_Turku.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\BEV_data_Turku_2019.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\BEV_energy_quantities.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\BEV_quantity.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\DE_1,5MWp.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\DE_1,5MWp_ALT.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\DE_3MW_Wind.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\DE_3MW_Wind_ALT.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\DE_5,6MW_Wind.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\Electrolyzer_input.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\Electrolyzer_link.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\FCET_data.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\FCEV_data.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\FCEV_quantity.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\PKW_fuel_sources.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\gasoline_consumption.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\km_LKW.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\n_LKW.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\rel_refuel_prob.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="C:\Users\sarah\AppData\Local\Temp\Rar$DRa34756.41431.rartemp\seasonal_refuel_prob.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value=";" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\Energielandschaft\AgriPV-Tool\pvlib_TMY_Demoflaeche.csv">
           <value>
             <Attribute>
@@ -11,6 +151,13 @@
           </value>
         </entry>
         <entry key="\Energielandschaft\IEEJ_Energielandschaft_Agri_PV.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Green_Energy_Hub\Moritz\Output\OutputElectrolyzer_output.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
