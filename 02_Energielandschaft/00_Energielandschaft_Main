@@ -21,6 +21,8 @@ class AgriPV:
     """
     Klasse zur Analyse und Visualisierung von Agri-PV-Flächen
     basierend auf OSM-Daten.
+    Hierbei erfolgt die Abfrage der Geometrie über die OpenStreetMap Way-ID
+    und die Berechnung des PV-Layouts innerhalb der Fläche.
     """
 
     def __init__(self, way_id: int = 168868469, utm_epsg: int = 32632):
@@ -243,7 +245,7 @@ class AgriPV:
             total_length = sum(LineString(s).length for s in self.segments)
             print(f"Gesamtlänge aller Reihen: {total_length:.2f} m")
 
-        do_export = input("HTML-Karte erzeugen? (J/n): ").strip().lower()
+        do_export = input("HTML-Karte erzeugen? (j/n): ").strip().lower()
         if do_export in ("", "j", "ja", "y", "yes"):
             offset_distance = Lvor + (Bg / 2.0)
             offset_poly = self.polygon_utm.buffer(-offset_distance)
