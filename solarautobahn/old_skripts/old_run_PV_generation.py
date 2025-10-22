@@ -2,7 +2,7 @@
 
 #----------------------- Wetterdatenfunktion starten ---------------------------------
 
-from solarautobahn.functions_weather_data import fetch_weather_data
+from Solarautobahn.functions_weather_data import fetch_weather_data
 
 df = fetch_weather_data(
     coords=(51.08579, 6.47554),                # Solarautobahn-Koordinaten
@@ -19,7 +19,7 @@ print("Wetterdaten erfolgreich geladen und gespeichert.")
 
 #----------------------- Geometriefunktion skript starten: -----------------------------------------
 
-from solarautobahn.functions_geometrie import run_autobahn_geometrie
+from Solarautobahn.functions_geometrie import run_autobahn_geometrie
 
 # Geometrie erzeugen und speichern
 run_autobahn_geometrie(
@@ -29,14 +29,14 @@ run_autobahn_geometrie(
 
 # ---------------------- Azimut-Funktion starten ----------------------
 
-from solarautobahn.functions_PV_Modul_und_Azimuth import run_azimut_berechnung
+from Solarautobahn.functions_PV_Modul_und_Azimuth import run_azimut_berechnung
 
 run_azimut_berechnung(
     base_path=r"/Input"
 )
 
 # ---------------------- PV-Ertragssimulation starten ----------------------
-from solarautobahn.functions_pv_simulation import simulate_pv_yield
+from Solarautobahn.functions_pv_simulation import simulate_pv_yield
 
 simulate_pv_yield(
     weather_csv_path=r"/Input/wetterdaten_solarautobahn_2022.csv",
