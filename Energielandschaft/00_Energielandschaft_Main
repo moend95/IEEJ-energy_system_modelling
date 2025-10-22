@@ -1,0 +1,225 @@
+# Energielandschaft
+
+from typing import List, Tuple, Optional
+import math
+import requests
+import numpy as np
+import geopandas as gpd
+import folium
+from shapely.geometry import Polygon, LineString, Point
+from pyproj import CRS, Transformer
+
+
+LonLat = Tuple[float, float]
+XY = Tuple[float, float]
+
+
+# ------------------------------
+# 1. Klasse: OSMHandler
+# ------------------------------
+class OSMHandler:
+    def __init__(self, overpass_url: str = "https://overpass-api.de/api/interpreter"):
+        self.overpass_url = overpass_url
+
+    def get_polygon(self, way_id: int) -> Polygon:
+        query = f"""
+        [out:json];
+        way({way_id});
+        (._;>;);
+        out body;
+        """
+        resp = requests.get(self.overpass_url, params={"data": query.strip()})
+        resp.raise_for_status()
+        data = resp.json()
+
+        nodes = {e["id"]: (e["lon"], e["lat"]) for e in data["elements"] if e["type"] == "node"}
+        way_elems = [e for e in data["elements"] if e["type"] == "way"]
+        if not way_elems:
+            raise ValueError(f"Way {way_id} nicht gefunden.")
+        coords = [nodes[nid] for nid in way_elems[0]["nodes"]]
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])
+        return Polygon(coords)
+
+
+# ------------------------------
+# 2. Klasse: GeoProcessor
+# ------------------------------
+class GeoProcessor:
+    def __init__(self, utm_epsg: int = 32632):
+        self.utm_epsg = utm_epsg
+        self.transformer = None
+
+    def project_to_utm(self, polygon_wgs84: Polygon) -> Polygon:
+        gdf = gpd.GeoDataFrame(index=[0], crs="EPSG:4326", geometry=[polygon_wgs84])
+        target_crs = CRS.from_epsg(self.utm_epsg)
+        gdf_utm = gdf.to_crs(target_crs)
+        self.transformer = Transformer.from_crs(target_crs, "EPSG:4326", always_xy=True)
+        return gdf_utm.geometry[0]
+
+    def calculate_area(self, polygon_utm: Polygon) -> Tuple[float, float]:
+        area_m2 = float(polygon_utm.area)
+        area_ha = area_m2 / 10_000.0
+        return area_m2, area_ha
+
+
+# ------------------------------
+# 3. Klasse: PVLayout
+# ------------------------------
+class PVLayout:
+    def __init__(self, Lvor: float, Bg: float, An_deg: float, Aarbeits: float, max_area_percentage: float):
+        self.Lvor = Lvor
+        self.Bg = Bg
+        self.An_deg = An_deg
+        self.Aarbeits = Aarbeits
+        self.max_area_percentage = max_area_percentage
+
+    def _line_through_point_angle(self, point: Point, angle_rad: float, length: float = 1e6) -> LineString:
+        dx = math.sin(angle_rad)
+        dy = math.cos(angle_rad)
+        return LineString([
+            (point.x - length * dy, point.y + length * dx),
+            (point.x + length * dy, point.y - length * dx),
+        ])
+
+    def calculate(self, polygon: Polygon) -> Tuple[List[Tuple[XY, XY]], float]:
+        if polygon.is_empty:
+            return [], 0.0
+
+        offset_distance = self.Lvor + (self.Bg / 2.0)
+        inner = polygon.buffer(-offset_distance)
+        if inner.is_empty:
+            return [], 0.0
+
+        angle_rad = math.radians(self.An_deg)
+        centroid = inner.centroid
+        max_area = (self.max_area_percentage / 100.0) * polygon.area
+        segments, total_length = [], 0.0
+
+        def try_add_line(distance: float) -> bool:
+            nonlocal segments, total_length
+            dx = math.sin(angle_rad)
+            dy = math.cos(angle_rad)
+            shift_x = centroid.x + distance * dx
+            shift_y = centroid.y + distance * dy
+            line = self._line_through_point_angle(Point(shift_x, shift_y), angle_rad)
+            inter = inner.intersection(line)
+            segs = []
+
+            if inter.is_empty:
+                return False
+            if isinstance(inter, LineString):
+                segs = [inter]
+            elif hasattr(inter, "geoms"):
+                segs = [g for g in inter.geoms if isinstance(g, LineString)]
+
+            for s in segs:
+                seg_len = s.length
+                if (total_length + seg_len) * self.Bg > max_area:
+                    remaining_len = (max_area / self.Bg) - total_length
+                    if remaining_len <= 0:
+                        return False
+                    midpoint = s.interpolate(0.5, normalized=True)
+                    half = remaining_len / 2.0
+                    part = LineString([
+                        s.interpolate(max(0, s.project(midpoint) - half)),
+                        s.interpolate(min(s.length, s.project(midpoint) + half))
+                    ])
+                    segments.append(tuple(part.coords[:2]))
+                    total_length += part.length
+                    return False
+                segments.append(tuple(s.coords[:2]))
+                total_length += seg_len
+            return True
+
+        _ = try_add_line(0.0)
+        step = self.Aarbeits + self.Bg
+        multiplier = 1
+        max_span = max(polygon.bounds[2] - polygon.bounds[0], polygon.bounds[3] - polygon.bounds[1]) * 1.5
+
+        while multiplier * step < max_span:
+            for sign in (1, -1):
+                try_add_line(sign * multiplier * step)
+            multiplier += 1
+            if total_length * self.Bg >= max_area:
+                break
+
+        return segments, total_length * self.Bg
+
+
+# ------------------------------
+# 4. Klasse: MapExporter
+# ------------------------------
+class MapExporter:
+    def __init__(self, transformer: Transformer):
+        self.transformer = transformer
+
+    def export(self, polygon_utm: Polygon, offset_polygon_utm: Optional[Polygon],
+               segments: List[Tuple[XY, XY]], filename: str = "agri_pv_plot.html",
+               show_in_browser: bool = False, line_weight_scale: float = 1.0):
+        
+        def to_latlon(coords: List[XY]) -> List[Tuple[float, float]]:
+            return [self.transformer.transform(x, y) for x, y in coords]
+
+        poly_coords_latlon = to_latlon(list(polygon_utm.exterior.coords))
+        center = np.mean(poly_coords_latlon, axis=0)[::-1].tolist()
+        m = folium.Map(location=center, zoom_start=17, control_scale=True)
+
+        folium.Polygon(
+            locations=[(lat, lon) for lon, lat in poly_coords_latlon],
+            color="black", fill=True, fill_color="#bab8b9", fill_opacity=0.35
+        ).add_to(m)
+
+        if offset_polygon_utm and not offset_polygon_utm.is_empty:
+            off_coords = to_latlon(list(offset_polygon_utm.exterior.coords))
+            folium.Polygon(
+                locations=[(lat, lon) for lon, lat in off_coords],
+                color="#850296", fill=True, fill_color="#429925", fill_opacity=0.8
+            ).add_to(m)
+
+        for seg in segments:
+            seg_latlon = to_latlon(list(seg))
+            folium.PolyLine(
+                locations=[(lat, lon) for lon, lat in seg_latlon],
+                color="#0552ab", weight=max(1, int(line_weight_scale))
+            ).add_to(m)
+
+        m.save(filename)
+        print(f"Karte gespeichert unter: {filename}")
+
+        if show_in_browser:
+            import webbrowser
+            webbrowser.open(filename)
+
+
+# ------------------------------
+# 5. Klasse: AgriPVSimulation
+# ------------------------------
+class AgriPVSimulation:
+    def __init__(self, way_id: int):
+        self.way_id = way_id
+        self.osm = OSMHandler()
+        self.geo = GeoProcessor()
+
+    def run(self):
+        polygon_wgs84 = self.osm.get_polygon(self.way_id)
+        polygon_utm = self.geo.project_to_utm(polygon_wgs84)
+        area_m2, area_ha = self.geo.calculate_area(polygon_utm)
+
+        print(f"Feldfläche: {area_m2:.2f} m² ({area_ha:.4f} ha)")
+
+        Lvor, Bg, An, Aarbeits, max_pct = 10.0, 10.0, 0.0, 10.0, 70.0
+        pv = PVLayout(Lvor, Bg, An, Aarbeits, max_pct)
+        segments, covered_area = pv.calculate(polygon_utm)
+
+        print(f"PV-Fläche: {covered_area:.2f} m² ({covered_area / area_m2 * 100:.2f} %)")
+
+        offset_distance = Lvor + (Bg / 2.0)
+        offset_poly = polygon_utm.buffer(-offset_distance)
+        exporter = MapExporter(self.geo.transformer)
+        exporter.export(polygon_utm, offset_poly, segments, show_in_browser=True)
+
+
+if __name__ == "__main__":
+    sim = AgriPVSimulation(way_id=168868469)
+    sim.run()
