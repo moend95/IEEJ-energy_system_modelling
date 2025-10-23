@@ -198,9 +198,10 @@ class AgriPV:
         folium.Polygon(
             locations=[(lat, lon) for lon, lat in poly_coords_latlon],
             color="black",
+            opacity=0.3,
             fill=True,
             fill_color="#bab8b9",
-            fill_opacity=0.35,
+            fill_opacity=0.2,
             tooltip="Feldfläche"
         ).add_to(m)
 
@@ -209,9 +210,10 @@ class AgriPV:
             folium.Polygon(
                 locations=[(lat, lon) for lon, lat in off_coords_latlon],
                 color="#850296",
+                opacity=0.3,
                 fill=True,
                 fill_color="#429925",
-                fill_opacity=0.8,
+                fill_opacity=0.2,
                 tooltip="Innenfläche (Vorgewende entfernt)"
             ).add_to(m)
 
@@ -220,6 +222,7 @@ class AgriPV:
             folium.PolyLine(
                 locations=[(lat, lon) for lon, lat in seg_latlon],
                 color="#0552ab",
+                opacity=0.3,
                 weight=max(1, int(line_weight_scale)),
                 tooltip="PV-Reihe"
             ).add_to(m)
