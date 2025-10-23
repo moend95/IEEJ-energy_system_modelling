@@ -108,6 +108,7 @@ def plot_geometry_on_map(gdf, map_filename="karte.html"):
 
 # ------------------------ Speicherfunktion ------------------------ #
 def save_geometry(gdf, base_path):
+    gdf = gdf[gdf["ref"].notna()]  # nur Zeilen mit gültigem 'ref'
     autobahn = gdf["ref"].iloc[0].replace(" ", "").lower()
     richtung = gdf["richtung"].iloc[0].lower()
     filename = f"{autobahn}_{richtung}.geojson"
@@ -148,7 +149,8 @@ def run_autobahn_geometrie(base_path):
         "richtung": richtung
     } for coords in info["abschnitte"]]
 
-    gdf = HighwayExtractor.highway_gdf_in_bb(bbox_liste)
+    extractor = HighwayExtractor()
+    gdf = extractor.highway_gdf_in_bb(bbox_liste)
     if not gdf.empty:
         gdf = gdf.to_crs(epsg=4326)
         plot_geometry_on_map(gdf)
@@ -160,5 +162,5 @@ def run_autobahn_geometrie(base_path):
  # um funktions-skript hier zu testen
 if __name__ == "__main__":
      run_autobahn_geometrie(
-         base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
+         base_path="./Input"
      )
