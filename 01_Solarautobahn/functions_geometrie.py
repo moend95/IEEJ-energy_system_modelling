@@ -92,31 +92,39 @@ class HighwayExtractor:
 
         return gpd.GeoDataFrame(highway_edges_cut, crs=self.edges.crs) if highway_edges_cut else gpd.GeoDataFrame(columns=["geometry", "richtung", "ref"])
 
+#--------------------Geometrie plotten und speichern ------------- #
+class GeometryHandler:
+    def __init__(self, gdf, base_path):
+        """
+        gdf: GeoDataFrame mit den Geometrien
+        base_path: Basisordner für das Speichern der GeoJSON-Dateien
+        """
+        self.gdf = gdf
+        self.base_path = base_path
+    # ------------------------ Karte anzeigen ------------------------ #
+    def plot_geometry_on_map(self, map_filename="karte.html"):
+        gdf_4326 = self.gdf.to_crs(epsg=4326)
+        if gdf_4326.empty:
+            print("Das GeoDataFrame ist leer. Keine Geometrien zum Anzeigen.")
+            return
+        bounds = gdf_4326.total_bounds
+        center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
+        m = folium.Map(location=center, zoom_start=12, tiles='OpenStreetMap')
+        folium.GeoJson(gdf_4326).add_to(m)
+        m.save(map_filename)
+        webbrowser.open(map_filename)
 
-# ------------------------ Karte anzeigen ------------------------ #
-def plot_geometry_on_map(gdf, map_filename="karte.html"):
-    gdf_4326 = gdf.to_crs(epsg=4326)
-    if gdf_4326.empty:
-        print("Das GeoDataFrame ist leer. Keine Geometrien zum Anzeigen.")
-        return
-    bounds = gdf.total_bounds
-    center = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
-    m = folium.Map(location=center, zoom_start=12, tiles='OpenStreetMap')
-    folium.GeoJson(gdf_4326).add_to(m)
-    m.save(map_filename)
-    webbrowser.open(map_filename)
-
-# ------------------------ Speicherfunktion ------------------------ #
-def save_geometry(gdf, base_path):
-    gdf = gdf[gdf["ref"].notna()]  # nur Zeilen mit gültigem 'ref'
-    autobahn = gdf["ref"].iloc[0].replace(" ", "").lower()
-    richtung = gdf["richtung"].iloc[0].lower()
-    filename = f"{autobahn}_{richtung}.geojson"
-    output_path = os.path.join(base_path, "geometrien", filename)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    gdf.to_file(output_path, driver="GeoJSON")
-    print(f"GeoDataFrame gespeichert unter: {output_path}")
-    return output_path
+    # ------------------------ Speicherfunktion ------------------------ #
+    def save_geometry(self):
+        gdf = self.gdf[self.gdf["ref"].notna()]  # nur Zeilen mit gültigem 'ref'
+        autobahn = gdf["ref"].iloc[0].replace(" ", "").lower()
+        richtung = gdf["richtung"].iloc[0].lower()
+        filename = f"{autobahn}_{richtung}.geojson"
+        output_path = os.path.join(self.base_path, "geometrien", filename)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        gdf.to_file(output_path, driver="GeoJSON")
+        print(f"GeoDataFrame gespeichert unter: {output_path}")
+        return output_path
 
 # ------------------------ Vordefinierte Abschnitte ------------------------ #
 vordefinierte_abschnitte = {
@@ -153,8 +161,9 @@ def run_autobahn_geometrie(base_path):
     gdf = extractor.highway_gdf_in_bb(bbox_liste)
     if not gdf.empty:
         gdf = gdf.to_crs(epsg=4326)
-        plot_geometry_on_map(gdf)
-        save_geometry(gdf, base_path=base_path)
+        handler = GeometryHandler(gdf, base_path)
+        handler.plot_geometry_on_map()
+        handler.save_geometry()
     else:
         print("Keine Daten gefunden.")
 
