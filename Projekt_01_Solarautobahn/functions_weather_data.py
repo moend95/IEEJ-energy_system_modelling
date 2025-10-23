@@ -54,9 +54,9 @@ class DWDWeatherFetcher:
         "radiation_sky_short_wave_diffuse": "dhi",
         "temperature_air_mean_200": "temp_air",
         "wind_speed": "wind_speed",
-        "temperature_dew_point_mean_200": "temp_dew",  # K
-        "pressure_air_site": "pressure_pa",  # Pa
-        "humidity": "rel_hum",  # %
+        "temperature_dew_point_mean_200": "temp_dew",  # K Taupunkt
+        "pressure_air_site": "pressure_pa",  # Pa Luftdruck
+        "humidity": "rel_hum",  # % relative feuchte
     }
 
     def __init__(self, cfg: DWDWeatherConfig):
@@ -294,21 +294,21 @@ def plot_single_series(df: pd.DataFrame, col: str, title: str = None):
 
 
 
-# --------- Beispiel-Aufruf ----------
-
-if __name__ == "__main__":
-    cfg = DWDWeatherConfig(
-        start="2022-01-01",
-        end="2022-12-31",
-        auto_select=True,
-        save_path="./Input/test_solarautobahn.csv",
-        plot_date="2022-07-20",
-        plot_range=("2022-01-01", "2022-12-31"),
-
-    )
-    df = DWDWeatherFetcher(cfg).run()
-
-# Aufrufbeispiele:
-plot_single_series(df, "dni",  "Direktstrahlung (DNI)")
-plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
-plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")
+# # --------- Beispiel-Aufruf ----------
+#
+# if __name__ == "__main__":
+#     cfg = DWDWeatherConfig(
+#         start="2022-01-01",
+#         end="2022-12-31",
+#         auto_select=True,
+#         save_path="./Input/test_solarautobahn.csv",
+#         plot_date="2022-07-20",
+#         plot_range=("2022-01-01", "2022-12-31"),
+#
+#     )
+#     df = DWDWeatherFetcher(cfg).run()
+#
+# # Aufrufbeispiele:
+# plot_single_series(df, "dni",  "Direktstrahlung (DNI)")
+# plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
+# plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")

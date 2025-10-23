@@ -2,21 +2,27 @@
 
 #----------------------- Wetterdatenfunktion starten ---------------------------------
 
-from Solarautobahn.functions_weather_data import fetch_weather_data
+# ----------------------- Wetterdatenfunktion starten ---------------------------------
+from Projekt_01_Solarautobahn.functions_weather_data import DWDWeatherFetcher, DWDWeatherConfig
 
-df = fetch_weather_data(
+cfg = DWDWeatherConfig(
     coords=(51.08579, 6.47554),                # Solarautobahn-Koordinaten
     start="2022-01-01",
     end="2022-12-31",
-    station_id=None,                           # station_id=None, auto_select=False = eigene Stationswahl;  station_id=None, auto_select=True = Automatische Stationswahl; oder direkt station Id angeben
-    auto_select=False,
+    station_id=None,                           # None = Autoauswahl oder manuell
+    auto_select=True,                          # automatisch beste Station wählen
     min_quality=0.95,
-    save_path = "./Input/wetterdaten_solarautobahn_2022.csv",
-    plot_date=None,                    # Optionaler Plot für einen bestimmten Tag
-    plot_range=("2022-01-01", "2022-12-31")                            # (start, end) z.B. ("2022-01-01", "2022-12-31")
+    save_path="./Input/wetterdaten_solarautobahn_2022.csv",
+    plot_date=None,
+    plot_range=("2022-01-01", "2022-12-31")
 )
 
+# Wetterdaten abrufen
+fetcher = DWDWeatherFetcher(cfg)
+df = fetcher.run()
+
 print("Wetterdaten erfolgreich geladen und gespeichert.")
+
 
 #----------------------- Geometriefunktion skript starten: -----------------------------------------
 
