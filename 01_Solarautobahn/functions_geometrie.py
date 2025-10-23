@@ -44,39 +44,54 @@ class DirectionUtilis:
         return mapping.get(richtung, None)
 
 # ------------------------ GeoDataFrame-Erzeugung ------------------------ #
-def highway_gdf_in_bb(list_indiv_bb):
-    highways = ox.graph_from_place("Nordrhein-Westfalen, Germany", network_type='drive', custom_filter='["highway"~"motorway"]')
-    highway_edges = ox.graph_to_gdfs(highways, nodes=False, edges=True)
-    highway_edges = highway_edges[(highway_edges['ref'] == 'A 46') | (highway_edges['ref'] == 'A 44')]
+class HighwayExtractor:
 
-    highway_edges_cut = []
+    def __init__(self, region="Nordrhein-Westfalen, Germany", highway_refs=None):
+        """
+        :param region: Gebiet, aus dem die Autobahnen geladen werden
+        :param highway_refs: Liste von Autobahnen (z.B. ['A 46', 'A 44']), None = alle
+        """
+        self.region = region
+        self.highway_refs = highway_refs
 
-    for bbox in list_indiv_bb:
-        relevant_edges = []
-        for _, edge in highway_edges.iterrows():
-            if edge.geometry.intersects(bbox["geometry"]):
-                cut_geom = edge.geometry.intersection(bbox["geometry"])
-                if not cut_geom.is_empty and isinstance(cut_geom, LineString):
-                    relevant_edges.append((edge, cut_geom))
+        # Graph laden
+        self.graph = ox.graph_from_place(region, network_type='drive', custom_filter='["highway"~"motorway"]')
+        # Kanten als GeoDataFrame
+        self.edges = ox.graph_to_gdfs(self.graph, nodes=False, edges=True)
 
-        richtung = bbox["richtung"]
-        passt_edges = []
+        if highway_refs:
+            self.edges = self.edges[self.edges['ref'].isin(highway_refs)]
 
-        for edge, cut_geom in relevant_edges:
-            oneway = edge.get('oneway', False)
-            oneway = -1 if str(oneway) == '-1' else (1 if oneway is True else 0)
-            oriented_geom = apply_oneway_orientation(cut_geom, oneway)
-            angle = calculate_bearing(oriented_geom)
-            if richtung == "beide" or (richtung_to_angle(richtung) is not None and is_within_direction(angle, richtung_to_angle(richtung), tolerance=45)):
-                passt_edges.append({
-                    "geometry": oriented_geom,
-                    "richtung": richtung,
-                    "ref": edge.get("ref", "")
-                })
+    def highway_gdf_in_bb(self, list_indiv_bb):
+        highway_edges_cut = []
 
-        highway_edges_cut.extend(passt_edges)
+        for bbox in list_indiv_bb:
+            relevant_edges = []
+            for _, edge in self.edges.iterrows():
+                if edge.geometry.intersects(bbox["geometry"]):
+                    cut_geom = edge.geometry.intersection(bbox["geometry"])
+                    if not cut_geom.is_empty and isinstance(cut_geom, LineString):
+                        relevant_edges.append((edge, cut_geom))
 
-    return gpd.GeoDataFrame(highway_edges_cut, crs=highway_edges.crs) if highway_edges_cut else gpd.GeoDataFrame(columns=["geometry", "richtung", "ref"])
+            richtung = bbox["richtung"]
+            passt_edges = []
+
+            for edge, cut_geom in relevant_edges:
+                oneway = edge.get('oneway', False)
+                oneway = -1 if str(oneway) == '-1' else (1 if oneway is True else 0)
+                oriented_geom = DirectionUtilis.apply_oneway_orientation(cut_geom, oneway)
+                angle = DirectionUtilis.calculate_bearing(oriented_geom)
+                if richtung == "beide" or (DirectionUtilis.richtung_to_angle(richtung) is not None and DirectionUtilis.is_within_direction(angle, DirectionUtilis.richtung_to_angle(richtung), tolerance=45)):
+                    passt_edges.append({
+                        "geometry": oriented_geom,
+                        "richtung": richtung,
+                        "ref": edge.get("ref", "")
+                    })
+
+            highway_edges_cut.extend(passt_edges)
+
+        return gpd.GeoDataFrame(highway_edges_cut, crs=self.edges.crs) if highway_edges_cut else gpd.GeoDataFrame(columns=["geometry", "richtung", "ref"])
+
 
 # ------------------------ Karte anzeigen ------------------------ #
 def plot_geometry_on_map(gdf, map_filename="karte.html"):
@@ -93,6 +108,7 @@ def plot_geometry_on_map(gdf, map_filename="karte.html"):
 
 # ------------------------ Speicherfunktion ------------------------ #
 def save_geometry(gdf, base_path):
+    gdf = gdf[gdf["ref"].notna()]  # nur Zeilen mit gültigem 'ref'
     autobahn = gdf["ref"].iloc[0].replace(" ", "").lower()
     richtung = gdf["richtung"].iloc[0].lower()
     filename = f"{autobahn}_{richtung}.geojson"
@@ -133,7 +149,8 @@ def run_autobahn_geometrie(base_path):
         "richtung": richtung
     } for coords in info["abschnitte"]]
 
-    gdf = highway_gdf_in_bb(bbox_liste)
+    extractor = HighwayExtractor()
+    gdf = extractor.highway_gdf_in_bb(bbox_liste)
     if not gdf.empty:
         gdf = gdf.to_crs(epsg=4326)
         plot_geometry_on_map(gdf)
@@ -145,5 +162,5 @@ def run_autobahn_geometrie(base_path):
  # um funktions-skript hier zu testen
 if __name__ == "__main__":
      run_autobahn_geometrie(
-         base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
+         base_path="./Input"
      )
