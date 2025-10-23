@@ -16,26 +16,32 @@ import math
 import folium
 import webbrowser
 
-# ------------------------ Hilfsfunktionen ------------------------ #
-def apply_oneway_orientation(geom, oneway):
-    coords = list(geom.coords)
-    if oneway == -1:
-        coords = coords[::-1]
-    return LineString(coords)
+# ------------------------ Hilfsfunktionen: Autobahn Orientierung ------------------------ #
+class DirectionUtilis:
 
-def calculate_bearing(geom):
-    x1, y1 = geom.coords[0]
-    x2, y2 = geom.coords[-1]
-    angle = math.degrees(math.atan2(x2 - x1, y2 - y1))
-    return (angle + 360) % 360
+    @staticmethod
+    def apply_oneway_orientation(geom, oneway):
+        coords = list(geom.coords)
+        if oneway == -1:
+            coords = coords[::-1]
+        return LineString(coords)
 
-def is_within_direction(angle, target, tolerance=30):
-    delta = abs((angle - target + 180) % 360 - 180)
-    return delta <= tolerance
+    @staticmethod
+    def calculate_bearing(geom):
+        x1, y1 = geom.coords[0]
+        x2, y2 = geom.coords[-1]
+        angle = math.degrees(math.atan2(x2 - x1, y2 - y1))
+        return (angle + 360) % 360
 
-def richtung_to_angle(richtung):
-    mapping = {"nord": 0, "ost": 90, "süd": 180, "west": 270}
-    return mapping.get(richtung, None)
+    @staticmethod
+    def is_within_direction(angle, target, tolerance=30):
+        delta = abs((angle - target + 180) % 360 - 180)
+        return delta <= tolerance
+
+    @staticmethod
+    def richtung_to_angle(richtung):
+        mapping = {"nord": 0, "ost": 90, "süd": 180, "west": 270}
+        return mapping.get(richtung, None)
 
 # ------------------------ GeoDataFrame-Erzeugung ------------------------ #
 def highway_gdf_in_bb(list_indiv_bb):
@@ -136,7 +142,7 @@ def run_autobahn_geometrie(base_path):
         print("Keine Daten gefunden.")
 
 
- # um funktions-skript hier zu testen: muss man rausnehmen wenn run skript steht
+ # um funktions-skript hier zu testen
 if __name__ == "__main__":
      run_autobahn_geometrie(
          base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
