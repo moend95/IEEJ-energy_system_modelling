@@ -232,7 +232,7 @@ class AgriPV:
         self.project_to_utm()
         self.calculate_area()
 
-        Lvor = float(input("Länge des Vorgewendes in Metern (Standard 10.0): ") or 10.0)
+        Lvor = float(input("Breite des Vorgewendes (Randbereich des Feldes, auf dem Traktor wendet) in Metern (Standard 10.0): ") or 10.0)
         Bg = float(input("Breite der Grünstreifen in Metern (Standard 10.0): ") or 10.0)
         An = float(input("Ausrichtungswinkel in Grad (Standard 0.0): ") or 0.0)
         Aarbeits = float(input("Arbeitsbreite der PV-Module in Metern (Standard 10.0): ") or 10.0)
