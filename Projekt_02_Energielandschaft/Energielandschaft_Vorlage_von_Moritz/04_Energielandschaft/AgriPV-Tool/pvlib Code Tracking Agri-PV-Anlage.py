@@ -26,7 +26,7 @@ times = pd.date_range(start="2021-01-01",
                       tz=location.tz)
 
 # Wetterdaten laden
-tmy = pd.read_csv("C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\02_Energielandschaft\\00_Energielandschaft_Vorlage_Sciebo_Cloud_von_Moritz\\04_Energielandschaft\\AgriPV-Tool\\pvlib_TMY_Demoflaeche.csv", index_col=0)
+tmy = pd.read_csv("C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\Projekt_02_Energielandschaft\\Energielandschaft_Vorlage_von_Moritz\\04_Energielandschaft\\AgriPV-Tool\\pvlib_TMY_Demoflaeche.csv", index_col=0)
 tmy.index = pd.to_datetime(tmy.index)
 
 # Custom PV module definieren
