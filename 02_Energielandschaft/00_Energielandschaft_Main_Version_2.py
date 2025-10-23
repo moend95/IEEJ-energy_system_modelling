@@ -1,7 +1,4 @@
-# Energielandschaft MAIN
-
-
-# -- Energielandschaft Agri-PV (klassenbasierte Version) --
+# -- Energielandschaft Agri-PV (erweiterte Version mit OSM, uMap & manuell) --
 
 from typing import List, Tuple, Optional
 import math
@@ -19,10 +16,8 @@ XY = Tuple[float, float]
 
 class AgriPV:
     """
-    Klasse zur Analyse und Visualisierung von Agri-PV-Flächen
-    basierend auf OSM-Daten.
-    Hierbei erfolgt die Abfrage der Geometrie über die OpenStreetMap Way-ID
-    und die Berechnung des PV-Layouts innerhalb der Fläche.
+    Klasse zur Analyse und Visualisierung von Agri-PV-Flächen.
+    Unterstützt OSM-Way-ID, uMap-Polygon (GeoJSON) und manuelle Koordinaten.
     """
 
     def __init__(self, way_id: int = 168868469, utm_epsg: int = 32632):
@@ -36,8 +31,14 @@ class AgriPV:
         self.segments: List[Tuple[XY, XY]] = []
         self.covered_area: float = 0.0
 
-    # -- OSM / Geometrie-Funktionen --
+    # -------------------------
+    # Geometrie-Quellen
+    # -------------------------
+
     def get_osm_polygon(self, overpass_url: str = "https://overpass-api.de/api/interpreter") -> Polygon:
+        """
+        Lädt eine Fläche aus OpenStreetMap über die Way-ID.
+        """
         query = f"""
         [out:json];
         way({self.way_id});
@@ -60,6 +61,29 @@ class AgriPV:
         self.polygon_wgs84 = Polygon(coords)
         return self.polygon_wgs84
 
+    def load_umap_polygon(self, source: str) -> Polygon:
+        """
+        Lädt ein Polygon aus einer GeoJSON-Datei oder einer URL (z. B. uMap).
+        """
+        gdf = gpd.read_file(source)
+        if gdf.empty:
+            raise ValueError("Keine Geometrie in der angegebenen uMap-Quelle gefunden.")
+        self.polygon_wgs84 = gdf.to_crs("EPSG:4326").geometry.iloc[0]
+        return self.polygon_wgs84
+
+    def set_custom_polygon(self, coords_wgs84: List[Tuple[float, float]]) -> Polygon:
+        """
+        Setzt ein benutzerdefiniertes Polygon anhand von WGS84-Koordinaten (Lon, Lat).
+        """
+        if coords_wgs84[0] != coords_wgs84[-1]:
+            coords_wgs84.append(coords_wgs84[0])
+        self.polygon_wgs84 = Polygon(coords_wgs84)
+        return self.polygon_wgs84
+
+    # -------------------------
+    # Projektion & Flächen
+    # -------------------------
+
     def project_to_utm(self) -> Tuple[Polygon, Transformer]:
         gdf = gpd.GeoDataFrame(index=[0], crs="EPSG:4326", geometry=[self.polygon_wgs84])
         target_crs = CRS.from_epsg(self.utm_epsg)
@@ -73,7 +97,10 @@ class AgriPV:
         self.area_ha = self.area_m2 / 10_000.0
         return self.area_m2, self.area_ha
 
-    # -- PV-Layout-Funktionen --
+    # -------------------------
+    # PV-Layout
+    # -------------------------
+
     @staticmethod
     def _line_through_point_angle(point: Point, angle_rad: float, length: float = 1e6) -> LineString:
         dx = math.sin(angle_rad)
@@ -83,15 +110,7 @@ class AgriPV:
             (point.x + length * dy, point.y - length * dx),
         ])
 
-    def calculate_pv_layout(
-        self,
-        Lvor: float,
-        Bg: float,
-        An_deg: float,
-        Aarbeits: float,
-        max_area_percentage: float,
-    ) -> Tuple[List[Tuple[XY, XY]], float]:
-
+    def calculate_pv_layout(self, Lvor: float, Bg: float, An_deg: float, Aarbeits: float, max_area_percentage: float) -> Tuple[List[Tuple[XY, XY]], float]:
         polygon = self.polygon_utm
         if polygon.is_empty:
             return [], 0.0
@@ -164,14 +183,11 @@ class AgriPV:
         self.covered_area = total_length * Bg
         return self.segments, self.covered_area
 
-    # -- Export / Visualisierung --
-    def export_plot_to_osm_html(
-        self,
-        offset_polygon_utm: Optional[Polygon],
-        filename: str = "agri_pv_plot.html",
-        show_in_browser: bool = False,
-        line_weight_scale: float = 1.0,
-    ) -> None:
+    # -------------------------
+    # Export & Visualisierung
+    # -------------------------
+
+    def export_plot_to_osm_html(self, offset_polygon_utm: Optional[Polygon], filename: str = "agri_pv_plot.html", show_in_browser: bool = False, line_weight_scale: float = 1.0) -> None:
         def to_latlon_coords(coords: List[XY]) -> List[Tuple[float, float]]:
             return [self.transformer.transform(x, y) for x, y in coords]
 
@@ -185,7 +201,7 @@ class AgriPV:
             fill=True,
             fill_color="#bab8b9",
             fill_opacity=0.35,
-            tooltip="Offset (Vorgewende)"
+            tooltip="Feldfläche"
         ).add_to(m)
 
         if offset_polygon_utm is not None and not offset_polygon_utm.is_empty:
@@ -196,7 +212,7 @@ class AgriPV:
                 fill=True,
                 fill_color="#429925",
                 fill_opacity=0.8,
-                tooltip="Grünstreifen"
+                tooltip="Innenfläche (Vorgewende entfernt)"
             ).add_to(m)
 
         for seg in self.segments:
@@ -209,41 +225,68 @@ class AgriPV:
             ).add_to(m)
 
         m.save(filename)
-        print(f"Karte gespeichert unter: {filename}")
-
+        print(f"\nKarte gespeichert unter: {filename}")
         if show_in_browser:
             import webbrowser
             webbrowser.open(filename)
 
-    # -- Ausgabe --
+    # -------------------------
+    # Ausgabe
+    # -------------------------
+
     @staticmethod
     def print_results_table(area_m2: float, area_ha: float, covered_area: float, max_percentage: float) -> None:
         covered_pct = (covered_area / area_m2 * 100.0) if area_m2 > 0 else 0.0
         print("\nErgebnisse:")
         print("-" * 50)
-        print(f"Feldfläche         : {area_m2:12.2f} m²  ({area_ha:8.4f} ha)")
-        print(f"Max. gewünschter Anteil : {max_percentage:6.2f} %")
-        print(f"Bedeckte Fläche     : {covered_area:12.2f} m²  ({covered_pct:6.2f} % der Fläche)")
+        print(f"Feldfläche           : {area_m2:12.2f} m²  ({area_ha:8.4f} ha)")
+        print(f"Max. PV-Anteil       : {max_percentage:6.2f} %")
+        print(f"Bedeckte PV-Fläche   : {covered_area:12.2f} m²  ({covered_pct:6.2f} % der Fläche)")
         print("-" * 50)
 
-    # -- Hauptablauf --
+    # -------------------------
+    # Hauptprogramm
+    # -------------------------
+
     def run(self):
-        self.get_osm_polygon()
+        print("\n--- Geometriequelle wählen ---")
+        print("1: OSM-Way-ID")
+        print("2: uMap-GeoJSON (URL oder Datei)")
+        print("3: Manuelle Koordinaten")
+        choice = input("Auswahl [1-3]: ").strip()
+
+        if choice == "1":
+            self.way_id = int(input("Way-ID eingeben (Standard 168868469): ") or 168868469)
+            self.get_osm_polygon()
+        elif choice == "2":
+            source = input("Pfad oder URL der uMap-GeoJSON-Datei eingeben: ").strip()
+            self.load_umap_polygon(source)
+        elif choice == "3":
+            print("Gib mindestens vier Koordinaten (Lon, Lat) an, getrennt durch Kommas.")
+            coords = []
+            while True:
+                line = input("Koordinate (oder leer zum Beenden): ").strip()
+                if not line:
+                    break
+                lon, lat = map(float, line.split(","))
+                coords.append((lon, lat))
+            self.set_custom_polygon(coords)
+        else:
+            print("Ungültige Auswahl. Standard: OSM-Way-ID.")
+            self.get_osm_polygon()
+
+        # Weiterer Ablauf identisch
         self.project_to_utm()
         self.calculate_area()
 
-        Lvor = float(input("Breite des Vorgewendes (Randbereich des Feldes, auf dem Traktor wendet) in Metern (Standard 10.0): ") or 10.0)
-        Bg = float(input("Breite der Grünstreifen in Metern (Standard 10.0): ") or 10.0)
-        An = float(input("Ausrichtungswinkel in Grad (Standard 0.0): ") or 0.0)
-        Aarbeits = float(input("Arbeitsbreite der PV-Module in Metern (Standard 10.0): ") or 10.0)
-        max_area_percentage = float(input("Maximale PV-Fläche in Prozent (Standard 70.0): ") or 70.0)
+        Lvor = float(input("Breite Vorgewende [m] (Standard 10.0): ") or 10.0)
+        Bg = float(input("Breite Grünstreifen [m] (Standard 10.0): ") or 10.0)
+        An = float(input("Ausrichtungswinkel [°] (Standard 0.0): ") or 0.0)
+        Aarbeits = float(input("Arbeitsbreite PV [m] (Standard 10.0): ") or 10.0)
+        max_area_percentage = float(input("Maximale PV-Fläche [%] (Standard 70.0): ") or 70.0)
 
         self.calculate_pv_layout(Lvor, Bg, An, Aarbeits, max_area_percentage)
         AgriPV.print_results_table(self.area_m2, self.area_ha, self.covered_area, max_area_percentage)
-        print(f"Anzahl der PV-Reihen (Segments): {len(self.segments)}")
-        if len(self.segments) > 0:
-            total_length = sum(LineString(s).length for s in self.segments)
-            print(f"Gesamtlänge aller Reihen: {total_length:.2f} m")
 
         do_export = input("HTML-Karte erzeugen? (j/n): ").strip().lower()
         if do_export in ("", "j", "ja", "y", "yes"):
