@@ -1,0 +1,15 @@
+# JetBrains IDE
+.idea/
+
+# Python Bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtuelle Umgebung
+venv/
+env/
+
+# Log-Dateien
+*.log
