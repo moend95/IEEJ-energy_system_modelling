@@ -1,3 +1,7 @@
+# Ausgabe der OpenStreetMap Karte funktioniert in dieser Version nicht korrekt. 
+# Option 2 "Vertikale Agri-PV-Anlage" funktioniert nicht korrekt.
+
+
 # Python ≥ 3.10
 # Notwendige Pakete: geopandas, shapely, folium, numpy, matplotlib, pandas, pvlib
 
