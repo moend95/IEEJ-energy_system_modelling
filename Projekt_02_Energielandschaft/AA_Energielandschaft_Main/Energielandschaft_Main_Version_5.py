@@ -1,6 +1,5 @@
-# Anpassungen bezüglich OpenStreetMap HTML-Ausgabe vorgenommen. Funktioniert jedoch nicht. 
-
-
+# Vertikal und Tracking funktioniert
+# Ausgabe der OpenStreetMap Karte als HTML-Datei im Browser funktioniert.
 
 
 # Python ≥ 3.10
@@ -86,6 +85,8 @@ class AgriPV:
         target_crs = CRS.from_epsg(self.utm_epsg)
         gdf_utm = gdf.to_crs(target_crs)
         self.polygon_utm = gdf_utm.geometry[0]
+        # Speichere das CRS-Objekt für spätere Reprojektionen
+        self.crs_utm = target_crs
         self.transformer = Transformer.from_crs(target_crs, "EPSG:4326", always_xy=True)
         return self.polygon_utm, self.transformer
 
@@ -113,6 +114,8 @@ class AgriPV:
 
         offset_distance = Lvor + (Bg / 2.0)
         inner = polygon.buffer(-offset_distance)
+        # Speichere die nutzbare PV-Fläche (innerer Offset) als Attribut
+        self.offset_polygon_utm = inner
         if inner.is_empty:
             return [], 0.0
 
@@ -182,108 +185,106 @@ class AgriPV:
 
     def export_plot_to_osm_html(
         self,
-        offset_polygon_utm: Optional[Polygon] = None,
-        filename: str = "agri_pv_plot.html",
-        show_in_browser: bool = True,
-        line_weight_scale: float = 1.0,
-    ) -> None:
-        """
-        Erstellt eine interaktive HTML-Karte (OpenStreetMap) mit der Fläche, PV-Belegung und Zonen.
-
-        Parameter
-        ----------
-        offset_polygon_utm : shapely.Polygon oder None
-            Polygon der PV-Nutzfläche (nach Abzug des Vorgewendes)
-        filename : str
-            Dateiname der HTML-Datei.
-        show_in_browser : bool
-            Wenn True, wird die HTML-Karte nach Erstellung im Standardbrowser geöffnet.
-        line_weight_scale : float
-            Skalierungsfaktor für die Linienbreite der PV-Reihen.
-        """
+        offset_polygon_utm=None,
+        filename="agri_pv_plot.html",
+        show_in_browser=True,
+        line_weight_scale=1.0,
+    ):
+        import folium
         import webbrowser
-        import os
+        from pathlib import Path
+        import geopandas as gpd
+        from shapely.geometry import mapping
+    
+        # -----------------------------------
+        # Stelle sicher, dass wir eine WGS84-Polygon haben
+        # -----------------------------------
+        if getattr(self, "polygon_wgs84", None) is None:
+            # Falls nur UTM vorhanden ist: in WGS84 transformieren
+            if getattr(self, "polygon_utm", None) is not None and getattr(self, "crs_utm", None) is not None:
+                poly_wgs84 = gpd.GeoSeries([self.polygon_utm], crs=self.crs_utm).to_crs(epsg=4326).iloc[0]
+            else:
+                raise ValueError("Kein Polygon vorhanden (weder WGS84 noch UTM).")
+        else:
+            poly_wgs84 = self.polygon_wgs84
+    
+        # -----------------------------------
+        # Karte zentrieren / Bounds setzen
+        # -----------------------------------
+        center = [poly_wgs84.centroid.y, poly_wgs84.centroid.x]
+        fmap = folium.Map(location=center, zoom_start=15, tiles="OpenStreetMap")
+    
+        # Originalfläche (Feldgrenze)
+        folium.GeoJson(
+            mapping(poly_wgs84),
+            name="Feldgrenze",
+            style_function=lambda feat: {
+                "fillColor": "transparent",
+                "color": "darkgreen",
+                "weight": max(1.0, 2.5 * line_weight_scale),
+            },
+            tooltip="Feldfläche",
+        ).add_to(fmap)
 
-        if self.polygon_wgs84 is None:
-            raise ValueError("Kein Polygon vorhanden. Bitte zuerst Geometrie laden.")
+        # Optional: PV-Nutzfläche (falls als UTM übergeben)
+        if offset_polygon_utm is not None and (not offset_polygon_utm.is_empty):
+            # Konvertiere offset-Polygon von UTM -> WGS84 (falls nötig)
+            try:
+                offset_wgs84 = gpd.GeoSeries([offset_polygon_utm], crs=getattr(self, "crs_utm", "EPSG:32632")).to_crs(epsg=4326).iloc[0]
+                folium.GeoJson(
+                    mapping(offset_wgs84),
+                    name="PV-Nutzfläche",
+                    style_function=lambda feat: {
+                        "fillColor": "#3186cc55",
+                        "color": "#003366",
+                        "weight": max(1.0, 1.5 * line_weight_scale),
+                    },
+                    tooltip="PV-Nutzfläche",
+                ).add_to(fmap)
+            except Exception as ex:
+                print(f"Warnung: Offset-Polygon konnte nicht nach WGS84 transformiert werden: {ex}")
 
-        # Hilfsfunktion: UTM → WGS84
-        def to_latlon_coords(coords: List[XY]) -> List[Tuple[float, float]]:
-            return [self.transformer.transform(x, y) for x, y in coords]
+        # PV-Reihen (falls vorhanden) zeichnen
+        if getattr(self, 'segments', None):
+            try:
+                fg_rows = folium.FeatureGroup(name="PV-Reihen")
+                for seg in self.segments:
+                    # seg ist typischerweise ((x1,y1),(x2,y2)) in UTM
+                    coords = list(seg)
+                    if getattr(self, 'transformer', None) is not None:
+                        # transformer.transform(x, y) -> (lon, lat)
+                        seg_latlon = [self.transformer.transform(x, y) for x, y in coords]
+                        locations = [(lat, lon) for lon, lat in seg_latlon]
+                    else:
+                        # Falls keine Transformer vorhanden: vermute coords sind already (lon, lat)
+                        locations = [(y, x) for x, y in coords]
 
-        # Kartenzentrum berechnen
-        poly_coords_latlon = to_latlon_coords(list(self.polygon_utm.exterior.coords))
-        center = np.mean(poly_coords_latlon, axis=0)[::-1].tolist()
+                    folium.PolyLine(
+                        locations=locations,
+                        color="green",
+                        weight=max(1, int(2 * line_weight_scale)),
+                        opacity=0.9,
+                        tooltip="PV-Reihe",
+                    ).add_to(fg_rows)
 
-        # Karte erstellen
-        m = folium.Map(location=center, zoom_start=17, control_scale=True, tiles="OpenStreetMap")
+                fg_rows.add_to(fmap)
+            except Exception as ex:
+                print(f"Warnung: PV-Reihen konnten nicht gezeichnet werden: {ex}")
 
-        # 1. Feldfläche (Gesamtfläche)
-        folium.Polygon(
-            locations=[(lat, lon) for lon, lat in poly_coords_latlon],
-            color="black",
-            opacity=0.8,
-            weight=2,
-            fill=True,
-            fill_color="#bab8b9",
-            fill_opacity=0.3,
-            tooltip=f"Feldfläche: {self.area_ha:.2f} ha"
-        ).add_to(m)
+        folium.LayerControl().add_to(fmap)
 
-        # 2. PV-Nutzfläche (Innenfläche nach Vorgewende-Abzug)
-        if offset_polygon_utm is not None and not offset_polygon_utm.is_empty:
-            off_coords_latlon = to_latlon_coords(list(offset_polygon_utm.exterior.coords))
-            folium.Polygon(
-                locations=[(lat, lon) for lon, lat in off_coords_latlon],
-                color="#850296",
-                opacity=0.8,
-                weight=2,
-                fill=True,
-                fill_color="#429925",
-                fill_opacity=0.25,
-                tooltip="PV-Nutzfläche (ohne Vorgewende)"
-            ).add_to(m)
+        # Fit bounds auf die Feldfläche (damit die Karte nicht leer/zu klein ist)
+        minx, miny, maxx, maxy = poly_wgs84.bounds
+        fmap.fit_bounds([[miny, minx], [maxy, maxx]])
 
-        # 3. PV-Reihen (Modullinien)
-        for i, seg in enumerate(self.segments):
-            seg_latlon = to_latlon_coords(list(seg))
-            folium.PolyLine(
-                locations=[(lat, lon) for lon, lat in seg_latlon],
-                color="#0552ab",
-                opacity=0.8,
-                weight=max(2, int(line_weight_scale * 2)),
-                tooltip=f"PV-Reihe {i+1}"
-            ).add_to(m)
+        # Datei speichern — erst danach öffnen
+        fmap.save(filename)
+        print(f"→ HTML-Karte gespeichert als: {filename}")
 
-        # Legende als HTML hinzufügen
-        legend_html = f'''
-        <div style="position: fixed; 
-                    bottom: 50px; left: 50px; width: 280px; height: auto; 
-                    background-color: white; z-index:9999; font-size:14px;
-                    border:2px solid grey; border-radius: 5px; padding: 10px">
-        <p style="margin:0; font-weight:bold; font-size:16px;">Agri-PV Übersicht</p>
-        <hr style="margin: 5px 0;">
-        <p style="margin:3px 0;"><span style="color:#000000;">▬</span> Feldfläche: {self.area_ha:.2f} ha</p>
-        <p style="margin:3px 0;"><span style="color:#429925;">▬</span> PV-Nutzfläche (innen)</p>
-        <p style="margin:3px 0;"><span style="color:#0552ab;">▬</span> PV-Reihen ({len(self.segments)} Stück)</p>
-        <p style="margin:3px 0;">Bedeckte Fläche: {self.covered_area:.2f} m²</p>
-        <p style="margin:3px 0;">Abdeckungsgrad: {(self.covered_area/self.area_m2*100):.1f}%</p>
-        </div>
-        '''
-        m.get_root().html.add_child(folium.Element(legend_html))
-
-        # Datei speichern
-        m.save(filename)
-        print(f"\n→ HTML-Karte gespeichert als: {filename}")
-
-        # Karte im Browser öffnen
         if show_in_browser:
-            abs_path = os.path.abspath(filename)
-            file_url = 'file:///' + abs_path.replace('\\', '/')
-            print(f"→ Öffne Karte im Browser: {file_url}")
-            webbrowser.open(file_url, new=2)
-
-
+            uri = Path(filename).resolve().as_uri()
+            print(f"→ Öffne Karte im Browser: {uri}")
+            webbrowser.open(uri, new=2)
     # ------------------------------------------------------------
     # Simulation: Tracking-Agri-PV
     # ------------------------------------------------------------
@@ -292,13 +293,6 @@ class AgriPV:
         Führt eine energetische Simulation einer Single-Axis-Tracking-Agri-PV-Anlage mit pvlib (PVWatts-Modell) durch.
         Verwendet den geografischen Schwerpunkt der Fläche als Standort.
         """
-        from pvlib.modelchain import ModelChain
-        from pvlib.location import Location
-        from pvlib.pvsystem import PVSystem, Array, SingleAxisTrackerMount
-        from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
-        import matplotlib.pyplot as plt
-        import pandas as pd
-
         # -------------------------------
         # Standort aus Polygon
         # -------------------------------
@@ -308,6 +302,13 @@ class AgriPV:
         latitude, longitude = centroid.y, centroid.x
 
         print(f"\nStandort (aus Polygon ermittelt): Breite={latitude:.6f}, Länge={longitude:.6f}")
+
+        from pvlib.modelchain import ModelChain
+        from pvlib.location import Location
+        from pvlib.pvsystem import PVSystem, Array, SingleAxisTrackerMount
+        from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
+        import matplotlib.pyplot as plt
+        import pandas as pd
 
         location = Location(latitude=latitude,
                             longitude=longitude,
@@ -663,6 +664,16 @@ class AgriPV:
             print("Ungültige Auswahl, Standard: Vertikal.")
             self.run_vertical_simulation()
 
+        do_export = input("HTML-Karte erzeugen? (j/n): ").strip().lower()
+        if do_export in ("", "j", "ja", "y", "yes"):
+            offset_distance = Lvor + (Bg / 2.0)
+            offset_poly = self.polygon_utm.buffer(-offset_distance)
+            self.export_plot_to_osm_html(
+                offset_polygon_utm=offset_poly if not offset_poly.is_empty else None,
+                filename="agri_pv_plot.html",
+                show_in_browser=True,
+                line_weight_scale=max(1.0, Bg / 2.0),
+            )
 
 if __name__ == "__main__":
     app = AgriPV()
