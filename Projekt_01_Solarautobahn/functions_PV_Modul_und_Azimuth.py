@@ -48,7 +48,7 @@ class AzimutCalculator:
         self.pv_typ_list.append(self.pv_typ)
         self.point_list.append(point)
 
-    def calculate_azimuth(self):
+    def calculate_azimut(self):
         # Punkte durchlaufen und Azimut berechnen:
         for i in range(len(self.number_of_points) - 1):
             p1 = self.number_of_points[i]
@@ -115,36 +115,49 @@ class AzimutVisualizer:
         plt.axis("equal")
         plt.show()
 
+class AzimutRunner:
+    def __init__(self, base_path):
+        self.base_path = base_path
 
-# -------------------------- Funktionsdefinition ----------------------------------------------
-# steuert die Auswahl der GeoJSON-Datei, Benutzerabfragen, und ruft die Hauptfunktion: calculate_azimut_from_geojson() auf
-def run_azimut_berechnung(base_path):
-    geojson_dir = os.path.join(base_path, "geometrien")                             # Es wird der Unterordner "geometrien" im base_path gebildet.
-    files = [f for f in os.listdir(geojson_dir) if f.endswith(".geojson")]          # Es werden alle .geojson-Dateien in diesem Ordner gesammelt.
-    if not files:                                                                   # Wenn keine Dateien vorhanden sind, wird eine Meldung ausgegeben
-        print("Keine GeoJSON-Dateien gefunden.")
-        return
+    def run(self):
+        geojson_dir = os.path.join(self.base_path, "geometrien")
+        files = [f for f in os.listdir(geojson_dir) if f.endswith(".geojson")]
 
-    print("Verfügbare GeoJSON-Dateien:")                                  # Ausgabe aller gefundenen Dateien
-    for i, f in enumerate(files):
-        print(f"{i + 1}. {f}")
+        if not files:
+            print("❌ Keine GeoJSON-Dateien gefunden.")
+            return
 
-    # Benutzer wählt eine Datei - Skript zieht sich dann den vollständigen Pfad zu dieser Datei
-    auswahl = int(input("Wähle die Nummer der Datei: ")) - 1
-    geojson_path = os.path.join(geojson_dir, files[auswahl])
+        print("Verfügbare GeoJSON-Dateien:")
+        for i, f in enumerate(files, start=1):
+            print(f"{i}. {f}")
 
-    # PV-Typ und Step_size wählen:
-    pv_typ = input("Welchen PV-Typ möchtest du simulieren? (dach / senkrecht / bifazial): ").strip().lower()
-    step_size = int(input("Punktabstand in Metern (z.B. 4): "))
-    # Zielpfad für die Ergebnisdatei
-    output_csv_path = os.path.join(base_path, "punkte_mit_azimut.csv")
+        # Benutzer wählt eine Datei - Skript zieht sich dann den vollständigen Pfad zu dieser Datei
+        auswahl = int(input("Wähle die Nummer der Datei: ")) - 1
+        geojson_path = os.path.join(geojson_dir, files[auswahl])
 
-    # Die Hauptfunktion wird aufgerufen und bekommt: - die gewählte GeoJSON-Datei, den gewünschten PV-Typ, den Abstand der Punkt und wohin das Ergebnis gespeichert werden soll.
-    calculate_azimut_from_geojson(geojson_path, pv_typ, step_size, output_csv_path)
+        # PV-Typ und Step_size wählen:
+        pv_typ = input("Welchen PV-Typ möchtest du simulieren? (dach / senkrecht / bifazial): ").strip().lower()
+        step_size = int(input("Punktabstand in Metern (z.B. 4): "))
+        # Zielpfad für die Ergebnisdatei
+        output_csv_path = os.path.join(self.base_path, "punkte_mit_azimut.csv")
+
+        #Hauptlogik
+        calc = AzimutCalculator(geojson_path, pv_typ, step_size, output_csv_path)
+        calc.load_geometry()
+        calc.interpolate_points()
+        calc.calculate_azimut()
+        calc.export_to_csv()
+
+        vis = AzimutVisualizer(calc)
+        vis.plot()
+
+
 
 
 # ------------------- Optionaler Direktstart:------------------------------------------
 if __name__ == "__main__":
-    run_azimut_berechnung(
         base_path="./Input"
-    )
+        runner = AzimutRunner(base_path)
+        runner.run()
+
+#def run_azimut_berechnung(base_path):
