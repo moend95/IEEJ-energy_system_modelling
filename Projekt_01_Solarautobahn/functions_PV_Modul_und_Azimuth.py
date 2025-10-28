@@ -160,4 +160,3 @@ if __name__ == "__main__":
         runner = AzimutRunner(base_path)
         runner.run()
 
-#def run_azimut_berechnung(base_path):
