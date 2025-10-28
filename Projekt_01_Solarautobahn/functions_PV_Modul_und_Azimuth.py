@@ -11,88 +11,109 @@ import math
 import matplotlib.pyplot as plt
 
 # Haupt-Funktionsaufbau - läd GeoJSON-Daei, interpoliert entlang Linie Punkte im gewünschten Abstand, berechnet Azimut und speichert als CSV:
-def calculate_azimut_from_geojson(geojson_path, pv_typ, step_size, output_csv_path):
-    gdf = gpd.read_file(geojson_path)
-    gdf = gdf.to_crs(epsg=25832)                # EPSG:25832 = UTM Zone 32N, metrisches Koordinatensystem
-    merged_line = unary_union(gdf.geometry)     # unary_union verschmilzt mehere Linien in eine Linien-Geometrie
+class AzimutCalculator:
 
-    total_length = merged_line.length
-    points = [merged_line.interpolate(distance) for distance in range(0, int(total_length), step_size)]     # interpolate(distance) erzeugt Punkte im Abstand von step_size entlang dieser Linie
+    def __init__(self, geojson_path, pv_typ, step_size, output_csv_path):
+        self.geojson_path = geojson_path
+        self.pv_typ = pv_typ.lower()
+        self.step_size = step_size
+        self.output_csv_path = output_csv_path
 
-    # Initialisierung leerer Listen für spätere Speicherung der Ergebnisse:
-    azimut_list = []
-    tilt_list = []
-    pv_typ_list = []
-    point_list = []
+        self.gdf = None
+        self.merged_line = None
+        self.number_of_points = None
+        self.azimut_list = []
+        self.tilt_list = []
+        self.pv_typ_list = []
+        self.point_list = []
 
-    # Punkte durchlaufen und Azimut berechnen:
-    for i in range(len(points)-1):
-        p1 = points[i]
-        p2 = points[i+1]
+    def load_geometry(self):
+        self.gdf = gpd.read_file(self.geojson_path)
+        self.gdf = self.gdf.to_crs(epsg=25832)              # EPSG:25832 = UTM Zone 32N, metrisches Koordinatensystem
+        self.merged_line = unary_union(self.gdf.geometry)   # unary_union verschmilzt mehere Linien in eine Linien-Geometrie
+        return self.merged_line
+
+    def interpolate_points(self):
+        total_length = self.merged_line.length
+        self.number_of_points = [
+            self.merged_line.interpolate(distance)              # interpolate(distance) erzeugt Punkte im Abstand von step_size entlang dieser Linie
+            for distance in range(0, int(total_length), self.step_size)
+        ]
+        return self.number_of_points
+
+    #Hilfsfunktion Anhängen vn Modulinformationen zum verkürzen von calculate_azimut
+    def _append_point(self, point, azimut, tilt):
+        self.azimut_list.append(azimut)
+        self.tilt_list.append(tilt)
+        self.pv_typ_list.append(self.pv_typ)
+        self.point_list.append(point)
+
+    def calculate_azimuth(self):
+        # Punkte durchlaufen und Azimut berechnen:
+        for i in range(len(self.number_of_points) - 1):
+            p1 = self.number_of_points[i]
+            p2 = self.number_of_points[i + 1]
 
         dx = p2.x - p1.x
         dy = p2.y - p1.y
-        theta_rad = math.atan2(dy, dx)              # atan2(dy, dx) gibt dir den Winkel in Bogenmaß
-        theta_deg = math.degrees(theta_rad)         # Umwandlung in Grad
-        azimut_tangent = (90 - theta_deg) % 360     # Umrechnung in Azimut: Norden = 0°, Osten = 90°, Süden = 180°, Westen = 270°
+        theta_rad = math.atan2(dy, dx)  # atan2(dy, dx) gibt dir den Winkel in Bogenmaß
+        theta_deg = math.degrees(theta_rad)  # Umwandlung in Grad
+        azimut_tangent = ( 90 - theta_deg) % 360  # Umrechnung in Azimut: Norden = 0°, Osten = 90°, Süden = 180°, Westen = 270°
 
         # Azimut & Neigung je nach PV-Typ setzen:
-        if pv_typ == "dach":
-            azimut = 180
-            tilt = 20
-            azimut_list.append(azimut)
-            tilt_list.append(tilt)
-            pv_typ_list.append(pv_typ)
-            point_list.append(p1)
+        if self.pv_typ == "dach":
+            self._append_point(point = p1, azimut = 180, tilt = 20)
 
-        # Bifazial: zwei Richtungen (z.B. Ost/West oder Nord/Süd), 90° Tilt (senkrecht).
-        # Hier startet eine Schleife, die zwei Werte durchläuft:
-        # Durch Schleife = zwei Azimut-Einträge für denselben Punkt, einmal für jede Seite der bifazialen Anlage:
-        elif pv_typ == "bifazial":
-            azimut_a = (azimut_tangent + 90) % 360      # Bsp.: Straße verläuft von West nach Ost → azimut_tangent = 90° --> Dann: azimut_a = (90 + 90) % 360 = 180° → Süden, azimut_b = (90 + 270) % 360 = 0° → Norden
+        elif self.pv_typ == "bifazial":
+            azimut_a = (azimut_tangent + 90) % 360
             azimut_b = (azimut_tangent + 270) % 360
             for azimut in [azimut_a, azimut_b]:
-                azimut_list.append(azimut)
-                tilt_list.append(90)            # Neigung liegt auf 90° (senkrecht)
-                pv_typ_list.append("bifazial")  # Der Typ der Anlage wird in die Liste geschrieben
-                point_list.append(p1)           # Für beide Richtungen wird derselbe Punkt verwendet
+                self._append_point(point = p1, azimut = azimut, tilt = 90)
 
-        else:  # "senkrecht"  - wenn nicht bifazial oder dach dann senkrecht mit einer Ausrichtungsseite
+        else:  # senkrecht
             azimut = (azimut_tangent + 90) % 360
-            tilt = 90
-            azimut_list.append(azimut)
-            tilt_list.append(tilt)
-            pv_typ_list.append(pv_typ)
-            point_list.append(p1)
+            self._append_point(point = p1, azimut = azimut,tilt = 90)
 
 
-# Punkte als CSV speichern:
-    data = [
-        (pt.y, pt.x, az, tilt, typ) for pt, az, tilt, typ in zip(point_list, azimut_list, tilt_list, pv_typ_list)
-    ]
-    df = pd.DataFrame(data, columns=["latitude", "longitude", "azimut", "tilt", "pv_typ"])
-    df.to_csv(output_csv_path, index=False)
-    print(f"Azimut-Punkte gespeichert unter: {output_csv_path}")
+    def export_to_csv(self):
+        # Punkte als CSV speichern:
+        data = [
+            (pt.y, pt.x, az, tilt, typ) for pt, az, tilt, typ in zip(self.point_list, self.azimut_list, self.tilt_list, self.pv_typ_list)
+        ]
+        df = pd.DataFrame(data, columns=["latitude", "longitude", "azimut", "tilt", "pv_typ"])
+        df.to_csv(self.output_csv_path, index=False)
+        print(f"Azimut-Punkte gespeichert unter: {self.output_csv_path}")
+        return df
 
-# Visualisierung mit Matplotlib:
-    fig, ax = plt.subplots(figsize=(10, 8))
-    ax.set_title(f"PV-Punkte mit Azimut ({pv_typ})")
-    ax.set_xlabel("X [m]")
-    ax.set_ylabel("Y [m]")
+class AzimutVisualizer:
+    def __init__(self, calculator: AzimutCalculator):
+        self.calc = calculator
 
-    for i in range(0, len(point_list), 10):
-        if isinstance(azimut_list[i], (int, float)):
-            dx = 5 * math.cos(math.radians(90 - azimut_list[i]))
-            dy = 5 * math.sin(math.radians(90 - azimut_list[i]))
-            ax.arrow(point_list[i].x, point_list[i].y, dx, dy, head_width=2, fc='blue', ec='blue')
+    def plot(self, every_nth_arrow = 10):  #Funktionsinformation: nur jeden x-ten (=10) Richtungspfeil anzeigen
+        gdf = self.calc.gdf
+        points = self.calc.point_list
+        azimuts = self.calc.azimut_list
+        pv_typ = self.calc.pv_typ
 
-    # Punkte und Linien darstellen
-    geo_gdf = gpd.GeoDataFrame(geometry=[Point(pt.x, pt.y) for pt in point_list], crs=gdf.crs)
-    gdf.plot(ax=ax, color='gray', linewidth=2)
-    geo_gdf.plot(ax=ax, color='red', markersize=5)
-    plt.grid(True)
-    plt.axis('equal')
-    plt.show()
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.set_title(f"PV-Punkte mit Azimut ({pv_typ})")
+        ax.set_xlabel("X [m]")
+        ax.set_ylabel("Y [m]")
+
+        # Richtungspfeile zeichnen
+        for i in range(0, len(points), every_nth_arrow):
+            if isinstance(azimuts[i], (int, float)):
+                dx = 5 * math.cos(math.radians(90 - azimuts[i]))
+                dy = 5 * math.sin(math.radians(90 - azimuts[i]))
+                ax.arrow(points[i].x, points[i].y, dx, dy, head_width=2, fc="blue", ec="blue")
+
+        # Linien & Punkte
+        geo_gdf = gpd.GeoDataFrame(geometry=[Point(pt.x, pt.y) for pt in points], crs=gdf.crs)
+        gdf.plot(ax=ax, color="gray", linewidth=2)
+        geo_gdf.plot(ax=ax, color="red", markersize=5)
+        plt.grid(True)
+        plt.axis("equal")
+        plt.show()
 
 
 # -------------------------- Funktionsdefinition ----------------------------------------------
@@ -125,5 +146,5 @@ def run_azimut_berechnung(base_path):
 # ------------------- Optionaler Direktstart:------------------------------------------
 if __name__ == "__main__":
     run_azimut_berechnung(
-        base_path=r"C:\Users\sarah\Documents\GitHub\IEEJ-energy_system_modelling\Input"
+        base_path="./Input"
     )
