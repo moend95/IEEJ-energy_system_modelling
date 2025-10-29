@@ -4,3 +4,13 @@
 
 # ------------------------------------------------------------
 
+from pathlib import Path
+from Projekt_02_Energielandschaft_RUN_SKRIPT import UserInputCollector
+
+collector = UserInputCollector()          # Defaults können hier übergeben werden
+config = collector.collect()             # interaktive Abfrage
+collector.save(config)                   # speichert wie gewohnt ./outputs/user_selection.json
+
+# jetzt weiterverwenden
+print(config)
+
