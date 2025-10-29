@@ -99,25 +99,8 @@ class Electrolyzer:
         """
         return 0.0
 
-# ===== 5) Elektroladesäule =======================================================
-@dataclass
-class ElectricCharger:
 
-    def __init__(self, name: str, rated_power_kw: float, n_connectors: int = 1, efficiency: float = 0.95,
-                    max_current_a: float | None = None, connection_type: str = "AC")
-        self.name = name
-        self.rated_power_kw = rated_power_kw
-        self.n_connectors = n_connectors
-        self.efficiency = efficiency
-        self.max_current_a = max_current_a
-        self.connection_type = connection_type      #AC oder DC
-
-    def charge (self)
-        return 0.0
-
-
-
-# ===== 6) Orchestrator =======================================================
+# ===== 5) Orchestrator =======================================================
 class GreenEnergyHub:
     """
     Koppelt PV, Wind, EL, Speicher, Nachfrage.
@@ -195,7 +178,7 @@ class GreenEnergyHub:
         return df
 
 
-# ===== 7) Minimaler „Main“-Block ============================================
+# ===== 6) Minimaler „Main“-Block ============================================
 if __name__ == "__main__":
     # 6.1 Zeitbasis & Komponenten „leer“ verdrahten
     index = make_time_index(start="2019-01-01 00:00", days=1)
