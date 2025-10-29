@@ -103,7 +103,14 @@ class Electrolyzer:
 @dataclass
 class ElectricCharger:
 
-    power_kw: float
+    def __init__(self, name: str, rated_power_kw: float, n_connectors: int = 1, efficiency: float = 0.95,
+                    max_current_a: float | None = None, connection_type: str = "AC")
+        self.name = name
+        self.rated_power_kw = rated_power_kw
+        self.n_connectors = n_connectors
+        self.efficiency = efficiency
+        self.max_current_a = max_current_a
+        self.connection_type = connection_type      #AC oder DC
 
     def charge (self)
         return 0.0
