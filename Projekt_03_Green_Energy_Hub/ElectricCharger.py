@@ -18,7 +18,7 @@ class ElectricCharger:
                  n_connectors: int = 1,
                  efficiency: float = 0.95,
                  max_current_a: float | None = None,
-                 connection_type: str = "AC")
+                 connection_type: str = "AC"):
 
         self.name = name
         self.rated_power_kw = rated_power_kw
