@@ -381,6 +381,13 @@ class AgriPV:
         system_loss_factor = 0.9
         mc.results.ac *= number_of_inverters * system_loss_factor
 
+        # Simulationsergebnis für spätere Auswertung/Plot speichern
+        try:
+            # Kopiere die AC-Zeitreihe ins Objekt
+            self.last_sim_ac = mc.results.ac.copy()
+        except Exception:
+            self.last_sim_ac = None
+
         # -------------------------------
         # Auswertung
         # -------------------------------
@@ -548,6 +555,12 @@ class AgriPV:
         # Skalierung: Anzahl Wechselrichter und Systemverluste
         mc.results.ac *= number_of_inverters * 0.9
 
+        # Simulationsergebnis für spätere Auswertung/Plot speichern
+        try:
+            self.last_sim_ac = mc.results.ac.copy()
+        except Exception:
+            self.last_sim_ac = None
+
         # Auswertung
         total_energy_kwh = mc.results.ac.sum() / 1000
         specific_yield = total_energy_kwh / total_installed_capacity_kwp
@@ -594,6 +607,62 @@ class AgriPV:
         covered_pct = (covered_area / area_m2 * 100.0) if area_m2 > 0 else 0.0
         print("\nErgebnisse:")
         print("-" * 50)
+
+    def plot_simulation_day(self, day: str, series_attr: str = "last_sim_ac", tz: str = "Europe/Berlin", show: bool = True, savepath: Optional[str] = None):
+        """
+        Plotte die simulierte AC-Leistung für einen einzelnen Tag.
+
+        Parameters
+        - day: Datum im Format 'YYYY-MM-DD' (z. B. '2024-06-21')
+        - series_attr: Attributname mit der pandas.Series (default: 'last_sim_ac')
+        - tz: Zeitzone, falls die Serie tz-aware ist
+        - show: ob der Plot angezeigt werden soll
+        - savepath: optionaler Pfad, um das Bild zu speichern
+        """
+        import pandas as pd
+        import matplotlib.pyplot as plt
+
+        if not hasattr(self, series_attr):
+            raise RuntimeError(f"Keine Simulationsergebnisse unter self.{series_attr}. Führe zuerst eine Simulation aus.")
+
+        series = getattr(self, series_attr)
+        if series is None:
+            raise RuntimeError(f"Die Serie self.{series_attr} ist leer.")
+
+        if not isinstance(series, pd.Series):
+            raise TypeError("Erwartet pandas.Series mit Zeitindex als Simulationsergebnis.")
+
+        # Normalisiere Datum und erstelle Start/End Timestamp
+        day_ts = pd.to_datetime(day).normalize()
+
+        if series.index.tz is None:
+            start = day_ts
+        else:
+            # lokalisiere in angegebener tz
+            start = day_ts.tz_localize(tz)
+
+        end = start + pd.Timedelta(days=1)
+
+        day_series = series.loc[(series.index >= start) & (series.index < end)]
+        if day_series.empty:
+            raise RuntimeError(f"Keine Daten für den Tag {day} (Series range: {series.index.min()} - {series.index.max()}).")
+
+        plt.figure(figsize=(10, 4))
+        day_series.plot(marker='o', linewidth=1)
+        plt.title(f"Simulationstag: {day} — AC-Leistung (W)")
+        plt.xlabel("Zeit")
+        plt.ylabel("Leistung (W)")
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+        if savepath:
+            plt.savefig(savepath, dpi=150)
+            print(f"Plot gespeichert: {savepath}")
+
+        if show:
+            plt.show()
+        else:
+            plt.close()
         print(f"Feldfläche           : {area_m2:12.2f} m²  ({area_ha:8.4f} ha)")
         print(f"Max. PV-Anteil       : {max_percentage:6.2f} %")
         print(f"Bedeckte PV-Fläche   : {covered_area:12.2f} m²  ({covered_pct:6.2f} %)")
@@ -678,6 +747,52 @@ class Application:
             AgriPV.print_results_table(ag.area_m2, ag.area_ha, ag.covered_area, cfg.max_area_percentage)
             ag.run_tracking_simulation()
 
+            # Option: Tagesplot nach Simulation
+            try:
+                do_plot = input("Tagesplot anzeigen? (j/n): ").strip().lower()
+                if do_plot in ("", "j", "ja", "y", "yes"):
+                    import datetime
+                    from pathlib import Path
+                    today = datetime.date.today()
+                    date_input = input(f"Datum (YYYY-MM-DD) [Standard {today.isoformat()}] (oder 'heute'/'gestern'): ").strip().lower()
+                    if not date_input or date_input in ("heute", "today"):
+                        date_input = today.isoformat()
+                    elif date_input in ("gestern", "yesterday"):
+                        date_input = (today - datetime.timedelta(days=1)).isoformat()
+                    else:
+                        # versuche, die Eingabe als ISO-Datum zu parsen
+                        try:
+                            # erzeugt Exception, wenn das Format nicht stimmt
+                            _ = datetime.date.fromisoformat(date_input)
+                        except Exception:
+                            print(f"Ungültiges Datum: {date_input}. Verwende heute: {today.isoformat()}")
+                            date_input = today.isoformat()
+
+                    savepath_raw = input("Plot speichern? Pfad eingeben, 'd' für Standard-Ordner ./outputs oder leer für nur anzeigen: ").strip()
+                    savepath = None
+                    if savepath_raw:
+                        if savepath_raw.lower() in ("d", "default"):
+                            out_dir = Path.cwd() / "outputs"
+                            out_dir.mkdir(parents=True, exist_ok=True)
+                            savepath = str(out_dir / f"simulation_day_{date_input}.png")
+                        else:
+                            # nutze angegebenen Pfad; erstelle Parent falls nötig
+                            p = Path(savepath_raw)
+                            if p.suffix == "":
+                                # kein Dateiname angegeben -> erzeuge Dateiname im angegebenen Ordner
+                                p.mkdir(parents=True, exist_ok=True)
+                                savepath = str(p / f"simulation_day_{date_input}.png")
+                            else:
+                                p.parent.mkdir(parents=True, exist_ok=True)
+                                savepath = str(p)
+
+                    try:
+                        ag.plot_simulation_day(date_input, savepath=savepath)
+                    except Exception as e:
+                        print(f"Fehler beim Erzeugen des Tagesplots: {e}")
+            except Exception as e:
+                print(f"Warnung (Tagesplot): {e}")
+
         elif pv_type == "2":
             print("Vertikale bifaciale Agri-PV-Anlage ausgewählt.")
             cfg.Lvor = float(input("Vorgewende [m] (10.0): ") or 10.0)
@@ -689,6 +804,48 @@ class Application:
             ag.calculate_pv_layout(cfg.Lvor, cfg.Bg, cfg.An, cfg.Aarbeits, cfg.max_area_percentage)
             AgriPV.print_results_table(ag.area_m2, ag.area_ha, ag.covered_area, cfg.max_area_percentage)
             ag.run_vertical_simulation()
+
+            # Option: Tagesplot nach Simulation
+            try:
+                do_plot = input("Tagesplot anzeigen? (j/n): ").strip().lower()
+                if do_plot in ("", "j", "ja", "y", "yes"):
+                    import datetime
+                    from pathlib import Path
+                    today = datetime.date.today()
+                    date_input = input(f"Datum (YYYY-MM-DD) [Standard {today.isoformat()}] (oder 'heute'/'gestern') (Series range: 2021-01-01 00:00:00 - 2021-12-31 23:00:00): ").strip().lower()
+                    if not date_input or date_input in ("heute", "today"):
+                        date_input = today.isoformat()
+                    elif date_input in ("gestern", "yesterday"):
+                        date_input = (today - datetime.timedelta(days=1)).isoformat()
+                    else:
+                        try:
+                            _ = datetime.date.fromisoformat(date_input)
+                        except Exception:
+                            print(f"Ungültiges Datum: {date_input}. Verwende heute: {today.isoformat()}")
+                            date_input = today.isoformat()
+
+                    savepath_raw = input("Plot speichern? Pfad eingeben, 'd' für Standard-Ordner ./outputs oder leer für nur anzeigen: ").strip()
+                    savepath = None
+                    if savepath_raw:
+                        if savepath_raw.lower() in ("d", "default"):
+                            out_dir = Path.cwd() / "outputs"
+                            out_dir.mkdir(parents=True, exist_ok=True)
+                            savepath = str(out_dir / f"simulation_day_{date_input}.png")
+                        else:
+                            p = Path(savepath_raw)
+                            if p.suffix == "":
+                                p.mkdir(parents=True, exist_ok=True)
+                                savepath = str(p / f"simulation_day_{date_input}.png")
+                            else:
+                                p.parent.mkdir(parents=True, exist_ok=True)
+                                savepath = str(p)
+
+                    try:
+                        ag.plot_simulation_day(date_input, savepath=savepath)
+                    except Exception as e:
+                        print(f"Fehler beim Erzeugen des Tagesplots: {e}")
+            except Exception as e:
+                print(f"Warnung (Tagesplot): {e}")
 
         else:
             print("Ungültige Auswahl, Standard: Vertikal.")
