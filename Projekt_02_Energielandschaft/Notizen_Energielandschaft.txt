@@ -1,0 +1,2 @@
+Programm 1: Fläche wird berechnet (Abfrage: Welche Fläche, Grünstreifen, Traktor Breite, Umkehr Radius, ...)
+Programm 2: Berechnete Fläche aus Programm 1 wird übergeben
