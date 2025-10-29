@@ -99,8 +99,18 @@ class Electrolyzer:
         """
         return 0.0
 
+# ===== 5) Elektroladesäule =======================================================
+@dataclass
+class ElectricCharger:
 
-# ===== 5) Orchestrator =======================================================
+    power_kw: float
+
+    def charge (self)
+        return 0.0
+
+
+
+# ===== 6) Orchestrator =======================================================
 class GreenEnergyHub:
     """
     Koppelt PV, Wind, EL, Speicher, Nachfrage.
@@ -178,7 +188,7 @@ class GreenEnergyHub:
         return df
 
 
-# ===== 6) Minimaler „Main“-Block ============================================
+# ===== 7) Minimaler „Main“-Block ============================================
 if __name__ == "__main__":
     # 6.1 Zeitbasis & Komponenten „leer“ verdrahten
     index = make_time_index(start="2019-01-01 00:00", days=1)
