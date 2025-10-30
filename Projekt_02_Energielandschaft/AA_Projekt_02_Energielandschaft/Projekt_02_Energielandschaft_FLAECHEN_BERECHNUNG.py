@@ -1,6 +1,8 @@
 # Flächen_Berechnung
 # Input: Fläche (GeoJSON-Datei), PV-Ausrichtung, Traktor Breite und Länge 
 # Ausgabe: Maximal mögliche Fläche für PV-Module, Gesamte Fläche des Ackers, Plot HTML-Karte 
+# Horizontale PV-Anlage (Aufgeständerte Anlage): Breite der PV-Reihe = 4 Module à 1.3 m = 5.2 m
+# Vertikale PV-Anlage (Senkrechter Zaun): Breite der PV-Reihe = 0.5 m (Bodenfußabdruck), Höhe der PV-Reihe = 2 Module à 1.3 m = 2.6 m
 
 # ------------------------------------------------------------
 
@@ -86,24 +88,40 @@ def main():
             pv_row_width_m=pv_row_width,
             open_in_browser=open_in_browser
         )
-        result_path, total_area_m2, usable_area_m2, pv_area_m2 = result
+        result_path, total_area_m2, usable_ground_area_m2, pv_footprint_m2, pv_vertical_front_m2 = result
         # Speichere Flächen in cfg und persistiere
         cfg['total_area_m2'] = round(float(total_area_m2), 3)
         cfg['total_area_ha'] = round(float(total_area_m2) / 10000.0, 4)
-        cfg['usable_area_m2'] = round(float(usable_area_m2), 3)
-        cfg['usable_area_ha'] = round(float(usable_area_m2) / 10000.0, 4)
-        cfg['max_pv_area_m2'] = round(float(pv_area_m2), 3)
-        cfg['max_pv_area_ha'] = round(float(pv_area_m2) / 10000.0, 4)
-        if usable_area_m2 > 0:
-            cfg['pv_coverage_of_usable_percent'] = round(100.0 * (pv_area_m2 / usable_area_m2), 2)
+        cfg['usable_ground_area_m2'] = round(float(usable_ground_area_m2), 3)
+        cfg['usable_ground_area_ha'] = round(float(usable_ground_area_m2) / 10000.0, 4)
+        cfg['pv_footprint_m2'] = round(float(pv_footprint_m2), 3)
+        cfg['pv_footprint_ha'] = round(float(pv_footprint_m2) / 10000.0, 4)
+        cfg['pv_vertical_front_m2'] = round(float(pv_vertical_front_m2), 3)
+        cfg['pv_vertical_front_ha'] = round(float(pv_vertical_front_m2) / 10000.0, 4)
+        # Fläche nach Abzug der PV-Reihen (Bodenfläche)
+        cfg['usable_after_pv_m2'] = round(float(usable_ground_area_m2) - float(pv_footprint_m2), 3)
+        cfg['usable_after_pv_ha'] = round((float(usable_ground_area_m2) - float(pv_footprint_m2)) / 10000.0, 4)
+        if usable_ground_area_m2 > 0:
+            cfg['pv_coverage_of_usable_percent'] = round(100.0 * (pv_footprint_m2 / usable_ground_area_m2), 2)
         else:
             cfg['pv_coverage_of_usable_percent'] = 0.0
+        # Falls vertikale Montage: speichere Montagehöhe
+        if cfg.get('pv_type') == 'vertical':
+            cfg['pv_row_height_m'] = cfg.get('pv_row_height_m', 2.6)
         collector.save(cfg)
         print(f'Karte erfolgreich erzeugt und gespeichert: {result_path}')
         print(f"Gesamtfläche Feld: {cfg['total_area_m2']} m² ({cfg['total_area_ha']} ha)")
-        print(f"Nutzbare Fläche nach Abzug Grünstreifen: {cfg['usable_area_m2']} m² ({cfg['usable_area_ha']} ha)")
-        print(f"Maximal mögliche PV-Fläche (theoretisch, Reihenbreite berücksichtigt): {cfg['max_pv_area_m2']} m² ({cfg['max_pv_area_ha']} ha)")
-        print(f"Das entspricht {cfg['pv_coverage_of_usable_percent']} % der nutzbaren Fläche")
+        print(f"Fläche des Feldes abzüglich Grünstreifen: {cfg['usable_ground_area_m2']} m² ({cfg['usable_ground_area_ha']} ha)")
+        print(f"Fläche abzüglich Grünstreifen und PV-Reihen: {cfg['usable_after_pv_m2']} m² ({cfg['usable_after_pv_ha']} ha)")
+
+        if cfg.get('pv_type') == 'horizontal':
+            # horizontale PV: Reihenbreite 5.2 m (cfg['pv_row_width_m'])
+            print(f"Fläche für horizontale PV-Anlage (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
+        else:
+            # vertikale PV: Reihenbreite 0.5 m (Bodenfußabdruck) plus vordere vertikale Fläche
+            print(f"Fläche für vertikale PV-Anlage (Boden-Fußabdruck, Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
+            print(f"Vordere vertikale PV-Fläche (Höhe {cfg.get('pv_row_height_m')} m): {cfg['pv_vertical_front_m2']} m² ({cfg['pv_vertical_front_ha']} ha)")
+        print(f"Das entspricht {cfg['pv_coverage_of_usable_percent']} % der nutzbaren Bodenfläche")
     except Exception as exc:
         print('Fehler beim Erzeugen der Karte:', exc)
 
@@ -127,6 +145,7 @@ def export_geojson_with_pv_rows(geojson_path: str,
                                 breite_gruenstreifen: float = 10.0,
                                 row_direction: str = "N-S",
                                 pv_row_width_m: float = None,
+                                pv_row_height_m: float = None,
                                 open_in_browser: bool = True):
     """
     Liest eine GeoJSON-Fläche ein, legt innerhalb der Fläche (abzüglich Randstreifen)
@@ -283,10 +302,16 @@ def export_geojson_with_pv_rows(geojson_path: str,
     out_path = Path(output_html)
     m.save(str(out_path))
 
-    # Berechne maximale PV-Fläche: Summe der Längen der Reihen * Breite pro Reihe
-    pv_area_m2 = 0.0
-    if pv_row_width_m is not None and total_row_length_m > 0:
-        pv_area_m2 = total_row_length_m * float(pv_row_width_m)
+    # Berechne PV-bezogene Flächen:
+    # - pv_footprint_m2: Bodenfläche, die durch Reihen eingenommen wird (Breite der Reihe * Länge)
+    # - pv_vertical_front_m2: bei vertikaler Montage die vordere vertikale Fläche (Höhe * Länge)
+    pv_footprint_m2 = 0.0
+    pv_vertical_front_m2 = 0.0
+    if total_row_length_m > 0:
+        if pv_row_width_m is not None:
+            pv_footprint_m2 = total_row_length_m * float(pv_row_width_m)
+        if pv_row_height_m is not None:
+            pv_vertical_front_m2 = total_row_length_m * float(pv_row_height_m)
 
     # Öffne im Browser (optional) — robust: mehrere Fallbacks
     if open_in_browser:
@@ -322,7 +347,7 @@ def export_geojson_with_pv_rows(geojson_path: str,
     else:
         print(f"Karte gespeichert unter: {out_path}")
 
-    return out_path, total_area_m2, usable_area_m2, pv_area_m2
+    return out_path, total_area_m2, usable_area_m2, pv_footprint_m2, pv_vertical_front_m2
 
 
 if __name__ == "__main__":

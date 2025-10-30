@@ -104,6 +104,8 @@ class UserInputCollector:
 			cfg['tilt'] = None
 			# Vertikale Anlage: schmale Reihen (Zaun-Elemente), Breite 0.5 m
 			cfg['pv_row_width_m'] = 0.5
+			# Vertikale Montagehöhe (z.B. als Zaun) in Metern
+			cfg['pv_row_height_m'] = 2.6
 
 		if out_dir is None:
 			out_dir = Path(__file__).resolve().parent / 'outputs'
