@@ -92,11 +92,18 @@ class UserInputCollector:
 		  - vertical  : row_direction='Norden nach Süden', tilt=None
 		"""
 		if cfg.get('pv_type') == 'horizontal':
-			cfg['row_direction'] = 'Osten nach Westen'
+			# Standardisierte Richtung für weitere Verarbeitung
+			cfg['row_direction'] = 'E-W'
+			cfg['row_direction_label'] = 'Osten nach Westen'
 			cfg['tilt'] = 30
+			# Horizontale Anlage: pro Reihe 4 Module à 1.3 m Breite
+			cfg['pv_row_width_m'] = round(4 * 1.3, 3)
 		else:
-			cfg['row_direction'] = 'Norden nach Süden'
+			cfg['row_direction'] = 'N-S'
+			cfg['row_direction_label'] = 'Norden nach Süden'
 			cfg['tilt'] = None
+			# Vertikale Anlage: schmale Reihen (Zaun-Elemente), Breite 0.5 m
+			cfg['pv_row_width_m'] = 0.5
 
 		if out_dir is None:
 			out_dir = Path(__file__).resolve().parent / 'outputs'

@@ -3,6 +3,17 @@
   "tractor_width": 3.0,
   "tractor_length": 5.0,
   "tractor_turn_radius": 6.0,
-  "row_direction": "Osten nach Westen",
-  "tilt": 30
+  "row_direction": "E-W",
+  "row_direction_label": "Osten nach Westen",
+  "tilt": 30,
+  "pv_row_width_m": 5.2,
+  "green_strip_width_m": 18.0,
+  "effective_row_spacing_m": 10.2,
+  "total_area_m2": 23599918.079,
+  "total_area_ha": 2359.9918,
+  "usable_area_m2": 22935164.407,
+  "usable_area_ha": 2293.5164,
+  "max_pv_area_m2": 11693101.773,
+  "max_pv_area_ha": 1169.3102,
+  "pv_coverage_of_usable_percent": 50.98
 }
