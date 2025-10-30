@@ -28,6 +28,12 @@ def main():
     row_direction = cfg["row_direction"]
     tilt = cfg["tilt"]
     pv_row_width = cfg.get('pv_row_width_m', None)
+    # Bestimme PV-Reihen-Höhe (für vertikale Anlagen). Default 2.5 m.
+    pv_row_height = None
+    if cfg.get('pv_type') == 'vertical':
+        pv_row_height = cfg.get('pv_row_height_m', 2.5)
+        # Sichere den Wert in der Konfiguration, damit er später persistiert wird
+        cfg['pv_row_height_m'] = pv_row_height
 
     print("Traktorbreite:", tractor_width)
     print("Traktorlänge:", tractor_length)
@@ -86,6 +92,7 @@ def main():
             breite_gruenstreifen=breite_gruenstreifen,
             row_direction=row_direction,
             pv_row_width_m=pv_row_width,
+            pv_row_height_m=pv_row_height,
             open_in_browser=open_in_browser
         )
         result_path, total_area_m2, usable_ground_area_m2, pv_footprint_m2, pv_vertical_front_m2 = result
@@ -107,7 +114,7 @@ def main():
             cfg['pv_coverage_of_usable_percent'] = 0.0
         # Falls vertikale Montage: speichere Montagehöhe
         if cfg.get('pv_type') == 'vertical':
-            cfg['pv_row_height_m'] = cfg.get('pv_row_height_m', 2.6)
+            cfg['pv_row_height_m'] = cfg.get('pv_row_height_m', 2.5)
         collector.save(cfg)
         print(f'Karte erfolgreich erzeugt und gespeichert: {result_path}')
         print(f"Gesamtfläche Feld: {cfg['total_area_m2']} m² ({cfg['total_area_ha']} ha)")
@@ -119,8 +126,8 @@ def main():
             print(f"Fläche für horizontale PV-Anlage (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
         else:
             # vertikale PV: Reihenbreite 0.5 m (Bodenfußabdruck) plus vordere vertikale Fläche
-            print(f"Fläche für vertikale PV-Anlage (Boden-Fußabdruck, Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
-            print(f"Vordere vertikale PV-Fläche (Höhe {cfg.get('pv_row_height_m')} m): {cfg['pv_vertical_front_m2']} m² ({cfg['pv_vertical_front_ha']} ha)")
+            print(f"Boden-Fußabdruck der PV-Reihen (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
+            print(f"PV-Fläche (Länge der Reihen × Höhe 2.5 m): {cfg['pv_vertical_front_m2']} m² ({cfg['pv_vertical_front_ha']} ha)")
         print(f"Das entspricht {cfg['pv_coverage_of_usable_percent']} % der nutzbaren Bodenfläche")
     except Exception as exc:
         print('Fehler beim Erzeugen der Karte:', exc)
