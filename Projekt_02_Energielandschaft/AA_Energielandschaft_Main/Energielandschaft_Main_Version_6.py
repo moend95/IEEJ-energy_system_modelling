@@ -17,6 +17,10 @@ from shapely.geometry import Polygon, LineString, Point
 from pyproj import CRS, Transformer
 from dataclasses import dataclass
 
+import os
+#print(os.path.isfile(".\pvlib_TMY_Demoflaeche.csv"))
+print(os.curdir)
+
 
 LonLat = Tuple[float, float]
 XY = Tuple[float, float]
@@ -319,9 +323,10 @@ class AgriPV:
 
         # -------------------------------
         # Wetterdaten
-        # -------------------------------
+        # ---------------------2
+        # ----------
         try:
-            tmy = pd.read_csv("C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\Projekt_02_Energielandschaft\\AA_Energielandschaft_Main\\pvlib_TMY_Demoflaeche.csv", index_col=0)
+            tmy = pd.read_csv("C:\\Users\\Felix\\Documents\\AAA_Master_EE\\GitHub\\MaPro_VS\\IEEJ-energy_system_modelling\\Projekt_02_Energielandschaft\\AA_Energielandschaft_Main\\pvlib_TMY_Demoflaeche.csv", index_col=0)
         except FileNotFoundError:
             raise FileNotFoundError("Fehler: Datei 'pvlib_TMY_Demoflaeche.csv' nicht gefunden.")
         tmy.index = pd.to_datetime(tmy.index)
@@ -453,7 +458,7 @@ class AgriPV:
         # Wetterdaten laden
         try:
             weather_data = pd.read_csv(
-                "C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\Projekt_02_Energielandschaft\\AA_Energielandschaft_Main\\pvlib_TMY_Demoflaeche.csv"
+                "./pvlib_TMY_Demoflaeche.csv"
             )
         except FileNotFoundError:
             raise FileNotFoundError("Fehler: Datei 'pvlib_TMY_Demoflaeche.csv' nicht gefunden.")

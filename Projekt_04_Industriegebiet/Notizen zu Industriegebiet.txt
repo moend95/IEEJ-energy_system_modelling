@@ -1,4 +1,40 @@
 - Machbarkeits Studie: Welche Unternehmen? 
 - Dummy-Unternehmen recherchieren (mit Lastgang und Dachfläche)
 - Dachfläche mit PV-Anlagen 
-- Lastgänge festlegen 
+- Lastgänge festlegen
+
+-Speicher Integration?!
+
+
+
+
+
+
+
+ABLAUF CODE:
+
+Klasse: IndustrieSim
+
+IN:
+-Unternehmen mit:
+    - Strom & Warm (& sehr warm) (Lastgänge oder zumindest jahres summe) (sonst Standard[~=Unternehmen aus TransIS))
+    - Dachfläche
+    -
+
+OUT:
+-Jahres Erzeugung Dach PV
+-Bilanz Verlauf Erzeugung vs. Verbrauch
+-KPIs (Eigenverbrauch, Autarkie, Netzbezug, Kostenüberschlag (Invest & Grid Cost))
+
+
+
+function: lastgänge einlesen(dateipfad)
+            else
+                  standard lastgänge einlesen (relativer dateipfad zu hinterlegten standardlastgängen)
+
+out pandas df für die weitere berechnung
+
+
+
+und so weiter... (weitere funktionen für die oben beschriebene Klasse)
+
