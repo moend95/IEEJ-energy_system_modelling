@@ -12,6 +12,11 @@
 
 import json
 from pathlib import Path
+from typing import Optional
+
+# Import orchestrator components
+from Projekt_02_Energielandschaft_FLAECHEN_BERECHNUNG import PVFieldProcessor
+from Projekt_02_Energielandschaft_PVLIB import PVSimulator, get_default_simulator
 
 class UserInputCollector:
 	"""
@@ -126,11 +131,79 @@ def get_user_inputs() -> dict:
 	return c.collect()
 
 
+class Application:
+	"""Main orchestration class for the Agri-PV workflow.
+
+	Usage:
+		app = Application()
+		app.run()  # interactive
+		# or programmatic:
+		app.run(geojson_path='path.geojson', out_html='out.html', open_in_browser=False)
+	"""
+
+	def __init__(self, simulator: Optional[PVSimulator] = None):
+		self.collector = UserInputCollector()
+		self.simulator = simulator or get_default_simulator()
+
+	def run(self, cfg: Optional[dict] = None, geojson_path: Optional[str] = None, out_html: Optional[str] = None, open_in_browser: bool = True):
+		# collect inputs if cfg not provided programmatically
+		if cfg is None:
+			cfg = self.collector.collect()
+			# persist initial config (adds derived defaults)
+			self.collector.save(cfg)
+
+		# interactive prompts for geojson and out_html if not provided
+		if geojson_path is None:
+			geojson_path = input('Pfad zur GeoJSON-Datei (.geojson) eingeben (oder ENTER zum Abbrechen): ').strip()
+			if not geojson_path:
+				print('Keine GeoJSON-Datei angegeben — Abbruch.')
+				return
+
+		if out_html is None:
+			out_html = input('Name der Ausgabedatei (HTML) [Standard: agri_pv_plot.html]: ').strip() or 'agri_pv_plot.html'
+
+		# if open_in_browser was not explicitly provided by caller (default True), allow interactive override
+		if open_in_browser is True:
+			open_answer = input('HTML-Datei direkt im Browser öffnen? (j/n) [j]: ').strip().lower()
+			open_in_browser = not (open_answer in ('n', 'nein', 'no'))
+
+		# run area processing
+		processor = PVFieldProcessor(cfg)
+		try:
+			result = processor.run(geojson_path, output_html=out_html, open_in_browser=open_in_browser)
+			out_path, total_area_m2, usable_ground_area_m2, pv_footprint_m2, pv_vertical_front_m2 = result
+			print(f'Karte erfolgreich erzeugt und gespeichert: {out_path}')
+			# persist the cfg after geometry processing
+			self.collector.save(cfg)
+
+			# run PV simulation using the configured simulator object
+			try:
+				sim_res = self.simulator.run(cfg)
+				if sim_res is not None:
+					cfg['pv_simulation'] = sim_res
+					self.collector.save(cfg)
+					print('PV-Simulationsergebnis in cfg gespeichert.')
+				else:
+					print('Keine Simulationsergebnisse (Simulation übersprungen).')
+			except Exception as e:
+				print('Fehler bei der PV-Simulation:', e)
+
+			# Print summary
+			print(f"Gesamtfläche Feld: {cfg.get('total_area_m2')} m² ({cfg.get('total_area_ha')} ha)")
+			print(f"Fläche des Feldes abzüglich Grünstreifen: {cfg.get('usable_ground_area_m2')} m² ({cfg.get('usable_ground_area_ha')} ha)")
+			print(f"Fläche abzüglich Grünstreifen und PV-Reihen: {cfg.get('usable_after_pv_m2')} m² ({cfg.get('usable_after_pv_ha')} ha)")
+			if cfg.get('pv_type') == 'horizontal':
+				print(f"Fläche für horizontale PV-Anlage (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg.get('pv_footprint_m2')} m² ({cfg.get('pv_footprint_ha')} ha)")
+			else:
+				print(f"Boden-Fußabdruck der PV-Reihen (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg.get('pv_footprint_m2')} m² ({cfg.get('pv_footprint_ha')} ha)")
+				print(f"PV-Fläche (Länge der Reihen × Höhe {cfg.get('pv_row_height_m')} m): {cfg.get('pv_vertical_front_m2')} m² ({cfg.get('pv_vertical_front_ha')} ha)")
+			print(f"Das entspricht {cfg.get('pv_coverage_of_usable_percent')} % der nutzbaren Bodenfläche")
+
+		except Exception as exc:
+			print('Fehler beim Erzeugen der Karte:', exc)
+
+
 if __name__ == '__main__':
-	# Beispiel: OO-basierte interaktive Abfrage
-	collector = UserInputCollector()
-	config = collector.collect()
-	out_file = collector.save(config)
-	print(f"→ Auswahl gespeichert in: {out_file}")
-	print('Konfiguration bereit')
+	app = Application()
+	app.run()
 

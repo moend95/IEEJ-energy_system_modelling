@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings(action='ignore', module='pvfactors')
 
 # Wetterdaten laden
-file_path = 'C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\02_Energielandschaft\\00_Energielandschaft_Vorlage_Sciebo_Cloud_von_Moritz\\04_Energielandschaft\\AgriPV-Tool\\pvlib_TMY_Demoflaeche.csv'
+file_path = 'C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\Projekt_02_Energielandschaft\\Energielandschaft_Vorlage_von_Moritz\\04_Energielandschaft\\AgriPV-Tool\\pvlib_TMY_Demoflaeche.csv'
 weather_data = pd.read_csv(file_path)
 
 # Zeit-Spalte in datetime konvertieren

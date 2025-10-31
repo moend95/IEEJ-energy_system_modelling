@@ -18,7 +18,8 @@ import numpy as np
 from shapely.geometry import LineString
 from shapely.ops import unary_union
 
-from Projekt_02_Energielandschaft_RUN_SKRIPT import UserInputCollector
+import json
+from pathlib import Path as _Path
 
 
 def _choose_utm_crs_from_lonlat(lon: float, lat: float):
@@ -38,7 +39,8 @@ class PVFieldProcessor:
     """
 
     def __init__(self, cfg: dict):
-        self.collector = UserInputCollector()
+        # accept optional external collector; if none provided, use a simple JSON saver
+        self.collector = None
         self.cfg = cfg
         # defaults / synchronisieren
         if self.cfg.get('pv_type') == 'vertical':
@@ -56,6 +58,19 @@ class PVFieldProcessor:
         self.pv_vertical_front_m2 = 0.0
         self.total_area_m2 = 0.0
         self.usable_ground_area_m2 = 0.0
+        # if no external collector is provided, define a minimal saver
+        if self.collector is None:
+            class _JsonSaver:
+                def save(self_inner, cfg_to_save: dict, out_dir: _Path = None):
+                    if out_dir is None:
+                        out_dir = _Path(__file__).resolve().parent / 'outputs'
+                    out_dir.mkdir(exist_ok=True)
+                    out_file = out_dir / 'user_selection.json'
+                    with out_file.open('w', encoding='utf-8') as f:
+                        json.dump(cfg_to_save, f, ensure_ascii=False, indent=2)
+                    return out_file
+
+            self.collector = _JsonSaver()
 
     def compute_green_and_spacing(self):
         tractor_width = float(self.cfg.get("tractor_width", 3.0))
@@ -246,45 +261,15 @@ class PVFieldProcessor:
             self.cfg['pv_coverage_of_usable_percent'] = 0.0
         # persist
         self.collector.save(self.cfg)
+
         return out_path, self.total_area_m2, self.usable_ground_area_m2, self.pv_footprint_m2, self.pv_vertical_front_m2
 
 
 def main():
-    collector = UserInputCollector()
-    cfg = collector.collect()
-    # ensure pv_row_height for vertical available early
-    if cfg.get('pv_type') == 'vertical':
-        cfg.setdefault('pv_row_height_m', 2.5)
-    collector.save(cfg)
-
-    geojson_path = input('Pfad zur GeoJSON-Datei (.geojson) eingeben (oder ENTER zum Abbrechen): ').strip()
-    if not geojson_path:
-        print('Keine GeoJSON-Datei angegeben — Abbruch.')
-        return
-
-    out_html = input('Name der Ausgabedatei (HTML) [Standard: agri_pv_plot.html]: ').strip() or 'agri_pv_plot.html'
-    open_answer = input('HTML-Datei direkt im Browser öffnen? (j/n) [j]: ').strip().lower()
-    open_in_browser = not (open_answer in ('n', 'nein', 'no'))
-
-    processor = PVFieldProcessor(cfg)
-    try:
-        result = processor.run(geojson_path, output_html=out_html, open_in_browser=open_in_browser)
-        out_path, total_area_m2, usable_ground_area_m2, pv_footprint_m2, pv_vertical_front_m2 = result
-        print(f'Karte erfolgreich erzeugt und gespeichert: {out_path}')
-        print(f"Gesamtfläche Feld: {cfg['total_area_m2']} m² ({cfg['total_area_ha']} ha)")
-        print(f"Fläche des Feldes abzüglich Grünstreifen: {cfg['usable_ground_area_m2']} m² ({cfg['usable_ground_area_ha']} ha)")
-        print(f"Fläche abzüglich Grünstreifen und PV-Reihen: {cfg['usable_after_pv_m2']} m² ({cfg['usable_after_pv_ha']} ha)")
-        if cfg.get('pv_type') == 'horizontal':
-            print(f"Fläche für horizontale PV-Anlage (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
-        else:
-            print(f"Boden-Fußabdruck der PV-Reihen (Reihenbreite {cfg.get('pv_row_width_m')} m): {cfg['pv_footprint_m2']} m² ({cfg['pv_footprint_ha']} ha)")
-            print(f"PV-Fläche (Länge der Reihen × Höhe {cfg.get('pv_row_height_m')} m): {cfg['pv_vertical_front_m2']} m² ({cfg['pv_vertical_front_ha']} ha)")
-        print(f"Das entspricht {cfg['pv_coverage_of_usable_percent']} % der nutzbaren Bodenfläche")
-    except Exception as exc:
-        print('Fehler beim Erzeugen der Karte:', exc)
+    print('Dieses Modul stellt die PVFieldProcessor-Klasse bereit. Verwende das Skript Projekt_02_Energielandschaft_RUN_SKRIPT.py als Hauptprogramm.')
 
 
 if __name__ == "__main__":
-    main()
+    print('Dieses Modul stellt die PVFieldProcessor-Klasse bereit. Verwende das Skript Projekt_02_Energielandschaft_RUN_SKRIPT.py als Hauptprogramm.')
 
 

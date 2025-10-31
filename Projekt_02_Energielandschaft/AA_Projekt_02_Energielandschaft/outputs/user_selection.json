@@ -19,5 +19,11 @@
   "pv_vertical_front_ha": 0.0,
   "usable_after_pv_m2": 11242062.634,
   "usable_after_pv_ha": 1124.2063,
-  "pv_coverage_of_usable_percent": 50.98
+  "pv_coverage_of_usable_percent": 50.98,
+  "pv_simulation": {
+    "number_of_modules": 6320595,
+    "installed_capacity_kwp": 2433726.142965,
+    "total_energy_kwh": 379.5343117635703,
+    "specific_yield_kwh_per_kwp": 0.00015594783039195404
+  }
 }
