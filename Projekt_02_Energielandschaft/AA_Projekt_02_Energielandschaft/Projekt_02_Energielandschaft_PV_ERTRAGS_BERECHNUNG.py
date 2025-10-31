@@ -4,3 +4,6 @@
 
 # ------------------------------------------------------------
 
+'''
+PV-Ertrags-Berechnung ist in Skript 'Projekt_02_Energielandschaft_PVLIB.py' integriert.
+'''

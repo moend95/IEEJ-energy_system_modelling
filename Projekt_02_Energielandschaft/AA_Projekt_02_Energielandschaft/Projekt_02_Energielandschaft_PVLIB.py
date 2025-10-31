@@ -91,22 +91,27 @@ def run_simulation_from_cfg(cfg: dict, weather_csv: str | Path = None):
 	# Support both vertical and horizontal configurations
 	pv_type = cfg.get('pv_type', 'vertical')
 	module_area = float(cfg.get('module_area_m2', module['Area']))
+	# Compute number of modules using a packing factor to account for row spacing, access, mounting gaps
+	packing_factor_horizontal = float(cfg.get('packing_factor_horizontal', 0.6))
+	packing_factor_vertical = float(cfg.get('packing_factor_vertical', 0.9))
 	if pv_type == 'vertical':
 		pv_vertical_front_m2 = float(cfg.get('pv_vertical_front_m2', 0.0))
 		if pv_vertical_front_m2 <= 0:
 			print('Keine vertikale PV-Fläche vorhanden (0 m2) — Simulation übersprungen.')
 			return None
-		number_of_modules = math.floor(pv_vertical_front_m2 / module_area)
+		usable_area_per_module = module_area / packing_factor_vertical
+		number_of_modules = math.floor(pv_vertical_front_m2 / usable_area_per_module)
 		if number_of_modules == 0:
 			print('Zu wenig Fläche für ein Modul — Simulation übersprungen.')
 			return None
 	else:
-		# horizontal: use ground footprint area to derive module count
+		# horizontal: use ground footprint area to derive module count with packing factor
 		pv_footprint_m2 = float(cfg.get('pv_footprint_m2', 0.0))
 		if pv_footprint_m2 <= 0:
 			print('Keine horizontale PV-Bodenfläche vorhanden (0 m2) — Simulation übersprungen.')
 			return None
-		number_of_modules = math.floor(pv_footprint_m2 / module_area)
+		usable_area_per_module = module_area / packing_factor_horizontal
+		number_of_modules = math.floor(pv_footprint_m2 / usable_area_per_module)
 		if number_of_modules == 0:
 			print('Zu wenig Fläche für ein Modul — Simulation übersprungen.')
 			return None
@@ -172,6 +177,10 @@ def run_simulation_from_cfg(cfg: dict, weather_csv: str | Path = None):
 		from pvlib import irradiance
 		surface_tilt = float(cfg.get('tilt', 30.0))
 		surface_azimuth = float(cfg.get('azimuth', 180.0))
+		bifaciality = float(cfg.get('bifaciality', 0.85))
+		albedo = float(cfg.get('albedo', 0.2))
+		ground_view_factor = float(cfg.get('ground_view_factor', 0.5))  # einfache Annahme (0..1)
+
 		# weather must contain dni, ghi, dhi; fallback if only ghi available
 		dni = weather.get('dni') if 'dni' in weather.columns else None
 		ghi = weather.get('ghi') if 'ghi' in weather.columns else None
@@ -187,7 +196,15 @@ def run_simulation_from_cfg(cfg: dict, weather_csv: str | Path = None):
 								ghi if ghi is not None else 0,
 								dhi if dhi is not None else 0)
 		irrad = pd.DataFrame(index=times)
-		irrad['effective_irradiance'] = poa['poa_global']
+		poa_global = poa['poa_global'].fillna(0)
+
+		# Einfacher Bifacial‑Fallback: Rückseitenanteil aus Albedo * GHI * ground_view_factor
+		if ghi is not None:
+			rear_irradiance = albedo * ghi * ground_view_factor
+		else:
+			rear_irradiance = albedo * poa_global * ground_view_factor
+
+		irrad['effective_irradiance'] = poa_global + (bifaciality * rear_irradiance)
 
 	# temperature model
 	temp_params = PARAMS['sapm']['open_rack_glass_glass'] if 'sapm' in PARAMS else PARAMS['open_rack_glass_glass']
@@ -197,18 +214,26 @@ def run_simulation_from_cfg(cfg: dict, weather_csv: str | Path = None):
 	module_capacity_kwp = module['Vmpo'] * module['Impo'] / 1000.0
 	total_installed_capacity_kwp = module_capacity_kwp * number_of_modules
 
+	# Build a realistic string/array layout to avoid creating absurdly long strings
+	modules_per_string = int(min(20, max(1, number_of_modules)))
+	strings = int(math.ceil(number_of_modules / modules_per_string))
+	# adjust modules represented by the system (may be >= number_of_modules if rounding)
+	represented_modules = modules_per_string * strings
+
 	array = pvsystem.Array(mount=pvsystem.FixedMount(surface_tilt=axis_tilt, surface_azimuth=axis_azimuth),
-		                   module_parameters=module,
-		                   temperature_model_parameters=temp_params,
-		                   strings=1,
-		                   modules_per_string=number_of_modules)
+						   module_parameters=module,
+						   temperature_model_parameters=temp_params,
+						   strings=strings,
+						   modules_per_string=modules_per_string)
 	system = pvsystem.PVSystem(arrays=[array], inverter_parameters=inverter)
 	# Try to run ModelChain; if module parameters are insufficient for dc-model, fall back to a simple pvwatts-like estimate
 	try:
 		mc = modelchain.ModelChain(system, site, aoi_model='no_loss')
 		mc.run_model_from_effective_irradiance(irrad)
 		ac = mc.results.ac
-		ac *= 0.9
+		# scale AC to actual number of modules (ModelChain uses represented_modules)
+		scale_factor = number_of_modules / max(represented_modules, 1)
+		ac *= 0.9 * scale_factor
 		total_energy_kwh = ac.sum() / 1000.0
 		specific_yield = total_energy_kwh / total_installed_capacity_kwp if total_installed_capacity_kwp > 0 else 0.0
 	except Exception as e:
@@ -220,12 +245,25 @@ def run_simulation_from_cfg(cfg: dict, weather_csv: str | Path = None):
 		total_energy_kwh = float(energy_wh) / 1000.0
 		specific_yield = total_energy_kwh / total_installed_capacity_kwp if total_installed_capacity_kwp > 0 else 0.0
 
+	# If the specific yield is implausible (e.g., extremely low or extremely high), substitute a conservative estimate
+	fallback_note = None
+	min_reasonable_sy = float(cfg.get('min_reasonable_specific_yield_kwh_per_kwp', 200.0))
+	max_reasonable_sy = float(cfg.get('max_reasonable_specific_yield_kwh_per_kwp', 3500.0))
+	if specific_yield <= 0 or specific_yield < min_reasonable_sy or specific_yield > max_reasonable_sy:
+		# estimate using a default specific yield (kWh/kWp) depending on latitude/region; default ~900 for central Europe
+		default_sy = float(cfg.get('default_specific_yield_kwh_per_kwp', 900.0))
+		total_energy_kwh = float(total_installed_capacity_kwp) * default_sy
+		specific_yield = default_sy
+		fallback_note = f"Fallback verwendet: spezifischer Ertrag auf {default_sy} kWh/kWp gesetzt wegen unplausiblem Simulationsergebnis."
+
 	summary = {
 		'number_of_modules': int(number_of_modules),
 		'installed_capacity_kwp': float(total_installed_capacity_kwp),
 		'total_energy_kwh': float(total_energy_kwh),
 		'specific_yield_kwh_per_kwp': float(specific_yield),
 	}
+	if fallback_note is not None:
+		summary['note'] = fallback_note
 	# Format and print a user-friendly German summary
 	def _fmt_int_de(n: int) -> str:
 		return f"{n:,}".replace(',', '.')

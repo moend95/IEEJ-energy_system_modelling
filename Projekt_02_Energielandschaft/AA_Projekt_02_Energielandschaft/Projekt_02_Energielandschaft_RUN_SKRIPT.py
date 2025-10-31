@@ -153,11 +153,19 @@ class Application:
 			self.collector.save(cfg)
 
 		# interactive prompts for geojson and out_html if not provided
+		# allow a sensible default geojson path when user presses ENTER
+		default_geojson = cfg.get('default_geojson') or r'C:\Users\johan\TH_Koeln_Masterprojekt\IEEJ-energy_system_modelling\Projekt_02_Energielandschaft\AA_Projekt_02_Energielandschaft\Projekt_02_Energielandschaft_Flaeche_Agri_PV.geojson'
 		if geojson_path is None:
-			geojson_path = input('Pfad zur GeoJSON-Datei (.geojson) eingeben (oder ENTER zum Abbrechen): ').strip()
-			if not geojson_path:
-				print('Keine GeoJSON-Datei angegeben — Abbruch.')
-				return
+			ans = input(f'Pfad zur GeoJSON-Datei (.geojson) eingeben (ENTER = Standard: {default_geojson}): ').strip()
+			if not ans:
+				geojson_path = default_geojson
+			else:
+				geojson_path = ans
+
+		# verify existence
+		if not Path(geojson_path).exists():
+			print(f'GeoJSON-Datei nicht gefunden: {geojson_path} — Abbruch.')
+			return
 
 		if out_html is None:
 			out_html = input('Name der Ausgabedatei (HTML) [Standard: agri_pv_plot.html]: ').strip() or 'agri_pv_plot.html'
