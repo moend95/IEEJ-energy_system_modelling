@@ -18,6 +18,339 @@ from typing import Optional
 from Projekt_02_Energielandschaft_FLAECHEN_BERECHNUNG import PVFieldProcessor
 from Projekt_02_Energielandschaft_PVLIB import PVSimulator, get_default_simulator
 
+# Embedded GeoJSON for Agri-PV area (inlined so no external path required)
+EMBEDDED_GEOJSON = '''{
+	"type": "FeatureCollection",
+	"features": [
+		{
+			"type": "Feature",
+			"geometry": {
+				"coordinates": [
+					[
+						[
+							6.500258,
+							51.050945
+						],
+						[
+							6.500752,
+							51.051134
+						],
+						[
+							6.501245,
+							51.051296
+						],
+						[
+							6.502404,
+							51.051781
+						],
+						[
+							6.503048,
+							51.052078
+						],
+						[
+							6.518154,
+							51.058876
+						],
+						[
+							6.522102,
+							51.056394
+						],
+						[
+							6.523132,
+							51.057797
+						],
+						[
+							6.525192,
+							51.057473
+						],
+						[
+							6.525707,
+							51.06481
+						],
+						[
+							6.528969,
+							51.069125
+						],
+						[
+							6.530771,
+							51.070095
+						],
+						[
+							6.534548,
+							51.070095
+						],
+						[
+							6.535063,
+							51.077969
+						],
+						[
+							6.525021,
+							51.080449
+						],
+						[
+							6.518841,
+							51.086057
+						],
+						[
+							6.525879,
+							51.089184
+						],
+						[
+							6.531587,
+							51.089858
+						],
+						[
+							6.536586,
+							51.092122
+						],
+						[
+							6.53811,
+							51.093092
+						],
+						[
+							6.531179,
+							51.098766
+						],
+						[
+							6.513691,
+							51.095114
+						],
+						[
+							6.514378,
+							51.089399
+						],
+						[
+							6.497211,
+							51.086596
+						],
+						[
+							6.492062,
+							51.094143
+						],
+						[
+							6.482964,
+							51.092634
+						],
+						[
+							6.481719,
+							51.092391
+						],
+						[
+							6.479852,
+							51.089184
+						],
+						[
+							6.47747,
+							51.087674
+						],
+						[
+							6.47644,
+							51.086367
+						],
+						[
+							6.478801,
+							51.086084
+						],
+						[
+							6.479273,
+							51.085073
+						],
+						[
+							6.480002,
+							51.083873
+						],
+						[
+							6.481762,
+							51.082013
+						],
+						[
+							6.484294,
+							51.078805
+						],
+						[
+							6.486611,
+							51.075704
+						],
+						[
+							6.484551,
+							51.075354
+						],
+						[
+							6.486483,
+							51.073493
+						],
+						[
+							6.487255,
+							51.071929
+						],
+						[
+							6.490345,
+							51.072549
+						],
+						[
+							6.494358,
+							51.067655
+						],
+						[
+							6.491997,
+							51.066805
+						],
+						[
+							6.495495,
+							51.06303
+						],
+						[
+							6.497104,
+							51.061263
+						],
+						[
+							6.498671,
+							51.059065
+						],
+						[
+							6.500816,
+							51.054614
+						],
+						[
+							6.50116,
+							51.053346
+						],
+						[
+							6.501331,
+							51.051768
+						],
+						[
+							6.499926,
+							51.051343
+						],
+						[
+							6.499293,
+							51.054371
+						],
+						[
+							6.497898,
+							51.057365
+						],
+						[
+							6.497126,
+							51.058498
+						],
+						[
+							6.494658,
+							51.057878
+						],
+						[
+							6.490002,
+							51.06338
+						],
+						[
+							6.492577,
+							51.064095
+						],
+						[
+							6.490345,
+							51.066347
+						],
+						[
+							6.488028,
+							51.065942
+						],
+						[
+							6.48217,
+							51.072307
+						],
+						[
+							6.484551,
+							51.073035
+						],
+						[
+							6.480775,
+							51.077106
+						],
+						[
+							6.477835,
+							51.080058
+						],
+						[
+							6.47526,
+							51.082647
+						],
+						[
+							6.474144,
+							51.086529
+						],
+						[
+							6.474466,
+							51.090478
+						],
+						[
+							6.471806,
+							51.092418
+						],
+						[
+							6.45421,
+							51.092041
+						],
+						[
+							6.442752,
+							51.09355
+						],
+						[
+							6.444211,
+							51.089992
+						],
+						[
+							6.450477,
+							51.090316
+						],
+						[
+							6.454639,
+							51.081717
+						],
+						[
+							6.459832,
+							51.049326
+						],
+						[
+							6.46524,
+							51.041097
+						],
+						[
+							6.481912,
+							51.037265
+						],
+						[
+							6.483307,
+							51.042905
+						],
+						[
+							6.4991,
+							51.050513
+						],
+						[
+							6.499658,
+							51.050756
+						],
+						[
+							6.500258,
+							51.050945
+						]
+					]
+				],
+				"type": "Polygon"
+			},
+			"properties": {
+				"_umap_options": {
+					"color": "DarkOrange",
+					"weight": 9
+				},
+				"name": "Energielandschaft_Juechen_Agri_PV",
+				"description": "Agri-PV Fläche"
+			},
+			"id": "AzODE"
+		}
+	]
+}'''
 class UserInputCollector:
 	"""
 	Objektorientierter Collector für die Benutzerabfrage.
@@ -152,28 +485,20 @@ class Application:
 			# persist initial config (adds derived defaults)
 			self.collector.save(cfg)
 
-		# interactive prompts for geojson and out_html if not provided
-		# allow a sensible default geojson path when user presses ENTER
-		default_geojson = cfg.get('default_geojson') or r'C:\Users\johan\TH_Koeln_Masterprojekt\IEEJ-energy_system_modelling\Projekt_02_Energielandschaft\AA_Projekt_02_Energielandschaft\Projekt_02_Energielandschaft_Flaeche_Agri_PV.geojson'
+		# If no geojson_path provided, write embedded GeoJSON to outputs and use that file.
 		if geojson_path is None:
-			ans = input(f'Pfad zur GeoJSON-Datei (.geojson) eingeben (ENTER = Standard: {default_geojson}): ').strip()
-			if not ans:
-				geojson_path = default_geojson
-			else:
-				geojson_path = ans
+			out_dir = Path(__file__).resolve().parent / 'outputs'
+			out_dir.mkdir(exist_ok=True)
+			emb_path = out_dir / 'embedded_area.geojson'
+			# write embedded content if file not present
+			if not emb_path.exists():
+				with emb_path.open('w', encoding='utf-8') as f:
+					f.write(EMBEDDED_GEOJSON)
+			geojson_path = str(emb_path)
 
-		# verify existence
-		if not Path(geojson_path).exists():
-			print(f'GeoJSON-Datei nicht gefunden: {geojson_path} — Abbruch.')
-			return
-
+		# default output html if not provided
 		if out_html is None:
-			out_html = input('Name der Ausgabedatei (HTML) [Standard: agri_pv_plot.html]: ').strip() or 'agri_pv_plot.html'
-
-		# if open_in_browser was not explicitly provided by caller (default True), allow interactive override
-		if open_in_browser is True:
-			open_answer = input('HTML-Datei direkt im Browser öffnen? (j/n) [j]: ').strip().lower()
-			open_in_browser = not (open_answer in ('n', 'nein', 'no'))
+			out_html = 'agri_pv_plot.html'
 
 		# run area processing
 		processor = PVFieldProcessor(cfg)
