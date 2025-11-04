@@ -1,4 +1,0 @@
-- Machbarkeits Studie: Welche Unternehmen? 
-- Dummy-Unternehmen recherchieren (mit Lastgang und Dachfläche)
-- Dachfläche mit PV-Anlagen 
-- Lastgänge festlegen 
