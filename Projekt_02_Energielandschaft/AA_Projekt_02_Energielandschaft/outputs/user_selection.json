@@ -6,18 +6,5 @@
   "row_direction": "E-W",
   "row_direction_label": "Osten nach Westen",
   "tilt": 30,
-  "pv_row_width_m": 5.2,
-  "green_strip_width_m": 18.0,
-  "effective_row_spacing_m": 10.2,
-  "total_area_m2": 23599918.079,
-  "total_area_ha": 2359.9918,
-  "usable_ground_area_m2": 22935164.407,
-  "usable_ground_area_ha": 2293.5164,
-  "pv_footprint_m2": 11693101.773,
-  "pv_footprint_ha": 1169.3102,
-  "pv_vertical_front_m2": 0.0,
-  "pv_vertical_front_ha": 0.0,
-  "usable_after_pv_m2": 11242062.634,
-  "usable_after_pv_ha": 1124.2063,
-  "pv_coverage_of_usable_percent": 50.98
+  "pv_row_width_m": 5.2
 }
