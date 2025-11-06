@@ -10,6 +10,7 @@ from shapely.geometry import Point, LineString
 from shapely.ops import unary_union
 import math
 import matplotlib.pyplot as plt
+from functions_weather_data import
 
 class PVType:
     """
@@ -62,9 +63,10 @@ class WeatherFetcher:
 
 class AzimutCalculator:
 
-    def __init__(self, geojson_path, step_size, output_csv_path):
+    def __init__(self, geojson_path, step_size, pv_type, output_csv_path):
         self.geojson_path = geojson_path
         self.step_size = step_size
+        self.pv_type = pv_type
         self.output_csv_path = output_csv_path
 
         self.gdf = None
@@ -105,19 +107,11 @@ class AzimutCalculator:
         azimut_tangent = (90 - theta_deg) % 360  # Umrechnung in Azimut: Norden = 0°, Osten = 90°, Süden = 180°, Westen = 270°
 
         # Azimut & Neigung je nach PV-Typ setzen:
-        if self.pv_typ == "dach":
-            self._append_point(point=p1, azimut=180)
+        if self.pv_type.azimut == "variabel":
+            self._append_point(point=p1, azimut=azimut_tangent)
 
-        elif self.pv_typ == "bifazial":
-            azimut_a = (azimut_tangent + 90) % 360
-            azimut_b = (azimut_tangent + 270) % 360
-            for azimut in [azimut_a, azimut_b]:
-                self._append_point(point=p1, azimut=azimut)
-
-        else:  # senkrecht
-            azimut = (azimut_tangent + 90) % 360
-            self._append_point(point=p1, azimut=azimut)
-
+        if self.pv_type.azimut != "variabel":
+            self._append_point(point=p1, azimut=self.pv_type.azimut)
 
 class PV_System:
     # Initialisierung mit GDF als .geojason und pvtypes als Liste pvtypes = [2, 3, 4]
@@ -127,17 +121,19 @@ class PV_System:
         self.step_size = step_size
 
 
-    #def calculatePV(self):
+    def calculate_pv(self):
 
-      #  calc = AzimutCalculator(gdf, step_size)
-      #  calc.calculate_azimut()
+        for pvtype in self.pvtypes:
+            calc = AzimutCalculator(self.gdf, self.step_size, pvtype)
+            calc.calculate_azimut()
 
-        for
+
+     #   for
 
      #   fetcher = WeatherFetcher()
      #   weatherdata = get_weather_data.fetcher
 
             mc = ModelChain(system, location)
-            mc.run_model(weatherData)
+            mc.run_model(weatherData) #Sarah TO-DO Zeile 146 funktioniert
             mc.results
 
