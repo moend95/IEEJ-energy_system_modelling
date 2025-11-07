@@ -16,6 +16,7 @@ from typing import Optional
 
 # Import orchestrator components
 from Projekt_02_Energielandschaft_FLAECHEN_BERECHNUNG import PVFieldProcessor
+from Projekt_02_Energielandschaft import PVMapPlotter
 from Projekt_02_Energielandschaft_PVLIB import PVSimulator, get_default_simulator
 
 # Embedded GeoJSON for Agri-PV area (inlined so no external path required)
@@ -500,12 +501,31 @@ class Application:
 		if out_html is None:
 			out_html = 'agri_pv_plot.html'
 
-		# run area processing
-		processor = PVFieldProcessor(cfg)
+		# run area processing and plotting using PVMapPlotter (produces map + res dict)
+		plotter = PVMapPlotter(cfg)
 		try:
-			result = processor.run(geojson_path, output_html=out_html, open_in_browser=open_in_browser)
-			out_path, total_area_m2, usable_ground_area_m2, pv_footprint_m2, pv_vertical_front_m2 = result
+			out_path, res = plotter.plot(geojson_path, out_html=out_html, open_in_browser=open_in_browser)
 			print(f'Karte erfolgreich erzeugt und gespeichert: {out_path}')
+			# merge computed results into cfg
+			cfg['total_area_m2'] = res.get('total_area_m2')
+			cfg['usable_ground_area_m2'] = res.get('usable_ground_area_m2')
+			cfg['pv_footprint_m2'] = res.get('pv_footprint_m2')
+			if 'pv_vertical_front_m2' in res:
+				cfg['pv_vertical_front_m2'] = res.get('pv_vertical_front_m2')
+			# derive hectare values and coverage
+			if cfg.get('total_area_m2'):
+				cfg['total_area_ha'] = round(float(cfg['total_area_m2']) / 10000.0, 4)
+			if cfg.get('usable_ground_area_m2'):
+				cfg['usable_ground_area_ha'] = round(float(cfg['usable_ground_area_m2']) / 10000.0, 4)
+			if cfg.get('pv_footprint_m2'):
+				cfg['pv_footprint_ha'] = round(float(cfg['pv_footprint_m2']) / 10000.0, 4)
+			if cfg.get('usable_ground_area_m2') and cfg.get('pv_footprint_m2') is not None:
+				cfg['usable_after_pv_m2'] = round(float(cfg['usable_ground_area_m2']) - float(cfg['pv_footprint_m2']), 3)
+				cfg['usable_after_pv_ha'] = round(float(cfg['usable_after_pv_m2']) / 10000.0, 4)
+			if cfg.get('usable_ground_area_m2') and cfg.get('pv_footprint_m2') is not None:
+				cfg['pv_coverage_of_usable_percent'] = round(100.0 * (float(cfg['pv_footprint_m2']) / float(cfg['usable_ground_area_m2'])), 2)
+			else:
+				cfg['pv_coverage_of_usable_percent'] = 0.0
 			# persist the cfg after geometry processing
 			self.collector.save(cfg)
 
