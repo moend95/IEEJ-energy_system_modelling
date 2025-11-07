@@ -7,14 +7,20 @@
   "row_direction_label": "Osten nach Westen",
   "tilt": 30,
   "pv_row_width_m": 5.2,
-  "albedo": 0.2,
-  "bifaciality": 0.85,
   "total_area_m2": 23599918.079,
-  "green_strip_width_m": 18.0,
-  "fahrspur_breite_m": 5.0,
-  "effective_row_spacing_m": 10.2,
   "usable_ground_area_m2": 22935164.407,
-  "total_row_length_m": 2248673.418,
   "pv_footprint_m2": 11693101.773,
-  "map_html": "C:\\Users\\johan\\TH_Koeln_Masterprojekt\\IEEJ-energy_system_modelling\\Projekt_02_Energielandschaft\\AA_Projekt_02_Energielandschaft\\outputs\\agri_pv_plot.html"
+  "total_area_ha": 2359.9918,
+  "usable_ground_area_ha": 2293.5164,
+  "pv_footprint_ha": 1169.3102,
+  "usable_after_pv_m2": 11242062.634,
+  "usable_after_pv_ha": 1124.2063,
+  "pv_coverage_of_usable_percent": 50.98,
+  "pv_simulation": {
+    "number_of_modules": 3792357,
+    "installed_capacity_kwp": 1460235.6857790002,
+    "total_energy_kwh": 1314212117.2011,
+    "specific_yield_kwh_per_kwp": 900.0,
+    "note": "Fallback verwendet: spezifischer Ertrag auf 900.0 kWh/kWp gesetzt wegen unplausiblem Simulationsergebnis."
+  }
 }
