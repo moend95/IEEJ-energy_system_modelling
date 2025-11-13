@@ -293,60 +293,60 @@ def plot_single_series(df: pd.DataFrame, col: str, title: str = None):
     plt.show()
 
 
-
-# --------- Beispiel-Aufruf ----------
-
-if __name__ == "__main__":
-    cfg = DWDWeatherConfig(
-        start="2022-01-01",
-        end="2022-12-31",
-        auto_select=True,
-        save_path="./Input/test_solarautobahn.csv",
-        plot_date="2022-07-20",
-        plot_range=("2022-01-01", "2022-12-31"),
-        use_dirint= True,
-    )
-    df = DWDWeatherFetcher(cfg).run()
-
-# Aufrufbeispiele:
-plot_single_series(df, "dni",  "Direktstrahlung (DNI)")
-plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
-plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")
-
-
-# ------------------------test Monatssummen ---------------------------------
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-# ------------------------------
-# Monats-Energie aus 10-min-Daten (W/m²) → kWh/m²
-# ------------------------------
-
-df_rad = df[["ghi", "dhi", "dni"]].clip(lower=0)
-
-# 10 Minuten = 10/60 h; W → Wh → kWh ⇒ Faktor = 1/6000
-factor = (10/60)/1000   # oder: 1/6000
-
-
-# Monatssummen bilden
-monthly = pd.DataFrame({
-    "ghi": df_rad["ghi"].resample("M").sum() * factor,
-    "dhi": df_rad["dhi"].resample("M").sum() * factor,
-    "dni": df_rad["dni"].resample("M").sum() * factor,
-})
-
-monthly.index = monthly.index.to_period("M")
-print(monthly)
-
-# ------------------------------
-# Plotten
-# ------------------------------
-monthly.plot(kind="bar", figsize=(12,5))
-plt.ylabel("Monatssumme [kWh/m²]")
-plt.title("Monatssummen der Strahlung (kWh/m²)")
-plt.grid(axis="y", linestyle="--", alpha=0.5)
-plt.tight_layout()
-plt.show()
-
+#
+# # --------- Beispiel-Aufruf ----------
+#
+# if __name__ == "__main__":
+#     cfg = DWDWeatherConfig(
+#         start="2022-01-01",
+#         end="2022-12-31",
+#         auto_select=True,
+#         save_path="./Input/test_solarautobahn.csv",
+#         plot_date="2022-07-20",
+#         plot_range=("2022-01-01", "2022-12-31"),
+#         use_dirint= True,
+#     )
+#     df = DWDWeatherFetcher(cfg).run()
+#
+# # Aufrufbeispiele:
+# plot_single_series(df, "dni",  "Direktstrahlung (DNI)")
+# plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
+# plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")
+#
+#
+# # ------------------------test Monatssummen ---------------------------------
+#
+# import numpy as np
+# import matplotlib.pyplot as plt
+#
+# # ------------------------------
+# # Monats-Energie aus 10-min-Daten (W/m²) → kWh/m²
+# # ------------------------------
+#
+# df_rad = df[["ghi", "dhi", "dni"]].clip(lower=0)
+#
+# # 10 Minuten = 10/60 h; W → Wh → kWh ⇒ Faktor = 1/6000
+# factor = (10/60)/1000   # oder: 1/6000
+#
+#
+# # Monatssummen bilden
+# monthly = pd.DataFrame({
+#     "ghi": df_rad["ghi"].resample("M").sum() * factor,
+#     "dhi": df_rad["dhi"].resample("M").sum() * factor,
+#     "dni": df_rad["dni"].resample("M").sum() * factor,
+# })
+#
+# monthly.index = monthly.index.to_period("M")
+# print(monthly)
+#
+# # ------------------------------
+# # Plotten
+# # ------------------------------
+# monthly.plot(kind="bar", figsize=(12,5))
+# plt.ylabel("Monatssumme [kWh/m²]")
+# plt.title("Monatssummen der Strahlung (kWh/m²)")
+# plt.grid(axis="y", linestyle="--", alpha=0.5)
+# plt.tight_layout()
+# plt.show()
+#
 

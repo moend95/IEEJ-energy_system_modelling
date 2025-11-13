@@ -149,7 +149,7 @@ class DWDWeatherFetcher:
         df["zenith"] = solpos["zenith"]
         cosz = np.cos(np.radians(df["zenith"]))
 
-        # 6) DNI berechnen (tagsüber), physikalische Schranken
+        # 6) DNI berechnen horizontale ebene!
         cosz_safe = np.where(cosz <= 0.0, np.nan, cosz)  # Nacht -> NaN
         df["dni"] = (df.get("ghi", np.nan) - df.get("dhi", np.nan)) / cosz_safe
         if "ghi" in df.columns:
