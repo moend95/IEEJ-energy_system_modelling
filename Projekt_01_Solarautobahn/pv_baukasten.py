@@ -50,7 +50,7 @@ PV_TYPEN = [
     PVType(
         1,
         "Windschutzwand",
-        bifazial=0.0,
+        bifazial=0,                 # Faktor für prozentual mehr erzeugung dadurch das es bifazial ist
         azimut="variabel",
         tilt=90,
         module="Canadian_Solar_CS6X_300M__2013_",
