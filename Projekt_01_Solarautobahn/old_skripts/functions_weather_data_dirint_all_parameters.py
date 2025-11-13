@@ -301,7 +301,7 @@ if __name__ == "__main__":
         start="2022-01-01",
         end="2022-12-31",
         auto_select=True,
-        save_path="./Input/test_solarautobahn.csv",
+        save_path="../Input/test_solarautobahn.csv",
         plot_date="2022-07-20",
         plot_range=("2022-01-01", "2022-12-31"),
 

@@ -160,7 +160,7 @@ class DWDWeatherFetcher:
         daylight = (cosz > 0) & df["ghi"].notna() & (df["ghi"] > 0)
         dni_series = df["dni"].copy()
         dni_series[~daylight] = np.nan
-        df["dni"] = dni_series.interpolate(method="time", limit=1000)  # <= hier Limit anpassen, z.B. 2..6
+        df["dni"] = dni_series.interpolate(method="time", limit=100)  # <= hier Limit anpassen, z.B. 2..6
 
         # Nach-Absicherung der Schranken nach der Interpolation:
         if "ghi" in df.columns:
@@ -242,3 +242,42 @@ if __name__ == "__main__":
         plot_range=("2022-01-01", "2022-12-31"),
     )
     df = DWDWeatherFetcher(cfg).run()
+
+
+
+# ------------------------test Monatssummen ---------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ------------------------------
+# Monats-Energie aus 10-min-Daten (W/m²) → kWh/m²
+# ------------------------------
+
+df_rad = df[["ghi", "dhi", "dni"]].clip(lower=0)
+
+# 10 Minuten = 10/60 h; W → Wh → kWh ⇒ Faktor = 1/6000
+factor = (10/60)/1000   # oder: 1/6000
+
+
+# Monatssummen bilden
+monthly = pd.DataFrame({
+    "ghi": df_rad["ghi"].resample("M").sum() * factor,
+    "dhi": df_rad["dhi"].resample("M").sum() * factor,
+    "dni": df_rad["dni"].resample("M").sum() * factor,
+})
+
+monthly.index = monthly.index.to_period("M")
+print(monthly)
+
+# ------------------------------
+# Plotten
+# ------------------------------
+monthly.plot(kind="bar", figsize=(12,5))
+plt.ylabel("Monatssumme [kWh/m²]")
+plt.title("Monatssummen der Strahlung (kWh/m²)")
+plt.grid(axis="y", linestyle="--", alpha=0.5)
+plt.tight_layout()
+plt.show()
+
+
