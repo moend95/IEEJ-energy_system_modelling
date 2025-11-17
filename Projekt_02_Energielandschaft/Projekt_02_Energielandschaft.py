@@ -1,17 +1,20 @@
-# Projekt 02 - Energielandschaft 
-# Input: Traktor Parameter (Länge, Breite, Wenderadius), Fläche (GeoJSON-Datei), Typ PV-Anlage
-# Output: Max. mögliche PV-Fläche
+"""
+Projekt 02 - Energielandschaft
 
-import json
-from pathlib import Path
-from typing import Optional, Tuple
-import os
-import geopandas as gpd
-import numpy as np
-from shapely.ops import unary_union
-from shapely.geometry import LineString
+Dieses Skript enthält modular aufgebaute Klassen zur:
+- Einlesung einer eingebetteten GeoJSON-Fläche (WGS84)
+- Auswahl des PV-Typs (horizontal/vertical)
+- Abfrage der Traktorparameter (Breite, Länge, Wenderadius)
+- Berechnung von Wende- und Fahrspurbreiten mit Sicherheitszuschlag von 1 m
+- Berechnung der verfügbaren Nutzfläche (in m², reprojiziert in UTM)
+- Generierung von PV Modulmitten als GeoJSON FeatureCollection
 
-# Embedded GeoJSON (fallback default area) so this script is fully standalone
+Technische Hinweise:
+- Shapely wird für Geometrieoperationen verwendet.
+- Flächen-/Längenberechnungen erfolgen in metrischem UTM (automatische Zonenwahl
+  basierend auf Polygon-Zentroid) und werden für GeoJSON wieder in WGS84 zurückprojiziert.
+"""
+
 EMBEDDED_GEOJSON = '''{
 	"type": "FeatureCollection",
 	"features": [
@@ -30,526 +33,824 @@ EMBEDDED_GEOJSON = '''{
 	]
 }'''
 
-
-class PVTypeSelector:
-	"""
-	Klasse zur Abfrage des PV-Anlagentyps (horizontal oder vertical).
-
-	Methoden:
-	- collect() -> str : Gibt 'horizontal' oder 'vertical' zurück.
-	"""
-
-	def __init__(self, default: str = 'horizontal'):
-		self.default = default
-
-	def collect(self) -> str:
-		print('\n--- Auswahl PV-Anlagentyp ---')
-		print('  1) Horizontale PV-Anlage (Aufgeständert, bifazial)')
-		print('  2) Vertikale PV-Anlage (Senkrecht, bifazial)')
-		while True:
-			val = input(f'Auswahl 1 oder 2 (Standard {"1" if self.default=="horizontal" else "2"}): ').strip()
-			if val == '':
-				return self.default
-			if val in ('1', '2'):
-				return 'horizontal' if val == '1' else 'vertical'
-			if val.lower() in ('h', 'horizontal', 'horizontale'):
-				return 'horizontal'
-			if val.lower() in ('v', 'vertical', 'vertikal'):
-				return 'vertical'
-			print('Ungültige Eingabe — bitte 1 oder 2 eingeben.')
+import json
+from typing import Tuple, List, Dict, Any
+from shapely.geometry import shape, Polygon, Point, mapping, LineString
+from shapely.ops import transform
+import pyproj
+import math
 
 
-class TractorParameters:
-	"""
-	Klasse zur Abfrage der Traktor-Parameter mit sicheren Float-Eingaben.
-
-	collect() -> dict mit keys: tractor_width, tractor_length, tractor_turn_radius
-	"""
-
-	def __init__(self, default_width: float = 3.0, default_length: float = 5.0, default_turn: float = 6.0):
-		self.default_width = default_width
-		self.default_length = default_length
-		self.default_turn = default_turn
-
-	def _input_float(self, prompt: str, default: float) -> Tuple[float, bool]:
-		while True:
-			try:
-				s = input(f"{prompt} (ENTER = Standard {default}): ").strip()
-				if s == "":
-					return float(default), True
-				return float(s), False
-			except ValueError:
-				print('Bitte eine gültige Zahl eingeben (z. B. 3.5).')
-
-	def collect(self) -> dict:
-		print('\n--- Traktor-Parameter ---')
-		w, w_default = self._input_float('Traktor Breite in Meter', self.default_width)
-		l, l_default = self._input_float('Traktor Länge in Meter', self.default_length)
-		r, r_default = self._input_float('Traktor Wenderadius in Meter', self.default_turn)
-		return {
-			'tractor_width': float(w),
-			'tractor_length': float(l),
-			'tractor_turn_radius': float(r),
-		}
-
-
-class UserInputCollector:
-	"""
-	Orchestriert die Benutzereingabe für PV-Typ und Traktorparameter und speichert die Konfiguration.
+class GeoJSONReader:
+	"""Lädt eine GeoJSON-FeatureCollection (WGS84) und liefert Shapely-Objekte.
 
 	Methoden:
-	- collect() -> dict : sammelt Eingaben und fügt abgeleitete Defaults hinzu
-	- save(cfg, out_dir) -> Path : speichert cfg als JSON in outputs/user_selection.json
+	- load(): parsed Polygon in WGS84 und reprojiziert in UTM (metrische Einheit).
 	"""
 
-	def __init__(self, defaults: Optional[dict] = None):
-		self.defaults = defaults or {}
-		self.pv_selector = PVTypeSelector(default=self.defaults.get('pv_type', 'horizontal'))
-		self.tractor = TractorParameters(
-			default_width=self.defaults.get('tractor_width', 3.0),
-			default_length=self.defaults.get('tractor_length', 5.0),
-			default_turn=self.defaults.get('tractor_turn_radius', 6.0),
-		)
+	def __init__(self, geojson_str: str):
+		self.geojson_str = geojson_str
 
-	def collect(self) -> dict:
-		cfg = {}
-		cfg['pv_type'] = self.pv_selector.collect()
-		tractor_vals = self.tractor.collect()
-		cfg.update(tractor_vals)
-
-		# Ableitungen ähnlich wie in RUN_SKRIPT
-		if cfg.get('pv_type') == 'horizontal':
-			cfg['row_direction'] = 'E-W'
-			cfg['row_direction_label'] = 'Osten nach Westen'
-			cfg['tilt'] = 30
-			cfg['pv_row_width_m'] = round(4 * 1.3, 3)
-		else:
-			cfg['row_direction'] = 'N-S'
-			cfg['row_direction_label'] = 'Norden nach Süden'
-			cfg['tilt'] = None
-			cfg['pv_row_width_m'] = 0.5
-			cfg['pv_row_height_m'] = 2.5
-
-		# Default packing/bifacial params (überschreibbar)
-		cfg.setdefault('albedo', 0.2)
-		cfg.setdefault('bifaciality', 0.85)
-
-		return cfg
-
-	def save(self, cfg: dict, out_dir: Optional[Path] = None) -> Path:
-		if out_dir is None:
-			out_dir = Path(__file__).resolve().parent / 'outputs'
-		out_dir.mkdir(exist_ok=True)
-		out_file = out_dir / 'user_selection.json'
-		with out_file.open('w', encoding='utf-8') as f:
-			json.dump(cfg, f, ensure_ascii=False, indent=2)
-		return out_file
-
-
-def get_user_inputs() -> dict:
-	"""Kompatibler Wrapper; erzeugt einen Collector, sammelt Eingaben und gibt das cfg zurück."""
-	c = UserInputCollector()
-	return c.collect()
-
-
-class GeoJSONSelector:
-	"""
-	Interaktive Auswahl einer GeoJSON-Datei.
-
-	Usage:
-		selector = GeoJSONSelector(default_path='path/to/default.geojson')
-		geojson_path = selector.collect()
-
-	Die Methode `collect()` prüft, ob die Datei existiert und fordert den Nutzer erneut
-	auf, falls nicht. Wenn ein Default gesetzt ist und ENTER gedrückt wird, wird der
-	Default verwendet (nur, falls vorhanden).
-	"""
-
-	def __init__(self, default_path: Optional[str] = None):
-		self.default_path = Path(default_path) if default_path else None
-
-	def collect(self) -> str:
-		print('\n--- GeoJSON-Auswahl ---')
-		if self.default_path:
-			prompt = f'Pfad zur GeoJSON-Datei (.geojson) eingeben (ENTER = Standard: {self.default_path}): '
-		else:
-			prompt = 'Pfad zur GeoJSON-Datei (.geojson) eingeben: '
-
-		while True:
-			s = input(prompt).strip()
-			if s == '':
-				if self.default_path and self.default_path.exists():
-					return str(self.default_path)
-				if self.default_path and not self.default_path.exists():
-					print(f'Standard-Datei nicht gefunden: {self.default_path}')
-					# continue loop to let user provide another path
-					continue
-				print('Kein Standardpfad gesetzt. Bitte Pfad eingeben.')
-				continue
-
-			p = Path(s)
-			if p.exists():
-				return str(p)
-			print(f'GeoJSON-Datei nicht gefunden: {p}. Bitte erneut eingeben oder STRG-C zum Abbrechen.')
-
-
-class GeoAreaCalculator:
-	"""Berechnet Gesamtfläche einer GeoJSON und (für horizontale PV) maximale PV-Fläche.
-
-	Arbeitsweise (horizontal):
-	- Bestimme Gesamtfläche durch Projektion in UTM.
-	- Leite notwendige Randfläche für Wenden ab: breite_gruenstreifen = 2*wenderadius + traktor_laenge + sicherheitszuschlag
-	- Leite Fahrspurbreite ab: breite_fahrspur = traktor_breite + 2*sicherheitszuschlag
-	- PV-Reihenbreite standardmäßig 9.2 m (vier Module à 2.3 m)
-	- Erzeuge innerhalb der gefluteten inneren Fläche Linien in Schrittweite = pv_reihenbreite + breite_fahrspur; summiere Schnittlängen als total_row_length
-	- PV-Fläche = total_row_length * pv_row_width
-	"""
-
-	def __init__(self, geojson_path: str):
-		self.geojson_path = Path(geojson_path)
-		self.poly_utm = None
-		self.utm_epsg = None
-		self.total_area_m2 = 0.0
-		self.inner = None
-		self.rows_gdf = None
-		self.total_row_length_m = 0.0
-		self.pv_footprint_m2 = 0.0
-
-	def _choose_utm_crs_from_lonlat(self, lon: float, lat: float) -> int:
+	def _choose_utm_crs(self, lon: float, lat: float) -> pyproj.CRS:
 		zone = int((lon + 180) / 6) + 1
-		hemisphere = 'north' if lat >= 0 else 'south'
-		if hemisphere == 'north':
+		if lat >= 0:
 			epsg = 32600 + zone
 		else:
 			epsg = 32700 + zone
-		return epsg
+		return pyproj.CRS.from_epsg(epsg)
 
-	def load_and_project(self):
-		if not self.geojson_path.exists():
-			raise FileNotFoundError(f'GeoJSON nicht gefunden: {self.geojson_path}')
-		gdf = gpd.read_file(str(self.geojson_path))
-		if gdf.empty:
-			raise ValueError('GeoJSON enthält keine Geometrien')
-		gdf = gdf.to_crs(epsg=4326)
-		geom = unary_union(gdf.geometry)
-		if geom.geom_type == 'GeometryCollection':
-			polys = [g for g in geom.geoms if g.geom_type in ('Polygon', 'MultiPolygon')]
-			geom = unary_union(polys)
-		centroid = geom.centroid
-		lon, lat = centroid.x, centroid.y
-		utm_epsg = self._choose_utm_crs_from_lonlat(lon, lat)
-		self.utm_epsg = utm_epsg
-		gdf_utm = gpd.GeoDataFrame(geometry=[geom], crs='EPSG:4326').to_crs(epsg=utm_epsg)
-		self.poly_utm = gdf_utm.geometry.iloc[0]
-		self.total_area_m2 = float(self.poly_utm.area)
-		return self.total_area_m2
-
-	def compute_horizontal_pv(self, tractor_width: float, tractor_length: float, tractor_turn_radius: float,
-							  pv_row_width_m: float = 9.2, safety_margin: float = 1.0):
-		"""Berechnet maximale PV-Fläche für horizontale Aufstellung.
-
-		Returns a dict with keys: green_strip_width_m, effective_row_spacing_m, usable_ground_area_m2,
-		total_row_length_m, pv_footprint_m2
+	def load(self) -> Tuple[Polygon, Polygon, pyproj.Transformer, pyproj.Transformer]:
+		"""Parst das eingebettete GeoJSON und gibt zurück:
+		(poly_wgs84, poly_utm, transformer_to_utm, transformer_to_wgs84)
 		"""
-		if self.poly_utm is None:
-			self.load_and_project()
+		obj = json.loads(self.geojson_str)
+		# Annahme: erste Feature enthält die Polygonfläche
+		feat = obj.get("features", [])[0]
+		geom = shape(feat["geometry"])  # in WGS84 (lon/lat)
 
-		# Ableitungen
-		breite_gruenstreifen = 2.0 * float(tractor_turn_radius) + float(tractor_length) + float(safety_margin)
-		breite_fahrspur = float(tractor_width) + 2.0 * float(safety_margin)
-		effective_spacing = float(pv_row_width_m) + breite_fahrspur
+		centroid = geom.representative_point()
+		lon, lat = centroid.x, centroid.y
+		utm_crs = self._choose_utm_crs(lon, lat)
 
-		# inner area after removing green strip at edges
-		inner = self.poly_utm.buffer(-breite_gruenstreifen)
-		if inner.is_empty:
-			usable_area = 0.0
-			self.inner = None
-		else:
-			self.inner = inner
-			usable_area = float(inner.area)
+		transformer_to_utm = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True)
+		transformer_to_wgs84 = pyproj.Transformer.from_crs(utm_crs, "EPSG:4326", always_xy=True)
 
-		# generate rows as in FLAECHEN_BERECHNUNG
-		total_length = 0.0
-		rows = []
-		if self.inner is not None:
-			minx, miny, maxx, maxy = self.inner.bounds
-			step = effective_spacing
-			start = miny - step
-			stop = maxy + step
-			ys = np.arange(start, stop + step, step)
-			for y in ys:
-				line = LineString([(minx - 10 * step, y), (maxx + 10 * step, y)])
-				seg = line.intersection(self.inner)
-				if not seg.is_empty:
-					if seg.geom_type == 'LineString' and seg.length > 0:
-						rows.append(seg)
-						total_length += seg.length
-					elif seg.geom_type == 'MultiLineString':
-						for part in seg.geoms:
-							if part.length > 0:
-								rows.append(part)
-								total_length += part.length
+		proj_to_utm = lambda x, y: transformer_to_utm.transform(x, y)
+		poly_utm = transform(proj_to_utm, geom)
 
-		self.rows_gdf = rows
-		self.total_row_length_m = float(total_length)
-		self.pv_footprint_m2 = float(self.total_row_length_m) * float(pv_row_width_m)
-
-		return {
-			'total_area_m2': round(self.total_area_m2, 3),
-			'green_strip_width_m': round(breite_gruenstreifen, 3),
-			'fahrspur_breite_m': round(breite_fahrspur, 3),
-			'effective_row_spacing_m': round(effective_spacing, 3),
-			'usable_ground_area_m2': round(usable_area, 3),
-			'total_row_length_m': round(self.total_row_length_m, 3),
-			'pv_footprint_m2': round(self.pv_footprint_m2, 3),
-		}
+		return geom, poly_utm, transformer_to_utm, transformer_to_wgs84
 
 
-class GeoAreaVerticalCalculator(GeoAreaCalculator):
-	"""Spezialisierung für vertikale PV-Anlagen.
+class PVTypeSelector:
+	"""Fragt den PV-Typ ab ("horizontal" oder "vertical").
 
-	Verwendet die Logik von GeoAreaCalculator und berechnet zusätzlich die
-	vertikale Frontfläche (Länge der Reihen × Höhe der Module/Reihen).
+	Parameter:
+	- default: Standardwert falls Enter gedrückt wird.
+	- interactive: falls False, wird der Default zurückgegeben.
 	"""
 
-	def compute_vertical_pv(self, tractor_width: float, tractor_length: float, tractor_turn_radius: float,
-							pv_row_width_m: float = 0.1, pv_row_height_m: float = 2.5, safety_margin: float = 1.0):
-		"""Berechnet Werte analog zur horizontalen Version, aber erzeugt Reihen
-		parallel zur Y-Achse (vertikale Elemente entlang der Reihen).
+	VALID = ("horizontal", "vertical")
 
-		Returns dict with total_area_m2, green_strip_width_m, fahrspur_breite_m,
-		effective_row_spacing_m, usable_ground_area_m2, total_row_length_m,
-		pv_footprint_m2, pv_vertical_front_m2
-		"""
-		if self.poly_utm is None:
-			self.load_and_project()
-
-		breite_gruenstreifen = 2.0 * float(tractor_turn_radius) + float(tractor_length) + float(safety_margin)
-		breite_fahrspur = float(tractor_width) + 2.0 * float(safety_margin)
-		effective_spacing = float(pv_row_width_m) + breite_fahrspur
-
-		inner = self.poly_utm.buffer(-breite_gruenstreifen)
-		if inner.is_empty:
-			usable_area = 0.0
-			self.inner = None
-		else:
-			self.inner = inner
-			usable_area = float(inner.area)
-
-		total_length = 0.0
-		rows = []
-		if self.inner is not None:
-			minx, miny, maxx, maxy = self.inner.bounds
-			step = effective_spacing
-			start = minx - step
-			stop = maxx + step
-			xs = np.arange(start, stop + step, step)
-			for x in xs:
-				line = LineString([(x, miny - 10 * step), (x, maxy + 10 * step)])
-				seg = line.intersection(self.inner)
-				if not seg.is_empty:
-					if seg.geom_type == 'LineString' and seg.length > 0:
-						rows.append(seg)
-						total_length += seg.length
-					elif seg.geom_type == 'MultiLineString':
-						for part in seg.geoms:
-							if part.length > 0:
-								rows.append(part)
-								total_length += part.length
-
-		self.rows_gdf = rows
-		self.total_row_length_m = float(total_length)
-		# Boden-Fußabdruck (sehr schmal bei vertikalen Montageelementen)
-		self.pv_footprint_m2 = float(self.total_row_length_m) * float(pv_row_width_m)
-		# Vertikale Frontfläche (Länge der Reihen × Höhe)
-		self.pv_vertical_front_m2 = float(self.total_row_length_m) * float(pv_row_height_m)
-
-		return {
-			'total_area_m2': round(self.total_area_m2, 3),
-			'green_strip_width_m': round(breite_gruenstreifen, 3),
-			'fahrspur_breite_m': round(breite_fahrspur, 3),
-			'effective_row_spacing_m': round(effective_spacing, 3),
-			'usable_ground_area_m2': round(usable_area, 3),
-			'total_row_length_m': round(self.total_row_length_m, 3),
-			'pv_footprint_m2': round(self.pv_footprint_m2, 3),
-			'pv_vertical_front_m2': round(self.pv_vertical_front_m2, 3),
-		}
+	@staticmethod
+	def select(default: str = "horizontal", interactive: bool = True) -> str:
+		if not interactive:
+			return default
+		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert, bifazial): 'horizontal' oder Vertikale PV-Anlage (Senkrecht, bifazial): 'vertical'): "
+		val = input(prompt).strip().lower() or default
+		if val not in PVTypeSelector.VALID:
+			print("Ungültige Auswahl, verwende Default: %s" % default)
+			return default
+		return val
 
 
-class PVMapPlotter:
-	"""Erzeugt eine HTML-Karte mit Feldgrenze, nutzbarer Fläche und eingezeichneten PV-Reihen.
+class TractorParameters:
+	"""Container für Traktorparameter und Berechnung der Randzonen.
 
-	Die Darstellung richtet sich nach den Traktorparametern und dem PV-Typ
-	(horizontal / vertical). Die Klasse verwendet die GeoAreaCalculator-Klassen
-	um Reihen und Flächen zu berechnen und zeichnet diese mit folium.
+	Attribute:
+	- width_m, length_m, turn_radius_m
+
+	Methoden:
+	- compute_wendestreifen_width(): Wende-/Rückzugsbreite inkl. 1 m Sicherheitszuschlag
+	- compute_fahrspur_width(): Fahrspurbreite inkl. 1 m Sicherheitszuschlag
 	"""
 
-	def __init__(self, cfg: dict):
-		self.cfg = cfg
+	def __init__(self, width_m: float, length_m: float, turn_radius_m: float):
+		self.width_m = float(width_m)
+		self.length_m = float(length_m)
+		self.turn_radius_m = float(turn_radius_m)
 
-	def plot(self, geojson_path: str, out_html: str = 'agri_pv_plot.html', open_in_browser: bool = True):
-		import folium
-		# choose calculator by pv_type
-		pv_type = self.cfg.get('pv_type', 'horizontal')
-		if pv_type == 'vertical':
-			calc = GeoAreaVerticalCalculator(geojson_path)
-			pv_row_width = float(self.cfg.get('pv_row_width_m', 0.1))
-			pv_row_height = float(self.cfg.get('pv_row_height_m', 2.5))
-			res = calc.compute_vertical_pv(
-				tractor_width=float(self.cfg.get('tractor_width', 3.0)),
-				tractor_length=float(self.cfg.get('tractor_length', 5.0)),
-				tractor_turn_radius=float(self.cfg.get('tractor_turn_radius', 6.0)),
-				pv_row_width_m=pv_row_width,
-				pv_row_height_m=pv_row_height,
-			)
-		else:
-			calc = GeoAreaCalculator(geojson_path)
-			pv_row_width = float(self.cfg.get('pv_row_width_m', 9.2))
-			res = calc.compute_horizontal_pv(
-				tractor_width=float(self.cfg.get('tractor_width', 3.0)),
-				tractor_length=float(self.cfg.get('tractor_length', 5.0)),
-				tractor_turn_radius=float(self.cfg.get('tractor_turn_radius', 6.0)),
-				pv_row_width_m=pv_row_width,
-			)
-
-		# prepare geometries in WGS84 for plotting
-		# original polygon
-		poly_wgs = gpd.GeoDataFrame(geometry=[calc.poly_utm], crs=f"EPSG:{calc.utm_epsg}").to_crs(epsg=4326).geometry.iloc[0]
-		# inner usable area (may be None)
-		inner_wgs = None
-		if getattr(calc, 'inner', None) is not None:
-			inner_wgs = gpd.GeoDataFrame(geometry=[calc.inner], crs=f"EPSG:{calc.utm_epsg}").to_crs(epsg=4326).geometry.iloc[0]
-
-		# rows
-		rows_geo = []
-		if getattr(calc, 'rows_gdf', None):
-			try:
-				rows_gdf = gpd.GeoDataFrame(geometry=calc.rows_gdf, crs=f"EPSG:{calc.utm_epsg}")
-				rows_wgs = rows_gdf.to_crs(epsg=4326)
-				rows_geo = list(rows_wgs.geometry)
-			except Exception:
-				rows_geo = list(calc.rows_gdf)
-
-		# map center
-		centroid = poly_wgs.centroid
-		lon, lat = centroid.x, centroid.y
-		m = folium.Map(location=[lat, lon], zoom_start=15)
-
-		# add original polygon
-		folium.GeoJson(data=gpd.GeoSeries([poly_wgs], crs='EPSG:4326').__geo_interface__, name='Feldrand',
-					   style_function=lambda x: {'color': 'DarkOrange', 'weight': 3, 'fill': False}).add_to(m)
-
-		# add inner usable area
-		if inner_wgs is not None:
-			folium.GeoJson(data=gpd.GeoSeries([inner_wgs], crs='EPSG:4326').__geo_interface__,
-						   style_function=lambda x: {'fillColor': '#1ca728', 'color': '#1ca728', 'weight': 1, 'fillOpacity': 0.35},
-						   name='PV-nutzfläche').add_to(m)
-
-		# add PV rows
-		rows_fg = folium.FeatureGroup(name='PV-Reihen')
-		for geom in rows_geo:
-			if geom is None:
-				continue
-			if geom.geom_type == 'LineString':
-				coords_latlon = [(y, x) for x, y in geom.coords]
-				folium.PolyLine(locations=coords_latlon, color='#ffee00', weight=2).add_to(rows_fg)
-			elif geom.geom_type == 'MultiLineString':
-				for part in geom.geoms:
-					coords = [(y, x) for x, y in part.coords]
-					folium.PolyLine(locations=coords, color='#ffee00', weight=2).add_to(rows_fg)
-		rows_fg.add_to(m)
-
-		# add a small info panel as Marker
-		info_html = f"PV-Typ: {pv_type}<br>Gesamtfläche: {res.get('total_area_m2')} m²<br>PV-Fußabdruck: {res.get('pv_footprint_m2')} m²"
-		folium.Marker(location=[lat, lon], icon=folium.DivIcon(html=f"<div style='font-size:12px'>{info_html}</div>"))
-
-		# fit bounds
+	@staticmethod
+	def from_input(interactive: bool = True, defaults: Tuple[float, float, float] = (2.5, 3.0, 4.0)) -> "TractorParameters":
+		if not interactive:
+			return TractorParameters(*defaults)
 		try:
-			b_minx, b_miny, b_maxx, b_maxy = poly_wgs.bounds
-			m.fit_bounds([[b_miny, b_minx], [b_maxy, b_maxx]])
-		except Exception:
-			pass
+			w = input(f"Traktorbreite in Meter [{defaults[0]}]: ") or str(defaults[0])
+			l = input(f"Traktorlaenge in Meter [{defaults[1]}]: ") or str(defaults[1])
+			r = input(f"Wenderadius in Meter [{defaults[2]}]: ") or str(defaults[2])
+			return TractorParameters(float(w), float(l), float(r))
+		except ValueError:
+			print("Ungültige Eingabe, benutze Defaultwerte.")
+			return TractorParameters(*defaults)
 
-		out_path = Path(out_html)
-		m.save(str(out_path))
+	def compute_wendestreifen_width(self) -> float:
+		# Formel: Länge + 2 * Wenderadius + 1 m Sicherheitszuschlag
+		return self.length_m + 2.0 * self.turn_radius_m + 1.0
 
-		# browser open with fallbacks (similar to PVFieldProcessor)
-		opened = False
-		if open_in_browser:
-			try:
-				opened = __import__('webbrowser').open(out_path.as_uri(), new=2)
-			except Exception:
-				opened = False
-			if not opened:
-				try:
-					p = str(out_path.resolve())
-					if os.name == 'nt':
-						os.startfile(p)
-						opened = True
-					else:
-						import subprocess
-						subprocess.run(['xdg-open', p], check=False)
-						opened = True
-				except Exception:
-					opened = False
-			if not opened:
-				print(f'Karte gespeichert unter: {out_path} (Öffnen im Browser fehlgeschlagen)')
+	def compute_fahrspur_width(self) -> float:
+		# Fahrspurbreite: Traktorbreite + 2 m Sicherheitszuschlag (zwei Seiten je 1 m)
+		return self.width_m + 2.0
+
+
+class AreaCalculator:
+	"""Berechnet die nutzbare Innenfläche einer Polygonfläche unter Abzug des
+	Wende-/Fahrspurmargins. Alle Berechnungen erfolgen in UTM (metrisch).
+
+	Methoden:
+	- compute_usable_area(poly_utm, margin_m) -> (usable_poly_utm, usable_area_m2)
+	"""
+
+	@staticmethod
+	def compute_usable_area(poly_utm: Polygon, margin_m: float) -> Tuple[Polygon, float]:
+		if margin_m <= 0:
+			area = poly_utm.area
+			return poly_utm, area
+		inner = poly_utm.buffer(-margin_m)
+		if inner.is_empty:
+			return inner, 0.0
+		return inner, inner.area
+
+
+def compute_restflaeche(poly_utm: Polygon, breite_gruenstreifen: Any) -> Polygon:
+	"""Berechnet die nutzbare Restfläche durch Entfernen eines äußeren
+	Randstreifens mit Breite `breite_gruenstreifen` (in Metern) vom gegebenen
+	Polygon in UTM-Koordinaten.
+
+	Implementation:
+	- Validiert `breite_gruenstreifen` (nicht-negativ, finite Zahl).
+	- Verwendet `shapely.buffer` mit negativem Wert: `poly_utm.buffer(-breite)`.
+	- Gibt das resultierende Polygon (kann leer sein) zurück.
+
+	Parameter:
+	- poly_utm: Shapely-Polygon in metrischem Koordinatensystem (z. B. UTM)
+	- breite_gruenstreifen: Breite des abzuziehenden Streifens in Metern
+
+	Rückgabe:
+	- Shapely-Polygon der verbleibenden Innenfläche (oder ein leeres Geometry-Objekt)
+	"""
+	# Validierung
+	if poly_utm is None:
+		raise ValueError("poly_utm darf nicht None sein")
+	if not hasattr(poly_utm, "buffer"):
+		raise TypeError("poly_utm muss ein Shapely-Polygon sein")
+
+	try:
+		b = float(breite_gruenstreifen)
+	except Exception:
+		raise ValueError(f"breite_gruenstreifen muss numerisch sein, gegeben: {breite_gruenstreifen}")
+
+	if not math.isfinite(b) or b < 0:
+		raise ValueError(f"breite_gruenstreifen muss eine nicht-negative endliche Zahl sein, gegeben: {breite_gruenstreifen}")
+
+	if b == 0:
+		return poly_utm
+
+	inner = poly_utm.buffer(-b)
+	return inner
+
+
+class PVGridGenerator:
+	"""Generiert ein rasterförmiges Netz von Modulmitten (als Punkte) innerhalb
+	der nutzbaren Fläche (UTM) und liefert ein GeoJSON FeatureCollection.
+
+	Parameter:
+	- usable_poly_utm: Shapely Polygon in UTM
+	- transformer_to_wgs84: pyproj.Transformer (UTM -> EPSG:4326)
+
+	Methode:
+	- generate_points(pv_type, row_spacing_m, module_spacing_m) -> GeoJSON dict
+	"""
+
+	def __init__(self, usable_poly_utm: Polygon, transformer_to_wgs84: pyproj.Transformer):
+		self.poly = usable_poly_utm
+		self.transformer_to_wgs84 = transformer_to_wgs84
+
+	@staticmethod
+	def _frange(start: float, stop: float, step: float):
+		vals = []
+		v = start
+		# guard against infinite loops
+		if step <= 0:
+			return vals
+		while v <= stop:
+			vals.append(v)
+			v += step
+		return vals
+
+	def generate_points(self, pv_type: str = "horizontal", row_spacing_m: float = 12.0, module_spacing_m: float = 1.0) -> Dict[str, Any]:
+		"""Erzeugt Punkte im Raster.
+
+		Annahmen / Parameter:
+		- `row_spacing_m`: Distanz zwischen zwei PV-Reihen (in Metern).
+		  Empfohlen: Fahrspurbreite + Modulreihenbreite.
+		- `module_spacing_m`: Abstand zwischen Modulmitten entlang einer Reihe.
+		- `pv_type` beeinflusst momentan nur die Reihenorientierung.
+		"""
+		if self.poly.is_empty:
+			return {"type": "FeatureCollection", "features": []}
+
+		minx, miny, maxx, maxy = self.poly.bounds
+
+		# Für horizontale Module: Reihen in x-Richtung, Abstand entlang y
+		# Für vertikale Module: wir verwenden denselben Rastermechanismus, evtl. kleinerer Abstand
+		if pv_type == "vertical":
+			row_spacing = max(1.0, row_spacing_m / 3.0)
 		else:
-			print(f'Karte gespeichert unter: {out_path}')
+			row_spacing = row_spacing_m
 
-		return out_path, res
+		xs = self._frange(minx + module_spacing_m / 2.0, maxx - module_spacing_m / 2.0, module_spacing_m)
+		ys = self._frange(miny + row_spacing / 2.0, maxy - row_spacing / 2.0, row_spacing)
+
+		features = []
+		for y in ys:
+			for x in xs:
+				pt = Point(x, y)
+				if pt.within(self.poly):
+					lon, lat = self.transformer_to_wgs84.transform(x, y)
+					features.append({
+						"type": "Feature",
+						"geometry": {"type": "Point", "coordinates": [lon, lat]},
+						"properties": {"pv_type": pv_type}
+					})
+
+		return {"type": "FeatureCollection", "features": features}
+
+	def generate_pv_points(polygon: Polygon, ausrichtung: str, reihenbreite: float,
+						   module_spacing_m: float = 1.0,
+						   transformer_to_wgs84: pyproj.Transformer = None) -> Dict[str, Any]:
+		"""Generiert PV-Modulpunkte als GeoJSON FeatureCollection.
+		Implementiert die angeforderte Zeilen-Segmentierung, Schnittpunkt-Generierung,
+		gleichmäßige Punkt-Generierung und GeoJSON-Ausgabe. Beinhaltet Parameter-Validierung
+		und optionalen Transformer für WGS84-Ausgabe.
+		"""
+		# Parameter-Validierung
+		if not isinstance(polygon, Polygon):
+			raise ValueError("Das Polygon muss ein Shapely Polygon sein.")
+		if ausrichtung not in ["horizontal", "vertical"]:
+			raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal' oder 'vertical'.")
+
+		# Diese Methode ist veraltet; verwende stattdessen generate_pv_points() oder generate_pv_reihen()
+		return {"type": "FeatureCollection", "features": []}
 
 
+def generate_pv_points(polygon: Polygon, ausrichtung: str, reihenbreite: float,
+                       module_spacing_m: float = 1.0,
+                       transformer_to_wgs84: pyproj.Transformer = None) -> Dict[str, Any]:
+	"""Generiert PV-Modulpunkte als GeoJSON FeatureCollection.
 
-if __name__ == '__main__':
-	# Make script fully standalone: write embedded geojson if needed, collect inputs, compute and plot
-	out_dir = Path(__file__).resolve().parent / 'outputs'
-	out_dir.mkdir(exist_ok=True)
-	emb_path = out_dir / 'embedded_area.geojson'
-	if not emb_path.exists():
-		with emb_path.open('w', encoding='utf-8') as f:
-			f.write(EMBEDDED_GEOJSON)
+	Vorgehen:
+	1. Segmentiert die Bounding-Box des Polygons in Linien (Zeilen/Spalten) abhängig von `ausrichtung`.
+	2. Prüft für jede Linie den Schnitt mit dem Polygon.
+	3. Für jede Schnittlinie werden äquidistante Punkte in Abstand `module_spacing_m` erzeugt.
+	4. Gibt alle Punkte als GeoJSON FeatureCollection zurück.
 
-	collector = UserInputCollector()
-	cfg = collector.collect()
-	# persist initial config
-	collector.save(cfg)
+	Parameter:
+	- polygon: Shapely-Polygon (vorzugsweise in metrischen Einheiten, z. B. UTM)
+	- ausrichtung: 'horizontal' oder 'vertical'
+	- reihenbreite: Abstand zwischen Reihen in Metern
+	- module_spacing_m: Abstand zwischen Modulen entlang einer Reihe (default 1.0 m)
+	- transformer_to_wgs84: optionaler pyproj.Transformer zum Zurückprojektion der Punktkoordinaten
 
-	# compute areas depending on pv_type
-	if cfg.get('pv_type') == 'horizontal':
-		calc = GeoAreaCalculator(str(emb_path))
-		calc.load_and_project()
-		res = calc.compute_horizontal_pv(
-			tractor_width=cfg.get('tractor_width', 3.0),
-			tractor_length=cfg.get('tractor_length', 5.0),
-			tractor_turn_radius=cfg.get('tractor_turn_radius', 6.0),
-			pv_row_width_m=cfg.get('pv_row_width_m', 9.2),
-		)
+	Rückgabe:
+	- GeoJSON-Dict mit Point-Features (Koordinaten in CRS der Transformer, falls angegeben)
+	"""
+	# Validierung
+	if polygon is None or polygon.is_empty:
+		return {"type": "FeatureCollection", "features": []}
+	try:
+		r = float(reihenbreite)
+	except Exception:
+		raise ValueError("reihenbreite muss eine positive Zahl sein")
+	if r <= 0:
+		raise ValueError("reihenbreite muss > 0 sein")
+	try:
+		spacing = float(module_spacing_m)
+	except Exception:
+		raise ValueError("module_spacing_m muss eine positive Zahl sein")
+	if spacing <= 0:
+		raise ValueError("module_spacing_m muss > 0 sein")
+
+	a = str(ausrichtung).strip().lower()
+	if a not in ("horizontal", "vertical"):
+		raise ValueError("ausrichtung muss 'horizontal' oder 'vertical' sein")
+
+	minx, miny, maxx, maxy = polygon.bounds
+
+	lines: List[LineString] = []
+	if a == "horizontal":
+		y = miny + r / 2.0
+		while y <= maxy:
+			# leicht überlappen, damit Schnitt robust ist
+			lines.append(LineString([(minx - 1.0, y), (maxx + 1.0, y)]))
+			y += r
 	else:
-		calc = GeoAreaVerticalCalculator(str(emb_path))
-		calc.load_and_project()
-		res = calc.compute_vertical_pv(
-			tractor_width=cfg.get('tractor_width', 3.0),
-			tractor_length=cfg.get('tractor_length', 5.0),
-			tractor_turn_radius=cfg.get('tractor_turn_radius', 6.0),
-			pv_row_width_m=cfg.get('pv_row_width_m', 0.1),
-			pv_row_height_m=cfg.get('pv_row_height_m', 2.5),
-		)
+		x = minx + r / 2.0
+		while x <= maxx:
+			lines.append(LineString([(x, miny - 1.0), (x, maxy + 1.0)]))
+			x += r
 
-	# merge results into cfg and save
-	cfg.update(res)
-	collector.save(cfg)
+	features: List[Dict[str, Any]] = []
+	row_idx = 0
+	for line in lines:
+		inter = line.intersection(polygon)
+		if inter.is_empty:
+			row_idx += 1
+			continue
 
-	# plot map
-	plotter = PVMapPlotter(cfg)
-	out_path, plot_res = plotter.plot(str(emb_path), out_html=str(out_dir / 'agri_pv_plot.html'), open_in_browser=False)
+		segments = []
+		if inter.geom_type == 'LineString':
+			segments = [inter]
+		elif inter.geom_type == 'MultiLineString':
+			segments = list(inter.geoms)
+		else:
+			row_idx += 1
+			continue
 
-	# save final cfg with plot info
-	cfg['map_html'] = str(out_path)
-	collector.save(cfg)
+		for seg in segments:
+			seg_length = seg.length
+			if seg_length <= 0:
+				continue
+			dist = spacing / 2.0
+			while dist <= seg_length - 1e-9:
+				pt = seg.interpolate(dist)
+				x, y = pt.x, pt.y
+				if transformer_to_wgs84 is not None:
+					lon, lat = transformer_to_wgs84.transform(x, y)
+					coords = [lon, lat]
+				else:
+					coords = [x, y]
 
-	print('Fertig. Ergebnisse:')
-	print(f"  Karte: {out_path}")
-	print(f"  Gesamtfläche: {cfg.get('total_area_m2')} m²")
-	print(f"  PV-Fußabdruck: {cfg.get('pv_footprint_m2')} m²")
+				features.append({
+					"type": "Feature",
+					"geometry": {"type": "Point", "coordinates": coords},
+					"properties": {"row": row_idx, "dist_m": round(dist, 3)}
+				})
+				dist += spacing
+
+		row_idx += 1
+
+	return {"type": "FeatureCollection", "features": features}
+
+
+def generate_pv_reihen(polygon: Polygon, ausrichtung: str, row_spacing: float,
+                       transformer_to_wgs84: pyproj.Transformer = None) -> Dict[str, Any]:
+	"""Generiert PV-Reihen als LineString-Features (ohne Breite) in einer GeoJSON FeatureCollection.
+
+	Die PV-Reihen werden als **geometrielose Linien** (LineStrings ohne Pufferung) dargestellt.
+	Der wichtige Parameter ist der **Abstand zwischen den Linien** (row_spacing).
+
+	Vorgehen:
+	1. Bestimmt basierend auf der Ausrichtung die Segmentierungsrichtung:
+	   - horizontal: Linien Ost–West, Verschiebung Nord–Süd
+	   - vertikal: Linien Nord–Süd, Verschiebung Ost–West
+	2. Erzeugt aus der Bounding Box des Polygons parallele Linien im Abstand `row_spacing`.
+	3. Schneidet jede Linie mit dem nutzbaren Polygon (Shapely intersection).
+	4. Fügt jede resultierende nichtleere Schnittgeometrie als LineString-Feature ein (ohne Breite).
+	5. Exportiert eine GeoJSON-Datei, deren Features ausschließlich LineStrings enthalten.
+
+	Parameter:
+	- polygon: Shapely-Polygon (vorzugsweise in metrischen Einheiten, z. B. UTM)
+	- ausrichtung: 'horizontal' oder 'vertical'
+	- row_spacing: Abstand zwischen parallelen Reihen in Metern (wichtiger Parameter!)
+	- transformer_to_wgs84: optionaler pyproj.Transformer zur Zurückprojektion in WGS84
+
+	Rückgabe:
+	- GeoJSON-Dict mit LineString-Features (ein Feature pro Reihe oder Reihen-Segment)
+
+	Fehlerbehandlung:
+	- ValueError bei ungültiger Ausrichtung oder negativem row_spacing
+	- Leere Polygone liefern leere FeatureCollection
+	"""
+	# Validierung
+	if polygon is None or polygon.is_empty:
+		return {"type": "FeatureCollection", "features": []}
+
+	try:
+		r = float(row_spacing)
+	except Exception:
+		raise ValueError("row_spacing muss eine positive Zahl sein")
+	if r <= 0:
+		raise ValueError("row_spacing muss > 0 sein")
+
+	a = str(ausrichtung).strip().lower()
+	if a not in ("horizontal", "vertical"):
+		raise ValueError("ausrichtung muss 'horizontal' oder 'vertical' sein")
+
+	minx, miny, maxx, maxy = polygon.bounds
+
+	# Schritt 1 & 2: Generiere parallele Linien basierend auf Ausrichtung
+	lines: List[LineString] = []
+	if a == "horizontal":
+		# Linien verlaufen Ost–West (Konstante Y)
+		# Verschiebung Nord–Süd nach row_spacing
+		y = miny + r / 2.0
+		while y <= maxy:
+			# Linien erstrecken sich leicht über die Bounding Box
+			lines.append(LineString([(minx - 1.0, y), (maxx + 1.0, y)]))
+			y += r
+	else:  # vertical
+		# Linien verlaufen Nord–Süd (Konstante X)
+		# Verschiebung Ost–West nach row_spacing
+		x = minx + r / 2.0
+		while x <= maxx:
+			lines.append(LineString([(x, miny - 1.0), (x, maxy + 1.0)]))
+			x += r
+
+	# Schritt 3, 4 & 5: Schneide Linien mit Polygon und generiere Features
+	features: List[Dict[str, Any]] = []
+	row_idx = 0
+
+	for line in lines:
+		inter = line.intersection(polygon)
+
+		# Überspringe leere Schnitte
+		if inter.is_empty:
+			row_idx += 1
+			continue
+
+		# Behandle verschiedene Geometry-Typen
+		segments: List[LineString] = []
+		if inter.geom_type == 'LineString':
+			segments = [inter]
+		elif inter.geom_type == 'MultiLineString':
+			segments = list(inter.geoms)
+		else:
+			# Ignoriere Points oder andere Geometrie-Typen
+			row_idx += 1
+			continue
+
+		# Konvertiere jedes Segment in ein Feature
+		for seg_idx, seg in enumerate(segments):
+			if seg.length <= 0:
+				continue
+
+			# Reprojiziere Koordinaten falls Transformer vorhanden
+			if transformer_to_wgs84 is not None:
+				coords_wgs84 = []
+				for x, y in seg.coords:
+					lon, lat = transformer_to_wgs84.transform(x, y)
+					coords_wgs84.append([lon, lat])
+				coords = coords_wgs84
+			else:
+				coords = [[x, y] for x, y in seg.coords]
+
+			features.append({
+				"type": "Feature",
+				"geometry": {
+					"type": "LineString",
+					"coordinates": coords
+				},
+				"properties": {
+					"row": row_idx,
+					"segment": seg_idx,
+					"length_m": round(seg.length, 3),
+					"orientation": "EW" if a == "horizontal" else "NS"
+				}
+			})
+
+		row_idx += 1
+
+	return {"type": "FeatureCollection", "features": features}
+
+def export_geojson(points: Dict[str, Any], dateiname: str) -> None:
+	"""Exportiert eine GeoJSON FeatureCollection in eine Datei (RFC 7946 konform).
+
+	Parameter:
+	- points: GeoJSON FeatureCollection Dict (z. B. Rückgabe von generate_pv_points)
+	- dateiname: Pfad der Ausgabedatei (z. B. 'outputs/pv_points.geojson')
+
+	Funktionalität:
+	- Validiert, dass `points` die erforderlichen GeoJSON-Felder enthält.
+	- Schreibt die Datei mit UTF-8 Encoding, 2-Leerzeichen-Indentation und sortiertem JSON.
+	- RFC 7946 Konformität: Koordinaten sind [lon, lat], CRS ist implicit EPSG:4326 (WGS84).
+	- Erstellt ggf. das Parent-Verzeichnis falls nicht vorhanden.
+
+	Fehlerbehandlung:
+	- ValueError bei ungültigem Input (fehlende 'type' oder 'features' Schlüssel).
+	- IOError/OSError bei Dateischreib-Problemen.
+	"""
+	if not isinstance(points, dict):
+		raise ValueError("points muss ein Dictionary sein (GeoJSON FeatureCollection)")
+	if points.get("type") != "FeatureCollection":
+		raise ValueError("points.type muss 'FeatureCollection' sein")
+	if "features" not in points:
+		raise ValueError("points muss ein 'features' Feld (Liste) enthalten")
+	if not isinstance(points["features"], list):
+		raise ValueError("points['features'] muss eine Liste sein")
+
+	if not isinstance(dateiname, str) or not dateiname.strip():
+		raise ValueError("dateiname muss ein nicht-leerer String sein")
+
+	try:
+		import os
+		outdir = os.path.dirname(dateiname)
+		if outdir and not os.path.exists(outdir):
+			os.makedirs(outdir, exist_ok=True)
+
+		with open(dateiname, 'w', encoding='utf-8') as f:
+			json.dump(points, f, ensure_ascii=False, indent=2, sort_keys=True)
+
+		print(f"GeoJSON erfolgreich exportiert: {dateiname}")
+	except IOError as e:
+		raise IOError(f"Fehler beim Schreiben der Datei '{dateiname}': {e}")
+	except Exception as e:
+		raise RuntimeError(f"Unerwarteter Fehler beim Export: {e}")
+
+def run_standalone(interactive: bool = True) -> Dict[str, Any]:
+	"""Kurzer Ablauf (bindet alle Komponenten zusammen) und liefert ein Ergebnis-Dict:
+	- Liest EMBEDDED_GEOJSON
+	- Fragt PV-Typ und Traktorparameter ab (interaktiv oder Default)
+	- Berechnet Wende-/Fahrspurmargen
+	- Ermittelt nutzbare Innenfläche (UTM)
+	- Generiert PV-Punkte und gibt GeoJSON zurück
+	"""
+	reader = GeoJSONReader(EMBEDDED_GEOJSON)
+	geom_wgs84, geom_utm, to_utm, to_wgs84 = reader.load()
+
+	pv_type = PVTypeSelector.select(interactive=interactive)
+	tractor = TractorParameters.from_input(interactive=interactive)
+
+	wendestreifen = tractor.compute_wendestreifen_width()
+	fahrspur = tractor.compute_fahrspur_width()
+
+	# Margin: wir nehmen als konservativen Rand die größere der beiden Breiten
+	margin = max(wendestreifen, fahrspur)
+
+	usable_poly_utm, usable_area_m2 = AreaCalculator.compute_usable_area(geom_utm, margin)
+
+	grid_gen = PVGridGenerator(usable_poly_utm, to_wgs84)
+	row_spacing = fahrspur + 2.0  # grobe Heuristik: Fahrspur + 2m frei
+	geojson_points = grid_gen.generate_points(pv_type=pv_type, row_spacing_m=row_spacing, module_spacing_m=1.0)
+
+	result = {
+		"pv_type": pv_type,
+		"tractor": {"width_m": tractor.width_m, "length_m": tractor.length_m, "turn_radius_m": tractor.turn_radius_m},
+		"wendestreifen_m": wendestreifen,
+		"fahrspur_m": fahrspur,
+		"margin_used_m": margin,
+		"usable_area_m2": usable_area_m2,
+		"n_pv_points": len(geojson_points.get("features", [])),
+		"pv_points_geojson": geojson_points,
+	}
+
+	return result
+
+
+def compute_tractor_margins(traktor_breite: Any = None, traktor_laenge: Any = None, wenderadius: Any = None,
+							interactive: bool = True, defaults: Tuple[float, float, float] = (2.5, 3.0, 4.0)) -> Dict[str, Any]:
+	"""Fragt Traktorparameter ab oder verwendet übergebene Werte und berechnet:
+	- breite_gruenstreifen = 2*wenderadius + traktor_laenge + 1
+	- breite_fahrspur = traktor_breite + 2*1
+
+	Robustheit:
+	- Bei interaktiver Nutzung werden Eingaben validiert und ggf. erneut abgefragt.
+	- Bei nicht-interaktivem Aufruf werden ungültige oder fehlende Werte durch Defaults ersetzt.
+	- Negative oder Null-Werte werden als ungültig betrachtet und ersetzt.
+
+	Rückgabe: Dict mit den numerischen Werten und optionalen Warnungen.
+	"""
+
+	warnings: List[str] = []
+
+	def _to_valid_float(name: str, val: Any, default: float) -> float:
+		# Versuche Umwandlung; bei Fehler Default verwenden
+		if val is None:
+			if interactive:
+				raw = input(f"{name} in m [{default}]: ") or str(default)
+			else:
+				warnings.append(f"{name} nicht angegeben, verwende Default {default}")
+				return float(default)
+		else:
+			raw = str(val)
+		try:
+			f = float(raw)
+			if not math.isfinite(f) or f <= 0:
+				raise ValueError("Nicht-positive Zahl")
+			return f
+		except Exception:
+			warnings.append(f"Ungültiger Wert für {name}: '{raw}', benutze Default {default}")
+			return float(default)
+
+	b = _to_valid_float("traktor_breite", traktor_breite, defaults[0])
+	l = _to_valid_float("traktor_laenge", traktor_laenge, defaults[1])
+	r = _to_valid_float("wenderadius", wenderadius, defaults[2])
+
+	breite_gruenstreifen = 2.0 * r + l + 1.0
+	breite_fahrspur = b + 2.0 * 1.0
+
+	res = {
+		"traktor_breite_m": b,
+		"traktor_laenge_m": l,
+		"wenderadius_m": r,
+		"breite_gruenstreifen_m": breite_gruenstreifen,
+		"breite_fahrspur_m": breite_fahrspur,
+	}
+	if warnings:
+		res["warnings"] = warnings
+
+	return res
+
+
+def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict[str, Any]:
+	"""Gibt Reihenparameter zurück abhängig von der Ausrichtung.
+
+	**Reihenabstand (Zeile-zu-Zeile-Abstand in Meters):**
+	- Bei "horizontal": Reihenabstand = Fahrspurbreite + 9.2 m (EW-Ausrichtung)
+	- Bei "vertical": Reihenabstand = Fahrspurbreite + 0.5 m (NS-Ausrichtung)
+
+	**Orientierung der PV-Reihen:**
+	- Bei "horizontal": Reihen verlaufen Ost–West (EW), Reihenbreite = 9.2 m
+	- Bei "vertical": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 0.5 m
+
+	Parameter:
+	- ausrichtung: Erwartet 'horizontal' oder 'vertical' (Groß-/Kleinschreibung ignoriert).
+	- fahrspur_breite: Fahrspurbreite des Traktors in Metern (optional).
+	                   Falls None, wird nur die Reihenbreite berechnet.
+
+	Rückgabe: Dict mit Schlüsseln:
+	- `orientation` ("EW" oder "NS")
+	- `reihenbreite_m` (Breite der Modulreihe)
+	- `row_spacing_m` (Abstand zwischen Reihen, falls fahrspur_breite übergeben)
+
+	Fehlerbehandlung:
+	- Bei ungültigem Wert wird eine `ValueError` mit erklärendem Hinweis ausgelöst.
+	"""
+	if ausrichtung is None:
+		raise ValueError("Ausrichtung darf nicht None sein; benutze 'horizontal' oder 'vertical'.")
+
+	a = str(ausrichtung).strip().lower()
+	
+	if a == "horizontal":
+		result = {"orientation": "EW", "reihenbreite_m": 9.2}
+		if fahrspur_breite is not None:
+			result["row_spacing_m"] = fahrspur_breite + 9.2
+	elif a == "vertical":
+		result = {"orientation": "NS", "reihenbreite_m": 0.5}
+		if fahrspur_breite is not None:
+			result["row_spacing_m"] = fahrspur_breite + 0.5
+	else:
+		raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal' oder 'vertical'.")
+	
+	return result
+
+
+def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any]:
+	"""Hauptfunktion: Orchestriert alle Schritte für die PV-Flächenberechnung.
+
+	Schritte:
+	1. Einlesen der eingebetteten GeoJSON-Fläche.
+	2. Abfrage der Benutzerinputs: Ausrichtung und Traktorparameter.
+	3. Berechnung von Rand- und Fahrspurbreiten.
+	4. Berechnung der nutzbaren Restfläche.
+	5. Generierung der PV-Modulpunkte.
+	6. Export der Punkte als GeoJSON.
+
+	Parameter:
+	- interactive: Falls True, fragt die Funktion Benutzereingaben ab. Falls False, werden Defaults verwendet.
+	- output_dir: Verzeichnis für die Ausgabedateien (default: 'outputs')
+
+	Rückgabe:
+	- Dictionary mit allen Ergebnissen und Metadaten.
+	"""
+	print("\n" + "="*70)
+	print("PV-Flächenberechnung - Energielandschaft")
+	print("="*70 + "\n")
+
+	# Schritt 1: Einlesen der eingebetteten GeoJSON-Fläche
+	print("[1/6] Einlesen der eingebetteten GeoJSON-Fläche...")
+	try:
+		reader = GeoJSONReader(EMBEDDED_GEOJSON)
+		geom_wgs84, geom_utm, to_utm, to_wgs84 = reader.load()
+		print(f"  ✓ Polygon geladen (WGS84)")
+		print(f"    - Fläche (WGS84): {geom_wgs84.area:.2f} deg²")
+		print(f"    - Fläche (UTM): {geom_utm.area:.2f} m²\n")
+	except Exception as e:
+		print(f"  ✗ Fehler beim Laden des GeoJSON: {e}\n")
+		raise
+
+	# Schritt 2: Abfrage der Benutzerinputs
+	print("[2/6] Abfrage der Benutzerinputs...")
+	try:
+		ausrichtung = PVTypeSelector.select(interactive=interactive)
+		print(f"  ✓ PV-Ausrichtung: {ausrichtung}")
+
+		tractor = TractorParameters.from_input(interactive=interactive)
+		print(f"  ✓ Traktorparameter:")
+		print(f"    - Breite: {tractor.width_m} m")
+		print(f"    - Länge: {tractor.length_m} m")
+		print(f"    - Wenderadius: {tractor.turn_radius_m} m\n")
+	except Exception as e:
+		print(f"  ✗ Fehler bei Eingabeverarbeitung: {e}\n")
+		raise
+
+	# Schritt 3: Berechnung von Rand- und Fahrspurbreiten
+	print("[3/6] Berechnung von Rand- und Fahrspurbreiten...")
+	try:
+		wendestreifen = tractor.compute_wendestreifen_width()
+		fahrspur = tractor.compute_fahrspur_width()
+		print(f"  ✓ Wendestreifen-Breite: {wendestreifen:.2f} m (Formel: 2*r + l + 1)")
+		print(f"  ✓ Fahrspur-Breite: {fahrspur:.2f} m (Formel: b + 2)\n")
+	except Exception as e:
+		print(f"  ✗ Fehler bei Breitenberechnung: {e}\n")
+		raise
+
+	# Schritt 4: Berechnung der nutzbaren Restfläche
+	print("[4/6] Berechnung der nutzbaren Restfläche...")
+	try:
+		margin = max(wendestreifen, fahrspur)
+		rest_poly = compute_restflaeche(geom_utm, margin)
+		usable_area = rest_poly.area if not rest_poly.is_empty else 0.0
+		print(f"  ✓ Randstreifen-Marge: {margin:.2f} m")
+		print(f"  ✓ Nutzbare Fläche: {usable_area:.2f} m²")
+		if rest_poly.is_empty:
+			print(f"  ⚠ Warnung: Nutzbare Fläche ist leer (Randstreifen zu groß)\n")
+			return {
+				"success": False,
+				"error": "Nutzbare Fläche ist leer",
+				"metadata": {
+					"ausrichtung": ausrichtung,
+					"traktor": {"width_m": tractor.width_m, "length_m": tractor.length_m, "turn_radius_m": tractor.turn_radius_m},
+					"wendestreifen_m": wendestreifen,
+					"fahrspur_m": fahrspur,
+					"usable_area_m2": 0.0,
+				}
+			}
+		print()
+	except Exception as e:
+		print(f"  ✗ Fehler bei Flächenberechnung: {e}\n")
+		raise
+
+	# Schritt 5: Abfrage der Reihenparameter und Generierung der PV-Reihen
+	print("[5/6] Generierung der PV-Reihen (LineString-basiert)...")
+	try:
+		reihen_info = get_reihenparameter(ausrichtung, fahrspur_breite=fahrspur)
+		row_spacing = reihen_info.get("row_spacing_m")
+		orientation = reihen_info["orientation"]
+		
+		print(f"  ✓ Reihenparameter für '{ausrichtung}':")
+		print(f"    - Ausrichtung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})")
+		print(f"    - Reihenabstand (Zeile-zu-Zeile): {row_spacing:.2f} m")
+
+		# Generiere PV-Reihen (LineStrings statt Punkte)
+		geojson_points = generate_pv_reihen(rest_poly, ausrichtung, row_spacing, 
+											transformer_to_wgs84=to_wgs84)
+		n_points = len(geojson_points.get("features", []))
+		print(f"  ✓ Generierte PV-Reihen: {n_points}")
+		print(f"    - Geometrie: LineString (durchgehende Reihen)\n")
+	except Exception as e:
+		print(f"  ✗ Fehler bei Reihengenerierung: {e}\n")
+		raise
+
+	# Schritt 6: Export der Reihen als GeoJSON
+	print("[6/6] Export der Reihen als GeoJSON...")
+	try:
+		import os
+		if not os.path.exists(output_dir):
+			os.makedirs(output_dir, exist_ok=True)
+		
+		output_file = os.path.join(output_dir, "pv_reihen.geojson")
+		export_geojson(geojson_points, output_file)
+		print(f"  ✓ GeoJSON exportiert: {output_file}\n")
+	except Exception as e:
+		print(f"  ✗ Fehler beim Export: {e}\n")
+		raise
+
+	# Zusammenfassung
+	print("="*70)
+	print("ZUSAMMENFASSUNG")
+	print("="*70)
+	result = {
+		"success": True,
+		"ausrichtung": ausrichtung,
+		"metadata": {
+			"ausrichtung": ausrichtung,
+			"orientation": orientation,
+			"traktor": {
+				"width_m": tractor.width_m,
+				"length_m": tractor.length_m,
+				"turn_radius_m": tractor.turn_radius_m
+			},
+		"wendestreifen_m": wendestreifen,
+		"fahrspur_m": fahrspur,
+		"margin_m": margin,
+		"usable_area_m2": usable_area,
+		"row_spacing_m": row_spacing,
+		"n_pv_reihen": n_points,
+			"output_file": output_file,
+		}
+	}
+
+	print(f"PV-Ausrichtung: {ausrichtung}")
+	print(f"Traktor - Breite: {tractor.width_m} m, Länge: {tractor.length_m} m, Radius: {tractor.turn_radius_m} m")
+	print(f"Wendestreifen: {wendestreifen:.2f} m | Fahrspur: {fahrspur:.2f} m")
+	print(f"Nutzbare Fläche: {usable_area:.2f} m²")
+	print(f"Reihenabstand (Zeile-zu-Zeile: Traktor Fahrspur plus Breite PV-Anlage (Horizontale Ausrichtung 9.2 Meter, Vertikale Ausrichtung 0.5 Meter)): {row_spacing:.2f} m")
+	print(f"Orientierung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})") 
+	print(f"Generierte PV-Reihen: {n_points}")
+	print(f"Output: {output_file}")
+	print("="*70 + "\n")
+
+	return result
+
+
+if __name__ == "__main__":
+	try:
+		result = main(interactive=True, output_dir="outputs")
+		if result.get("success"):
+			print("✓ Verarbeitung erfolgreich abgeschlossen!")
+		else:
+			print(f"✗ Verarbeitung abgebrochen: {result.get('error')}")
+	except Exception as e:
+		print(f"✗ Kritischer Fehler: {e}")
+		import traceback
+		traceback.print_exc()
 
