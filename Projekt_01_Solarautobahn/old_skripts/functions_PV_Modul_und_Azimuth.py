@@ -156,7 +156,7 @@ class AzimutRunner:
 
 # ------------------- Optionaler Direktstart:------------------------------------------
 if __name__ == "__main__":
-        base_path="./Input"
+        base_path= "../Input"
         runner = AzimutRunner(base_path)
         runner.run()
 
