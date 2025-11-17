@@ -553,4 +553,3 @@ if __name__ == '__main__':
 	print(f"  Gesamtfläche: {cfg.get('total_area_m2')} m²")
 	print(f"  PV-Fußabdruck: {cfg.get('pv_footprint_m2')} m²")
 
-
