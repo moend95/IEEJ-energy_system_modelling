@@ -3,6 +3,7 @@ import geopandas as gpd
 from shapely.ops import unary_union
 import math
 import os
+import matplotlib.pyplot as plt
 
 
 sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
@@ -247,6 +248,35 @@ class AzimutCalculator:
 
         return gdf_points
 
+class AzimutVisualizer:
+    def __init__(self, calculator: AzimutCalculator):
+        self.calc = calculator
+
+    def plot(self, every_nth_arrow = 10):  #Funktionsinformation: nur jeden x-ten (=10) Richtungspfeil anzeigen
+        gdf = self.calc.gdf
+        points = self.calc.point_list
+        azimuts = self.calc.azimut_list
+        pv_typ = self.calc.pv_typ
+
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.set_title(f"PV-Punkte mit Azimut ({pv_typ})")
+        ax.set_xlabel("X [m]")
+        ax.set_ylabel("Y [m]")
+
+        # Richtungspfeile zeichnen
+        for i in range(0, len(points), every_nth_arrow):
+            if isinstance(azimuts[i], (int, float)):
+                dx = 5 * math.cos(math.radians(90 - azimuts[i]))
+                dy = 5 * math.sin(math.radians(90 - azimuts[i]))
+                ax.arrow(points[i].x, points[i].y, dx, dy, head_width=2, fc="blue", ec="blue")
+
+        # Linien & Punkte
+        geo_gdf = gpd.GeoDataFrame(geometry=[Point(pt.x, pt.y) for pt in points], crs=gdf.crs)
+        gdf.plot(ax=ax, color="gray", linewidth=2)
+        geo_gdf.plot(ax=ax, color="red", markersize=5)
+        plt.grid(True)
+        plt.axis("equal")
+        plt.show()
 
 # PV-System
 # -----------------------------------------------------

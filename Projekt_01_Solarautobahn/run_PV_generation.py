@@ -36,14 +36,14 @@ run_autobahn_geometrie(
 
 # ---------------------- Azimut-Funktion starten ----------------------
 
-from Projekt_01_Solarautobahn.functions_PV_Modul_und_Azimuth import AzimutRunner
+from Projekt_01_Solarautobahn.old_skripts.functions_PV_Modul_und_Azimuth import AzimutRunner
 
 runner = AzimutRunner(base_path="./Input")
 runner.run()
 
 
 # ---------------------- PV-Ertragssimulation starten ----------------------
-from Projekt_01_Solarautobahn.functions_PV_Auslegung import simulate_pv_yield
+from Projekt_01_Solarautobahn.old_skripts.functions_PV_Auslegung import simulate_pv_yield
 
 # nötige gespeicherte Daten aus Input Ordner laden:
 simulate_pv_yield(
