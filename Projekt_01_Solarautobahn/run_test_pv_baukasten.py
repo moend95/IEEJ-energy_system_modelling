@@ -4,11 +4,12 @@ from pvlib.pvsystem import PVSystem
 from pvlib.modelchain import ModelChain
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import geopandas as gpd
+from shapely.geometry import Point
 
 from pv_baukasten import PV_System, PV_TYPEN, sandia_modules, cec_inverters, temp_models_sapm
 from functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
-
+import functions_geometrie as fg
 
 
 if __name__ == "__main__":
@@ -43,13 +44,29 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[0]],  # 0 = ID 1 Windschutzwand, 1 = ID 2 Schallschutzwand, 2 = ID 3 Schallschutzwand_Dach, 3 = ID 4 Böschung, 4 = ID 5 Freifläche_bzw_Agri_geneigt, 5 = ID 6 Agri_vertikal, 6 = ID 7 Haus_Dach
-        step_size=4,                        # Punktabstand = Modul Abstand zueinander in Metern
+        step_size=40,                        # Punktabstand = Modul Abstand zueinander in Metern
         weather_df=weather_df,
         base_output_dir=output_dir,
     )
 
     # --- Punkte & Azimut generieren ---
     results = pv_system.generate_pv_points()
+
+    # --- Geometrie der PV Punkte als GEOJASON aus dem GDF extrahieren  ---
+    df = results[1]
+    gdf_pv_points = gpd.GeoDataFrame(
+        df,
+        geometry=df["geometry"],
+        crs="EPSG:4326"
+    )
+
+    # --- Geometrie (Linie) auf der Karte darstellen ---
+    gh_linie = fg.GeometryHandler(gdf=gpd.read_file(geojson_path), base_path=base_input)
+    gh_linie.plot_geometry_on_map(map_filename="linien_karte.html")
+
+    # --- Geometrie PV Punkte auf der Karte darstellen ---
+    gh_punkte = fg.GeometryHandler(gdf=gdf_pv_points, base_path=base_input)
+    gh_punkte.plot_geometry_on_map(map_filename="punkte_karte.html")
 
     # kleine Kontrolle in der Konsole
     print("Berechnete PV-Typen:")
