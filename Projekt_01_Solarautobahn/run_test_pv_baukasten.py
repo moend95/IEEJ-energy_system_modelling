@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     # --- Pfade einstellen ---
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "a46_west.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "pv_reihen.geojson")
     # HIER anpassen: nimm die GeoJSON-Datei, die du wirklich testen willst
 
     output_dir = os.path.join(base_input, "punkte")
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[0]],  # 0 = ID 1 Windschutzwand, 1 = ID 2 Schallschutzwand, 2 = ID 3 Schallschutzwand_Dach, 3 = ID 4 Böschung, 4 = ID 5 Freifläche_bzw_Agri_geneigt, 5 = ID 6 Agri_vertikal, 6 = ID 7 Haus_Dach
-        step_size=40,                        # Punktabstand = Modul Abstand zueinander in Metern
+        step_size=200,                        # Punktabstand = Modul Abstand zueinander in Metern
         weather_df=weather_df,
         base_output_dir=output_dir,
     )
