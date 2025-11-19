@@ -95,7 +95,7 @@ class PVTypeSelector:
 	def select(default: str = "horizontal", interactive: bool = True) -> str:
 		if not interactive:
 			return default
-		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert, bifazial): 'horizontal' oder Vertikale PV-Anlage (Senkrecht, bifazial): 'vertical'): "
+		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert Anlage, Ost-West): 'horizontal' oder Vertikale PV-Anlage (Senkrechte Anlage (Zaun), Nord-Süd): 'vertical'): "
 		val = input(prompt).strip().lower() or default
 		if val not in PVTypeSelector.VALID:
 			print("Ungültige Auswahl, verwende Default: %s" % default)
