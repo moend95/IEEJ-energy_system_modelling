@@ -12,7 +12,7 @@ cfg = DWDWeatherConfig(
     station_id=None,                           # None = Autoauswahl oder manuell
     auto_select=True,                          # automatisch beste Station wählen
     min_quality=0.95,
-    save_path="./Input/wetterdaten_solarautobahn_2022.csv",
+    save_path="../Input/wetterdaten_solarautobahn_2022.csv",
     plot_date=None,
     plot_range=("2022-01-01", "2022-12-31")
 )
@@ -30,7 +30,7 @@ from Projekt_01_Solarautobahn.functions_geometrie import run_autobahn_geometrie
 
 # Geometrie erzeugen und speichern
 run_autobahn_geometrie(
-    base_path="./Input"
+    base_path="../Input"
 )
 
 
@@ -38,7 +38,7 @@ run_autobahn_geometrie(
 
 from Projekt_01_Solarautobahn.old_skripts.functions_PV_Modul_und_Azimuth import AzimutRunner
 
-runner = AzimutRunner(base_path="./Input")
+runner = AzimutRunner(base_path="../Input")
 runner.run()
 
 
@@ -47,7 +47,7 @@ from Projekt_01_Solarautobahn.old_skripts.functions_PV_Auslegung import simulate
 
 # nötige gespeicherte Daten aus Input Ordner laden:
 simulate_pv_yield(
-    weather_csv_path="./Input/wetterdaten_solarautobahn_2022.csv",
-    points_csv_path="./Input/punkte_mit_azimut.csv",
+    weather_csv_path="../Input/wetterdaten_solarautobahn_2022.csv",
+    points_csv_path="../Input/punkte_mit_azimut.csv",
     save_results_to="./Input/pv_ertrag_ergebnisse.csv"
 )

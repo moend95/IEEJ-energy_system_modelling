@@ -144,7 +144,7 @@ if __name__ == "__main__":
         station_id=None,
         auto_select=True,
         min_quality=0.95,
-        save_path="./Input/wetterdaten_solarautobahn_2022.csv",
+        save_path="../Input/wetterdaten_solarautobahn_2022.csv",
     )
     weather_df = DWDWeatherFetcher(cfg).run()
 
