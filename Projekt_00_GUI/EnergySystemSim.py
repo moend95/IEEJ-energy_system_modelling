@@ -36,17 +36,17 @@ with st.container(key="Erzeugung", width=1000, height=500):
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
             energy_landscape_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal"])
-            tractor_width = st.segmented_control("Traktorbreite", ["10m", "15m", "20m"], default="10m")
+            tractor_width = st.segmented_control("Traktorbreite", ["10m", "100m", "200m"], default="100m")
 
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
             pv_geojson_mapping = {
                 ("Vertikal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Vertikal.geojson",
-                ("Vertikal", "15m"): "P_02_Agri_PV_Breite15.0_Laenge15.0_Wenderadius15.0_Vertikal.geojson",
-                ("Vertikal", "20m"): "P_02_Agri_PV_Breite20.0_Laenge20.0_Wenderadius20.0_Vertikal.geojson",
+                ("Vertikal", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Vertikal.geojson",
+                ("Vertikal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Vertikal.geojson",
                 ("Horizontal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Horizontal.geojson",
-                ("Horizontal", "15m"): "P_02_Agri_PV_Breite15.0_Laenge15.0_Wenderadius15.0_Horizontal.geojson",
-                ("Horizontal", "20m"): "P_02_Agri_PV_Breite20.0_Laenge20.0_Wenderadius20.0_Horizontal.geojson",
+                ("Horizontal", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Horizontal.geojson",
+                ("Horizontal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
             }
 
             selected_file = pv_geojson_mapping[energy_landscape_pv_type, tractor_width]
