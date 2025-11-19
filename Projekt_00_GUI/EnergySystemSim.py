@@ -1,49 +1,111 @@
 import streamlit as st
 import os
+import folium
+from streamlit_folium import st_folium
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
 
 
-
 st.title("Energiesystem Modelierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Solarautobahn", "Energielandschaft", "Industriegebiet", "Green Energy Hub"])
+with st.container(key="Erzeugung", width=1000, height=500):
 
-with tab1:
-    col1, col2 = st.columns(2)
+    tab1, tab2, tab3 = st.tabs(["Solarautobahn", "Energielandschaft", "Industriegebiet"])
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    image_files = {
-        "A44": os.path.join(script_dir, "Pictures", "A44.png"),
-        "A46": os.path.join(script_dir, "Pictures", "A46.png"),
-    }
+    with tab1:
+        col1_tab1, col2_tab1 = st.columns(2)
 
-    with col1:
-        highway_selection = st.selectbox("Autobahnabschnitt", image_files.keys())
-        highway_pv_type = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        image_files = {
+            "A44": os.path.join(script_dir, "Pictures", "A44.png"),
+            "A46": os.path.join(script_dir, "Pictures", "A46.png"),
+        }
 
-    with col2:
-        st.image(image_files[highway_selection])
+        with col1_tab1:
+            highway_selection = st.selectbox("Autobahnabschnitt", image_files.keys())
+            highway_pv_type = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+
+        with col2_tab1:
+            st.image(image_files[highway_selection])
 
 
-with tab2:
-    st.markdown('<div class="tabs-erzeugung-eingabe">', unsafe_allow_html=True)
-    energy_landscape_pv_type = st.selectbox("PV-Typ", ["Vertikal Ost-West", "Geneigt Süd", "Geneigt Süd Tracking"])
-    tractor_width = st.segmented_control("Traktorbreite", ["1,40m", "2,20m", "3,00"])
-    st.markdown('</div>', unsafe_allow_html=True)
+    with tab2:
+        col1_tab2, col2_tab2 = st.columns(2)
+        with col1_tab2:
+            energy_landscape_pv_type = st.selectbox("PV-Typ", ["Vertikal Ost-West", "Geneigt Süd", "Geneigt Süd Tracking"])
+            tractor_width = st.segmented_control("Traktorbreite", ["6m", "9m", "12m"])
 
-with tab3:
-    st.markdown('<div class="tabs-erzeugung-eingabe">', unsafe_allow_html=True)
-    pv_build_industry_roof = st.slider("Dachfläche mit PV bebaut [%]", 0, 100)
-    st.write(f"{pv_build_industry_roof/100*50000} qm Dachfläche mit PV bebaut")
-    parking_ground_pv_activated = st.toggle("Parkplatz PV instalieren?")
-    st.markdown('</div>', unsafe_allow_html=True)
+        with col2_tab2:
+            # --- Mapping PV-Typ → GeoJSON-Datei ---
+            pv_geojson_mapping = {
+                "Vertikal Ost-West": "pv_reihen_sued.geojson",
+                "Geneigt Süd": "pv_reihen_sued.geojson",
+                "Geneigt Süd Tracking": "pv_reihen_sued.geojson"
+            }
 
-with tab4:
-    st.markdown('<div class="tabs-erzeugung-eingabe">', unsafe_allow_html=True)
-    energy_hub_roof_pv_activated = st.toggle("Dach PV instalieren?")
-    st.markdown('</div>', unsafe_allow_html=True)
+            selected_file = pv_geojson_mapping[energy_landscape_pv_type]
+            geojson_path = os.path.join(script_dir, "Geometry", selected_file)
+
+            # GeoJSON laden
+            with open(geojson_path, "r", encoding="utf-8") as f:
+                geojson_data = json.load(f)
+
+            # Karte erstellen
+            m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
+            # GeoJSON Layer hinzufügen
+            folium.GeoJson(
+                geojson_data,
+                name=energy_landscape_pv_type
+            ).add_to(m)
+
+            # Layer Control (falls mehrere Layer kommen)
+            folium.LayerControl().add_to(m)
+
+            # Karte in Streamlit rendern
+            st_data = st_folium(m, width=400, height=400)
+
+    with tab3:
+        pv_build_industry_roof = st.slider("Dachfläche mit PV bebaut [%]", 0, 100)
+        st.write(f"{pv_build_industry_roof/100*50000} qm Dachfläche mit PV bebaut")
+        parking_ground_pv_activated = st.toggle("Parkplatz PV instalieren?")
+
 
 st.write("### Verbrauch Eingabewerte")
+
+with st.container(key="Verbrauch", width=1500, height=800):
+
+    tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
+
+    with tab4:
+        options = ["Logistik", "Stahl", "Glas", "Nahrungsmittelerzeugung", "Handwerk"]
+
+        st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
+
+        selections = []
+        for i in range(5):
+            choice = st.selectbox(f"Unternehmen {i + 1}", ["Keine"] + options, key=f"selection_{i}")
+            selections.append(choice)
+
+        valid_selections = [s for s in selections if s != "Keine"]
+
+
+    with tab5:
+        col1_tab5, col2_tab5 = st.columns(2)
+
+        with col1_tab5:
+            electric_charger = st.slider("Anzahl Elektroladesäulen", 1, 30)
+            elctric_cars_per_day = st.slider("Anzahl beladener Elektroautos pro Tag", 0, electric_charger*50)
+
+
+        with col2_tab5:
+            electric_charger = st.slider("Anzahl Wasserstopfzapfsäulen", 1, 5)
+            elctric_cars_per_day = st.slider("Anzahl beladener Wasserstoffautos pro Tag", 0, electric_charger * 150)
+
+        expander = st.expander("Erklärung")
+        expander.write('''
+            Pro Wasserstoffzapfsäule wird ein maximaler Durchsatz von 150 Autos/Tag angenommen.
+            Für Elektroladesäulen ist die Annahme 50 Autos/Tag.
+        ''')

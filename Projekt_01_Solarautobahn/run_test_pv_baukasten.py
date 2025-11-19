@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     # --- Pfade einstellen ---
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "pv_reihen.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "pv_reihen_sued.geojson")
     # HIER anpassen: nimm die GeoJSON-Datei, die du wirklich testen willst
 
     output_dir = os.path.join(base_input, "punkte")
