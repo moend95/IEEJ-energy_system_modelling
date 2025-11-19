@@ -5,9 +5,8 @@ from pvlib.modelchain import ModelChain
 import pandas as pd
 import matplotlib.pyplot as plt
 import geopandas as gpd
-from shapely.geometry import Point
 
-from pv_baukasten import PV_System, PV_TYPEN, sandia_modules, cec_inverters, temp_models_sapm
+from Projekt_01_Solarautobahn.old_skripts.old_pv_baukasten_ohne_bifazialität import PV_System, PV_TYPEN, sandia_modules, cec_inverters, temp_models_sapm
 from functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
 import functions_geometrie as fg
 
@@ -30,7 +29,7 @@ if __name__ == "__main__":
         station_id=None,
         auto_select=True,
         min_quality=0.95,
-        save_path="./Input/wetterdaten_solarautobahn_2022.csv",
+        save_path="../Input/wetterdaten_solarautobahn_2022.csv",
         plot_date=None,
         plot_range=None,
     )
