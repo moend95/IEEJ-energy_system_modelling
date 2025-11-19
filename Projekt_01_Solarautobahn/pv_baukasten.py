@@ -422,12 +422,19 @@ class PV_System:
 
         mc = ModelChain(system, loc, aoi_model="no_loss")
 
-        # 5) Meteo mitgeben, sonst fehlen Temp/Wind
-        mc.run_model_from_effective_irradiance(
-            effective_irradiance=irrad["effective_irradiance"],
-            temp_air=self.weather_df["temp_air"],
-            wind_speed=self.weather_df["wind_speed"],
-        )
+        # 5) DataFrame für run_model_from_effective_irradiance bauen
+        #    pvlib erwartet hier eine Spalte 'effective_irradiance'
+        data = pd.DataFrame(index=self.weather_df.index)
+        data["effective_irradiance"] = irrad["effective_irradiance"].reindex(data.index)
+
+        # Falls deine Wetterdaten diese Spalten haben, mitgeben:
+        if "temp_air" in self.weather_df.columns:
+            data["temp_air"] = self.weather_df["temp_air"]
+        if "wind_speed" in self.weather_df.columns:
+            data["wind_speed"] = self.weather_df["wind_speed"]
+
+        # pvlib erwartet jetzt nur noch dieses DataFrame als Argument
+        mc.run_model_from_effective_irradiance(data)
 
         return mc.results.ac
 

@@ -1,4 +1,4 @@
-# weather_dwd.py
+# weather_dwd_old_eigen_dni_berechnung.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple, List
