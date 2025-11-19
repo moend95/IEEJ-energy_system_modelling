@@ -1,0 +1,44 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              6.456431,
+              51.038577
+            ],
+            [
+              6.453931,
+              51.037424
+            ],
+            [
+              6.454559,
+              51.0365
+            ],
+            [
+              6.457129,
+              51.037373
+            ],
+            [
+              6.456876,
+              51.038017
+            ],
+            [
+              6.456431,
+              51.038577
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "Green Energy Hub",
+        "description": "Green Energy Hub"
+      },
+      "id": "Hc2kI"
+    }
+  ]
+}
