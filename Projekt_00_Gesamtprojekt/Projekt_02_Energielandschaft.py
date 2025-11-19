@@ -797,7 +797,14 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 		if not os.path.exists(output_dir):
 			os.makedirs(output_dir, exist_ok=True)
 		
-		output_file = os.path.join(output_dir, "pv_reihen.geojson")
+		# Generiere Dateinamen mit Traktor-Parametern und Ausrichtung
+		# Format: Projekt_02_Energielandschaft_Agri_PV_T{width}x{length}xR{radius}_{orientation}.geojson
+		# Beispiel: Projekt_02_Energielandschaft_Agri_PV_T2.5x3.0xR4.0_H.geojson
+		traktor_params = f"Breite{tractor.width_m}_Laenge{tractor.length_m}_Wenderadius{tractor.turn_radius_m}"
+		orientation_abbrev = "Horizontal" if ausrichtung.lower() == "horizontal" else "Vertikal"
+		output_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}.geojson"
+		output_file = os.path.join(output_dir, output_filename)
+		
 		export_geojson(geojson_points, output_file)
 		print(f"  ✓ GeoJSON exportiert: {output_file}\n")
 	except Exception as e:
