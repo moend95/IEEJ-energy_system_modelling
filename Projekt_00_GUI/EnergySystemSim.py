@@ -35,18 +35,21 @@ with st.container(key="Erzeugung", width=1000, height=500):
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
-            energy_landscape_pv_type = st.selectbox("PV-Typ", ["Vertikal Ost-West", "Geneigt Süd", "Geneigt Süd Tracking"])
-            tractor_width = st.segmented_control("Traktorbreite", ["6m", "9m", "12m"])
+            energy_landscape_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal"])
+            tractor_width = st.segmented_control("Traktorbreite", ["10m", "15m", "20m"], default="10m")
 
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
             pv_geojson_mapping = {
-                "Vertikal Ost-West": "pv_reihen_sued.geojson",
-                "Geneigt Süd": "pv_reihen_sued.geojson",
-                "Geneigt Süd Tracking": "pv_reihen_sued.geojson"
+                ("Vertikal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Vertikal.geojson",
+                ("Vertikal", "15m"): "P_02_Agri_PV_Breite15.0_Laenge15.0_Wenderadius15.0_Vertikal.geojson",
+                ("Vertikal", "20m"): "P_02_Agri_PV_Breite20.0_Laenge20.0_Wenderadius20.0_Vertikal.geojson",
+                ("Horizontal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Horizontal.geojson",
+                ("Horizontal", "15m"): "P_02_Agri_PV_Breite15.0_Laenge15.0_Wenderadius15.0_Horizontal.geojson",
+                ("Horizontal", "20m"): "P_02_Agri_PV_Breite20.0_Laenge20.0_Wenderadius20.0_Horizontal.geojson",
             }
 
-            selected_file = pv_geojson_mapping[energy_landscape_pv_type]
+            selected_file = pv_geojson_mapping[energy_landscape_pv_type, tractor_width]
             geojson_path = os.path.join(script_dir, "Geometry", selected_file)
 
             # GeoJSON laden
@@ -55,10 +58,11 @@ with st.container(key="Erzeugung", width=1000, height=500):
 
             # Karte erstellen
             m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
+
             # GeoJSON Layer hinzufügen
             folium.GeoJson(
                 geojson_data,
-                name=energy_landscape_pv_type
+                name=f"{energy_landscape_pv_type}{tractor_width}"
             ).add_to(m)
 
             # Layer Control (falls mehrere Layer kommen)
