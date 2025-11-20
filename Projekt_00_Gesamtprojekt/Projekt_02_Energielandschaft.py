@@ -82,20 +82,20 @@ class GeoJSONReader:
 
 
 class PVTypeSelector:
-	"""Fragt den PV-Typ ab ("horizontal" oder "vertical").
+	"""Fragt den PV-Typ ab ("horizontal", "vertical" oder "horizontal_tracking").
 
 	Parameter:
 	- default: Standardwert falls Enter gedrückt wird.
 	- interactive: falls False, wird der Default zurückgegeben.
 	"""
 
-	VALID = ("horizontal", "vertical")
+	VALID = ("horizontal", "vertical", "horizontal_tracking")
 
 	@staticmethod
 	def select(default: str = "horizontal", interactive: bool = True) -> str:
 		if not interactive:
 			return default
-		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert Anlage, Ost-West): 'horizontal' oder Vertikale PV-Anlage (Senkrechte Anlage (Zaun), Nord-Süd): 'vertical'): "
+		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert Anlage, Ost-West): 'horizontal', Vertikale PV-Anlage (Senkrechte Anlage (Zaun), Nord-Süd): 'vertical', oder Horizontale PV-Anlage mit Single-Axis-Tracking (Aufgeständerte Anlage, Nord-Süd): 'horizontal_tracking'): "
 		val = input(prompt).strip().lower() or default
 		if val not in PVTypeSelector.VALID:
 			print("Ungültige Auswahl, verwende Default: %s" % default)
@@ -320,8 +320,8 @@ def generate_pv_points(polygon: Polygon, ausrichtung: str, reihenbreite: float,
 		raise ValueError("module_spacing_m muss > 0 sein")
 
 	a = str(ausrichtung).strip().lower()
-	if a not in ("horizontal", "vertical"):
-		raise ValueError("ausrichtung muss 'horizontal' oder 'vertical' sein")
+	if a not in ("horizontal", "vertical", "horizontal_tracking"):
+		raise ValueError("ausrichtung muss 'horizontal', 'vertical' oder 'horizontal_tracking' sein")
 
 	minx, miny, maxx, maxy = polygon.bounds
 
@@ -391,7 +391,8 @@ def generate_pv_reihen(polygon: Polygon, ausrichtung: str, row_spacing: float,
 	Vorgehen:
 	1. Bestimmt basierend auf der Ausrichtung die Segmentierungsrichtung:
 	   - horizontal: Linien Ost–West, Verschiebung Nord–Süd
-	   - vertikal: Linien Nord–Süd, Verschiebung Ost–West
+	   - vertical: Linien Nord–Süd, Verschiebung Ost–West
+	   - horizontal_tracking: Linien Nord–Süd, Verschiebung Ost–West (wie vertical)
 	2. Erzeugt aus der Bounding Box des Polygons parallele Linien im Abstand `row_spacing`.
 	3. Schneidet jede Linie mit dem nutzbaren Polygon (Shapely intersection).
 	4. Fügt jede resultierende nichtleere Schnittgeometrie als LineString-Feature ein (ohne Breite).
@@ -399,7 +400,7 @@ def generate_pv_reihen(polygon: Polygon, ausrichtung: str, row_spacing: float,
 
 	Parameter:
 	- polygon: Shapely-Polygon (vorzugsweise in metrischen Einheiten, z. B. UTM)
-	- ausrichtung: 'horizontal' oder 'vertical'
+	- ausrichtung: 'horizontal', 'vertical' oder 'horizontal_tracking'
 	- row_spacing: Abstand zwischen parallelen Reihen in Metern (wichtiger Parameter!)
 	- transformer_to_wgs84: optionaler pyproj.Transformer zur Zurückprojektion in WGS84
 
@@ -422,8 +423,8 @@ def generate_pv_reihen(polygon: Polygon, ausrichtung: str, row_spacing: float,
 		raise ValueError("row_spacing muss > 0 sein")
 
 	a = str(ausrichtung).strip().lower()
-	if a not in ("horizontal", "vertical"):
-		raise ValueError("ausrichtung muss 'horizontal' oder 'vertical' sein")
+	if a not in ("horizontal", "vertical", "horizontal_tracking"):
+		raise ValueError("ausrichtung muss 'horizontal', 'vertical' oder 'horizontal_tracking' sein")
 
 	minx, miny, maxx, maxy = polygon.bounds
 
@@ -437,6 +438,14 @@ def generate_pv_reihen(polygon: Polygon, ausrichtung: str, row_spacing: float,
 			# Linien erstrecken sich leicht über die Bounding Box
 			lines.append(LineString([(minx - 1.0, y), (maxx + 1.0, y)]))
 			y += r
+	elif a == "horizontal_tracking":
+		# Linien verlaufen Nord–Süd (Konstante X)
+		# Verschiebung Ost–West nach row_spacing
+		# Abstand wie 'horizontal' berechnet, aber Ausrichtung wie 'vertical'
+		x = minx + r / 2.0
+		while x <= maxx:
+			lines.append(LineString([(x, miny - 1.0), (x, maxy + 1.0)]))
+			x += r
 	else:  # vertical
 		# Linien verlaufen Nord–Süd (Konstante X)
 		# Verschiebung Ost–West nach row_spacing
@@ -646,13 +655,15 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	**Reihenabstand (Zeile-zu-Zeile-Abstand in Meters):**
 	- Bei "horizontal": Reihenabstand = Fahrspurbreite + 9.2 m (EW-Ausrichtung)
 	- Bei "vertical": Reihenabstand = Fahrspurbreite + 0.5 m (NS-Ausrichtung)
+	- Bei "horizontal_tracking": Reihenabstand = Fahrspurbreite + 9.2 m (NS-Ausrichtung)
 
 	**Orientierung der PV-Reihen:**
 	- Bei "horizontal": Reihen verlaufen Ost–West (EW), Reihenbreite = 9.2 m
 	- Bei "vertical": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 0.5 m
+	- Bei "horizontal_tracking": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 9.2 m, Single-Axis-Tracking
 
 	Parameter:
-	- ausrichtung: Erwartet 'horizontal' oder 'vertical' (Groß-/Kleinschreibung ignoriert).
+	- ausrichtung: Erwartet 'horizontal', 'vertical' oder 'horizontal_tracking' (Groß-/Kleinschreibung ignoriert).
 	- fahrspur_breite: Fahrspurbreite des Traktors in Metern (optional).
 	                   Falls None, wird nur die Reihenbreite berechnet.
 
@@ -665,7 +676,7 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	- Bei ungültigem Wert wird eine `ValueError` mit erklärendem Hinweis ausgelöst.
 	"""
 	if ausrichtung is None:
-		raise ValueError("Ausrichtung darf nicht None sein; benutze 'horizontal' oder 'vertical'.")
+		raise ValueError("Ausrichtung darf nicht None sein; benutze 'horizontal', 'vertical' oder 'horizontal_tracking'.")
 
 	a = str(ausrichtung).strip().lower()
 	
@@ -677,8 +688,12 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 		result = {"orientation": "NS", "reihenbreite_m": 0.5}
 		if fahrspur_breite is not None:
 			result["row_spacing_m"] = fahrspur_breite + 0.5
+	elif a == "horizontal_tracking":
+		result = {"orientation": "NS", "reihenbreite_m": 9.2}
+		if fahrspur_breite is not None:
+			result["row_spacing_m"] = fahrspur_breite + 9.2
 	else:
-		raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal' oder 'vertical'.")
+		raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal', 'vertical' oder 'horizontal_tracking'.")
 	
 	return result
 
@@ -798,10 +813,16 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 			os.makedirs(output_dir, exist_ok=True)
 		
 		# Generiere Dateinamen mit Traktor-Parametern und Ausrichtung
-		# Format: Projekt_02_Energielandschaft_Agri_PV_T{width}x{length}xR{radius}_{orientation}.geojson
-		# Beispiel: Projekt_02_Energielandschaft_Agri_PV_T2.5x3.0xR4.0_H.geojson
+		# Format: P_02_Agri_PV_{traktor}_{orientation}.geojson
+		# Beispiel: P_02_Agri_PV_Breite2.5_Laenge3.0_Wenderadius4.0_Horizontal.geojson
 		traktor_params = f"Breite{tractor.width_m}_Laenge{tractor.length_m}_Wenderadius{tractor.turn_radius_m}"
-		orientation_abbrev = "Horizontal" if ausrichtung.lower() == "horizontal" else "Vertikal"
+		a = ausrichtung.lower()
+		if a == "horizontal":
+			orientation_abbrev = "Horizontal"
+		elif a == "horizontal_tracking":
+			orientation_abbrev = "Horizontal_Tracking"
+		else:  # vertical
+			orientation_abbrev = "Vertikal"
 		output_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}.geojson"
 		output_file = os.path.join(output_dir, output_filename)
 		
@@ -860,4 +881,5 @@ if __name__ == "__main__":
 		print(f"✗ Kritischer Fehler: {e}")
 		import traceback
 		traceback.print_exc()
+
 
