@@ -7,10 +7,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 
-
+#Überschrift
 st.title("Energiesystem Modelierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
+# ---- Session State initialisieren ----
+if "geojson_layers" not in st.session_state:
+    st.session_state.geojson_layers = []
+
+
+# Fester Container für Darstellung der Erzeugungseingabe -> Fixierte Größe damit nachfolgender Inhalt nicht rutscht
 with st.container(key="Erzeugung", width=1000, height=500):
 
     tab1, tab2, tab3 = st.tabs(["Solarautobahn", "Energielandschaft", "Industriegebiet"])
@@ -19,10 +25,6 @@ with st.container(key="Erzeugung", width=1000, height=500):
         col1_tab1, col2_tab1 = st.columns(2)
 
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        image_files = {
-            "A44": os.path.join(script_dir, "Pictures", "A44.png"),
-            "A46": os.path.join(script_dir, "Pictures", "A46.png"),
-        }
 
         with col1_tab1:
             highway_selection = st.multiselect("Autobahn auswählen", ["A44", "A46"])
@@ -104,9 +106,11 @@ with st.container(key="Erzeugung", width=1000, height=500):
         parking_ground_pv_activated = st.toggle("Parkplatz PV instalieren?")
 
 
+
+
 st.write("### Verbrauch Eingabewerte")
 
-with st.container(key="Verbrauch", width=1500, height=800):
+with st.container(key="Verbrauch", width=1500, height=600):
 
     tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
 
@@ -140,3 +144,4 @@ with st.container(key="Verbrauch", width=1500, height=800):
             Pro Wasserstoffzapfsäule wird ein maximaler Durchsatz von 150 Autos/Tag angenommen.
             Für Elektroladesäulen ist die Annahme 50 Autos/Tag.
         ''')
+
