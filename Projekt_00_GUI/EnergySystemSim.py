@@ -25,12 +25,39 @@ with st.container(key="Erzeugung", width=1000, height=500):
         }
 
         with col1_tab1:
-            highway_selection = st.selectbox("Autobahnabschnitt", image_files.keys())
+            highway_selection = st.multiselect("Autobahn auswählen", ["A44", "A46"])
             highway_pv_type = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
 
         with col2_tab1:
-            st.image(image_files[highway_selection])
+            # Mapping Autobahn → GeoJSON
+            pv_geojson_mapping_col2_tab1 = {
+                "A44": "a44_beide.geojson",
+                "A46": "a46_beide.geojson",
+            }
 
+            # Karte erstellen
+            m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
+
+            # Loop über ausgewählte Autobahnen
+            for highway in highway_selection:
+                selected_file = pv_geojson_mapping_col2_tab1[highway]
+                geojson_path = os.path.join(script_dir, "Geometry", selected_file)
+
+                # GeoJSON laden
+                with open(geojson_path, "r", encoding="utf-8") as f:
+                    geojson_data = json.load(f)
+
+                # Layer hinzufügen
+                folium.GeoJson(
+                    geojson_data,
+                    name=f"{highway}"
+                ).add_to(m)
+
+            # Layer Control aktivieren
+            folium.LayerControl().add_to(m)
+
+            # Karte in Streamlit rendern
+            st_data = st_folium(m, width=400, height=400)
 
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
@@ -40,7 +67,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
 
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
-            pv_geojson_mapping = {
+            pv_geojson_mapping_col2_tab2 = {
                 ("Vertikal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Vertikal.geojson",
                 ("Vertikal", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Vertikal.geojson",
                 ("Vertikal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Vertikal.geojson",
@@ -49,7 +76,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 ("Horizontal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
             }
 
-            selected_file = pv_geojson_mapping[energy_landscape_pv_type, tractor_width]
+            selected_file = pv_geojson_mapping_col2_tab2[energy_landscape_pv_type, tractor_width]
             geojson_path = os.path.join(script_dir, "Geometry", selected_file)
 
             # GeoJSON laden
