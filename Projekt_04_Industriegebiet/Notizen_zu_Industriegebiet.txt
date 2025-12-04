@@ -28,6 +28,7 @@ OUT:
 
 
 
+
 function: lastgänge einlesen(dateipfad)
             else
                   standard lastgänge einlesen (relativer dateipfad zu hinterlegten standardlastgängen)
