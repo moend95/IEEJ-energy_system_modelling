@@ -11,10 +11,6 @@ import math
 st.title("Energiesystem Modelierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
-# ---- Session State initialisieren ----
-if "geojson_layers" not in st.session_state:
-    st.session_state.geojson_layers = []
-
 
 # Fester Container für Darstellung der Erzeugungseingabe -> Fixierte Größe damit nachfolgender Inhalt nicht rutscht
 with st.container(key="Erzeugung", width=1000, height=500):
@@ -115,7 +111,7 @@ with st.container(key="Verbrauch", width=1500, height=600):
     tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
 
     with tab4:
-        options = ["Logistik", "Stahl", "Glas", "Nahrungsmittelerzeugung", "Handwerk"]
+        options = ["Logistik", "Stahl", "Entsorgung", "Lebensmittel", "Büro"]
 
         st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
