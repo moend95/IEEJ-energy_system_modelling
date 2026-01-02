@@ -3,6 +3,7 @@ import os
 import folium
 from streamlit_folium import st_folium
 import json
+from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
@@ -141,3 +142,15 @@ with st.container(key="Verbrauch", width=1500, height=600):
             Für Elektroladesäulen ist die Annahme 50 Autos/Tag.
         ''')
 
+st.title("Energiesystem – Visualisierung")
+
+BASE_DIR = Path(__file__).resolve().parent
+svg_path = BASE_DIR / "assets" / "energiesystem.svg"
+svg_code = svg_path.read_text(encoding="utf-8")
+
+# SVG-Tag anpassen: width 100%, height auto
+svg_code = svg_code.replace(
+    "<svg", '<svg style="width:100%; height:auto;"'
+)
+
+st.components.v1.html(svg_code, height=600)
