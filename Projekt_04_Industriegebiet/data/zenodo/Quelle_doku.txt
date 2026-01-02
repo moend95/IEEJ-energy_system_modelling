@@ -1,0 +1,34 @@
+
+
+
+
+https://zenodo.org/records/3899018
+
+
+
+Load profile data of 50 industrial plants in Germany for one year
+
+
+Creators
+Braeuer, Fritz1
+ORCID icon
+Description
+This dataset holds the electric load profiles of 50 small and mid-size enterprises in Germany. The load profiles are in 15-minute time resolution for one year. The load is shown in kW as an average over 15 minutes.
+
+The dataset is divided into two:
+
+LoadProfile_20IPs_2016 shows load profiles of 20 industrial plants (IP) for the year 2016.
+LoadProfile_30IPs_2017 shows load profiles of 30 industrial plants (IP) for the year 2017.
+The IPs from the dataset for 2016 do not reappear in the dataset for 2017.
+
+ 
+
+The dataset LoadProfile_20IPs_2016 is evaluated in the following publication:
+
+Covic, N., Braeuer, F., McKenna, R., Pandzic, H., Optimizing Industrial Facilities’ Active Participation
+in Electricity Markets under Uncertainty, 2020.
+Both datasets together are evaluated in multiple publications:
+
+Braeuer, F., Finck, R., McKenna, R., Comparing empirical and model-based approaches for calculating dynamic grid emission factors: An application to CO2-minimizing storage dispatch in Germany, Journal of Cleaner Production, Volume 266, 2020, 121588, ISSN 0959-6526, https://doi.org/10.1016/j.jclepro.2020.121588 Add to Citavi project by DOI.
+Braeuer, F., Rominger, J., McKenna, R.,Fichtner, W., Battery storage systems: An economic model-based analysis of parallel revenue streams and general implications for industry, Applied Energy, Volume 239, 2019, Pages 1424-1440, ISSN 0306-2619, https://doi.org/10.1016/j.apenergy.2019.01.050 Add to Citavi project by DOI.
+Enjoy.
