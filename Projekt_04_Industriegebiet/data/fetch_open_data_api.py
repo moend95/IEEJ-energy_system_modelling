@@ -8,10 +8,25 @@
 
 import requests
 
+
+# User-Input für internal_id_1
+while True:
+    try:
+        internal_id_1 = int(
+            input("Bitte Datensatz auswählen (internal_id_1, 0–13): ")
+        )
+        if 0 <= internal_id_1 <= 13:
+            break
+        else:
+            print("Fehler: Zahl muss zwischen 0 und 13 liegen.")
+    except ValueError:
+        print("Fehler: Bitte eine ganze Zahl eingeben.")
+
+
 url = "https://api.opendata.ffe.de"
 params = {
     "id_opendata": 59,
-    "internal_id_1": 5,
+    "internal_id_1": internal_id_1,
 }
 print(params['internal_id_1'])
 
