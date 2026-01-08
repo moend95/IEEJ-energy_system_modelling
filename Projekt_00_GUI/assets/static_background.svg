@@ -32,8 +32,17 @@
      inkscape:window-x="-9"
      inkscape:window-y="-9"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" /><defs
-     id="defs1" /><g
+     inkscape:current-layer="layer1" />
+    <style type="text/css">
+            #Polygon_EL:hover,
+            #Polygon_SA:hover,
+            #Polygon_IG:hover,
+            #Polygon_GEH:hover{
+            fill: grey !important;
+            cursor: pointer;
+        }
+    </style>
+    <g
      inkscape:groupmode="layer"
      id="layer3"
      inkscape:label="layer3"><image
@@ -44,7 +53,9 @@
        id="image1-8"
        x="-3328.0833"
        y="-191.33466"
-       transform="scale(-1,1)" /></g><g
+       transform="scale(-1,1)" />
+    </g>
+    <g
      id="layer1"
      transform="matrix(0.70575955,0,0,0.70575955,836.16979,265.00426)"><path
        d="m 834.21215,501.26305 -53.8595,92.6713 53.32739,92.9804 107.18519,0.30744 53.8578,-92.67127 -53.3257,-92.97874 z"

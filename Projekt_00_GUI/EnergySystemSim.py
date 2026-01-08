@@ -169,15 +169,21 @@ st.markdown(
 st.title("Energiesystem – Visualisierung")
 
 BASE_DIR = Path(__file__).resolve().parent
-svg_path = BASE_DIR / "assets" / "static_background.svg"
-svg_code = svg_path.read_text(encoding="utf-8")
+svg_path1 = BASE_DIR / "assets" / "static_background.svg"
+svg_code1 = svg_path1.read_text(encoding="utf-8")
+
+
+
+svg_path2 = BASE_DIR / "assets" / "arrows.svg"
+svg_code2 = svg_path2.read_text(encoding="utf-8")
 
 # SVG-Tag anpassen: width 100%, height auto
-svg_code = svg_code.replace(
+svg_code1 = svg_code1.replace(
     "<svg", '<svg style="width:100%; height:auto;"'
 )
-
-#st.components.v1.html(svg_code, height=600)
-
+# SVG-Tag anpassen: width 100%, height auto
+svg_code2 = svg_code2.replace(
+    "<svg", '<svg style="width:100%; height:auto;"'
+)
 # Vollbreite SVG Container
-st.markdown(f'<div class="full-width-svg">{svg_code}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="full-width-svg">{svg_code1}</div>', unsafe_allow_html=True)
