@@ -4,9 +4,13 @@ import folium
 from streamlit_folium import st_folium
 import json
 from pathlib import Path
+from streamlit.components.v1 import html
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
+
+st.set_page_config(layout="centered")
+
 
 #Überschrift
 st.title("Energiesystem Modelierung - Innovationspark Jüchen")
@@ -142,10 +146,30 @@ with st.container(key="Verbrauch", width=1500, height=600):
             Für Elektroladesäulen ist die Annahme 50 Autos/Tag.
         ''')
 
+
+st.markdown(
+    """
+    <style>
+    /* Vollbild-SVG Container */
+    .full-width-svg {
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+        padding: 0;
+        overflow-x: hidden;
+    }
+    .full-width-svg svg {
+        width: 100vw;
+        height: auto;
+        display: block;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 st.title("Energiesystem – Visualisierung")
 
 BASE_DIR = Path(__file__).resolve().parent
-svg_path = BASE_DIR / "assets" / "energiesystem.svg"
+svg_path = BASE_DIR / "assets" / "static_background.svg"
 svg_code = svg_path.read_text(encoding="utf-8")
 
 # SVG-Tag anpassen: width 100%, height auto
@@ -153,4 +177,7 @@ svg_code = svg_code.replace(
     "<svg", '<svg style="width:100%; height:auto;"'
 )
 
-st.components.v1.html(svg_code, height=600)
+#st.components.v1.html(svg_code, height=600)
+
+# Vollbreite SVG Container
+st.markdown(f'<div class="full-width-svg">{svg_code}</div>', unsafe_allow_html=True)
