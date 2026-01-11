@@ -1,0 +1,39 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              6.480831,
+              51.034729
+            ],
+            [
+              6.479466,
+              51.034457
+            ],
+            [
+              6.479278,
+              51.034806
+            ],
+            [
+              6.480708,
+              51.035056
+            ],
+            [
+              6.480831,
+              51.034729
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "Green Energy Hub PV Flaeche"
+      },
+      "id": "HwBVM"
+    }
+  ]
+}
