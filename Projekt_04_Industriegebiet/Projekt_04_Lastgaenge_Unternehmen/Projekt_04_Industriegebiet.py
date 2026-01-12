@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import MonthLocator, DateFormatter
 
 # Pfade zu den CSV-Dateien
-path_2016 = r"c:\Users\johan\TH_Koeln_Masterprojekt\IEEJ-energy_system_modelling\Projekt_04_Industriegebiet\Projekt_04_Lastgaenge_Unternehmen\LoadProfile_20IPs_2016.csv"
-path_2017 = r"c:\Users\johan\TH_Koeln_Masterprojekt\IEEJ-energy_system_modelling\Projekt_04_Industriegebiet\Projekt_04_Lastgaenge_Unternehmen\LoadProfile_30IPs_2017.csv"
+path_2016 = r"LoadProfile_20IPs_2016.csv"
+path_2017 = r"LoadProfile_30IPs_2017.csv"
 
 # Einlesen der CSV-Dateien
 df_2016 = pd.read_csv(path_2016, sep=';', decimal=',', header=1)
@@ -90,9 +90,11 @@ if selected_data:
     # Formatiere Zeitstempel ohne Jahreszahl für CSV
     combined_df_csv = combined_df.copy()
     combined_df_csv['Time stamp'] = combined_df_csv['Time stamp'].dt.strftime('%d.%m %H:%M')
-    output_path = r"c:\Users\johan\TH_Koeln_Masterprojekt\IEEJ-energy_system_modelling\Projekt_04_Industriegebiet\Projekt_04_Lastgaenge_Unternehmen\combined_load_profiles.csv"
+    output_path = r"combined_load_profiles.csv"
     combined_df_csv[['Time stamp', 'Gesamtlast']].to_csv(output_path, sep=';', decimal=',', index=False)
     print(f"\nKombinierte Lastgänge gespeichert in: {output_path}")
+
+    print(f'Jahresenergiemenge der Gesamtlast: {combined_df["Gesamtlast"].sum() * (15/60) / 1000:.2f} MWh')
 
     # Erstelle ein Balkendiagramm der Gesamtlast
     try:
