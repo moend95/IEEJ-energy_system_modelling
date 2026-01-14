@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-DEFAULT_CSV = os.path.join(os.path.dirname(__file__), "LoadProfile_20IPs_2016.csv")
+DEFAULT_CSV = os.path.join(os.path.dirname(__file__), "LoadProfile_30IPs_2017.csv")
 
 
 def read_zenodo_csv(path: str) -> pd.DataFrame:
