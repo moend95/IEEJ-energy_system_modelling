@@ -10,6 +10,7 @@ from pvlib.pvsystem import PVSystem
 from pvlib.modelchain import ModelChain
 from pvlib.bifacial.pvfactors import pvfactors_timeseries
 from pvlib import location as pv_location, pvsystem
+from pvlib import pvsystem
 
 
 sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
@@ -44,6 +45,14 @@ class PVType:
         row_height: float | None = None,      # m
         row_width: float | None = None,       # m
         albedo: float | None = None,          # 0.2–0.3 etc.
+
+        # NEU Tracking:
+        mount_type: str = "fixed",  # "fixed" oder "singleaxis"
+        axis_tilt: float = 0.0,
+        axis_azimuth: float = 0.0,  # 0 = N-S Achse, 90 = E-W Achse
+        max_angle: float = 60.0,
+        backtrack: bool = True,
+
     ):
         self.id = id_
         self.name = name
@@ -63,6 +72,13 @@ class PVType:
         self.row_height = row_height
         self.row_width = row_width
         self.albedo = albedo
+
+        #tracking
+        self.mount_type = mount_type
+        self.axis_tilt = axis_tilt
+        self.axis_azimuth = axis_azimuth
+        self.max_angle = max_angle
+        self.backtrack = backtrack
 
     def __str__(self):
         return f"[{self.id}] {self.name}"
@@ -137,12 +153,18 @@ PV_TYPEN = [
         modules_per_string=10,
         strings_per_inverter=5,
         # NEU:
-        is_bifacial_detailed=True,  # <- WICHTIG
+        is_bifacial_detailed=False,
         bifaciality=0.75,
-        gcr=0.35,
+        gcr=0.35,                   # GCR = Ground Coverage Ratio (Bodenbedeckungsgrad).
         row_height=3.0,
         row_width=4.0,
         albedo=0.2,
+        # Tracking
+        mount_type="singleaxis",
+        axis_tilt=0,
+        axis_azimuth=0,
+        max_angle=60,
+        backtrack=True,
     ),
     PVType(
         6,
@@ -169,6 +191,10 @@ PV_TYPEN = [
         modules_per_string=10,
         strings_per_inverter=5,
     ),
+
+# Test
+
+
 ]
 
 
@@ -337,6 +363,24 @@ class PV_System:
     # -------------------------------------------------
     # 2) PV Simulation der Punkte
     # -------------------------------------------------
+
+    def _build_mount(self, pv_type: PVType, row):
+        if getattr(pv_type, "mount_type", "fixed") == "singleaxis":
+            if pv_type.backtrack and pv_type.gcr is None:
+                raise ValueError("Tracking mit backtrack=True braucht pv_type.gcr.")
+            return pvsystem.SingleAxisTrackerMount(
+                axis_tilt=float(pv_type.axis_tilt),
+                axis_azimuth=float(pv_type.axis_azimuth),
+                max_angle=float(pv_type.max_angle),
+                backtrack=bool(pv_type.backtrack),
+                gcr=float(pv_type.gcr) if pv_type.gcr is not None else None,
+            )
+        else:
+            return pvsystem.FixedMount(
+                surface_tilt=float(row["tilt"]),
+                surface_azimuth=float(row["azimut"]),
+            )
+
     def _simulate_monofacial_point(self, pv_type: PVType, row):
         module_params = sandia_modules[pv_type.module]
         inverter_params = cec_inverters[pv_type.inverter]
@@ -344,15 +388,20 @@ class PV_System:
 
         loc = Location(row["latitude"], row["longitude"], tz="Europe/Berlin")
 
-        system = PVSystem(
-            surface_tilt=row["tilt"],
-            surface_azimuth=row["azimut"],
+        mount = self._build_mount(pv_type, row)
+
+        array = pvsystem.Array(
+            mount=mount,
             module_parameters=module_params,
-            inverter_parameters=inverter_params,
             temperature_model_parameters=temp_params,
+            albedo=pv_type.albedo,
+        )
+
+        system = pvsystem.PVSystem(
+            arrays=[array],
+            inverter_parameters=inverter_params,
             modules_per_string=pv_type.modules_per_string,
             strings_per_inverter=pv_type.strings_per_inverter,
-            albedo=pv_type.albedo,
         )
 
         mc = ModelChain(system, loc)
@@ -360,7 +409,7 @@ class PV_System:
         return mc.results.ac
 
     def _simulate_bifacial_point(self, pv_type: PVType, row):
-        loc = pv_location.Location(row["latitude"], row["longitude"], tz="Europe/Berlin")
+        loc = Location(row["latitude"], row["longitude"], tz="Europe/Berlin")
         times = self.weather_df.index
         solar_position = loc.get_solarposition(times)
 
