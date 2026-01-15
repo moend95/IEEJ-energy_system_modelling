@@ -61,7 +61,7 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
-        step_size=200,             # Punktabstand in m
+        step_size=1000,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
     )
