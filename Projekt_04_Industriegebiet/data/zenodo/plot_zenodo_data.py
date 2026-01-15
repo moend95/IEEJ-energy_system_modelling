@@ -240,8 +240,13 @@ def main():
                 final_start = s_idx
                 final_end = e_idx
             else:
-                # Timestamp start (oder None -> Verwende ersten Index)
-                ts_start = start_arg if start_arg is not None else df.index[0]
+                # Timestamp start (oder None -> Verwende 04. Dezember als Standard)
+                if start_arg is not None:
+                    ts_start = start_arg
+                else:
+                    # Standard auf 04. Dezember setzen (4.12.2017 für den Datensatz)
+                    ts_start = pd.to_datetime('04.12.2017', dayfirst=True)
+                
                 if timeframe == 'day':
                     ts_end = ts_start + pd.Timedelta(days=1) - pd.Timedelta(minutes=15)
                 elif timeframe == 'week':
