@@ -221,7 +221,7 @@ def main():
                 final_start = s_idx
                 final_end = e_idx
             else:
-                ts_start = start_arg if start_arg is not None else df.index[0]
+                ts_start = start_arg if start_arg is not None else pd.to_datetime('04.12.2017', dayfirst=True)
                 ts_end = ts_start + pd.Timedelta(days=7) - pd.Timedelta(minutes=15)
                 final_start = ts_start
                 final_end = ts_end
@@ -288,7 +288,9 @@ def main():
             raise SystemExit(f"Profil '{profile_name}' nicht im ausgewählten Zeitfenster vorhanden.")
 
         series = sub[profile_name]
-        title = f"Profile {profile_name} from {os.path.basename(args.csv)} ({timeframe})"
+        start_str = series.index[0].strftime('%d.%m.%Y %H:%M')
+        end_str = series.index[-1].strftime('%d.%m.%Y %H:%M')
+        title = f"Profile {profile_name} ({start_str} bis {end_str})"
         plot_profile(series, title=title, save=args.save)
 
 
