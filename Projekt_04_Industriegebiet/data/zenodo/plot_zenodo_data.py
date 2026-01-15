@@ -125,6 +125,29 @@ def plot_profile(series: pd.Series, title: Optional[str] = None, save: Optional[
         plt.show()
 
 
+def plot_all_profiles(df: pd.DataFrame, start: Optional[Union[pd.Timestamp, int]], end: Optional[Union[pd.Timestamp, int]], save_dir: Optional[str] = None):
+    """Plottet alle verfügbaren Profile (LG 1 bis LG 30) in einem Zeitfenster."""
+    sub = select_slice(df, start, end)
+
+    # Filtere nur LG-Spalten
+    lg_cols = [col for col in sub.columns if col.startswith('LG')]
+
+    if not lg_cols:
+        print("Keine LG-Profile gefunden.")
+        return
+
+    print(f"Plotte {len(lg_cols)} Profile...")
+    for profile_name in lg_cols:
+        series = sub[profile_name]
+        title = f"Profile {profile_name} ({start} bis {end})"
+
+        if save_dir:
+            save_path = os.path.join(save_dir, f"{profile_name}.png")
+            plot_profile(series, title=title, save=save_path)
+        else:
+            plot_profile(series, title=title, save=None)
+
+
 def main():
     parser = argparse.ArgumentParser(description='Plot selected load profiles from Zenodo CSV.')
     parser.add_argument('--csv', default=DEFAULT_CSV, help='Pfad zur CSV-Datei (Standard: LoadProfile_20IPs_2016.csv)')
@@ -133,6 +156,7 @@ def main():
     parser.add_argument('--end', help="Endzeitpunkt (Datum) oder Zeilenindex (exklusiv)")
     parser.add_argument('--timeframe', choices=['whole', 'day', 'week', 'month'], help='Schnellauswahl des Zeitfensters: whole/day/week/month')
     parser.add_argument('--save', help='Optional: Dateiname, um den Plot zu speichern (z.B. out.png)')
+    parser.add_argument('--save-dir', help='Optional: Verzeichnis zum Speichern aller Plots (für Option 31)')
     args = parser.parse_args()
 
     if not os.path.exists(args.csv):
@@ -162,8 +186,10 @@ def main():
         print("  2) day    - 1 Tag")
         print("  3) week   - 1 Woche")
         print("  4) month  - 1 Monat")
-        choice = input("Auswahl (1-4): ").strip()
-        mapping = {'1': 'whole', '2': 'day', '3': 'week', '4': 'month'}
+        print("  5) all    - alle 30 LG für 1 Woche plotten")
+        print("  6) all_full - alle 30 LG für den gesamten Zeitraum plotten")
+        choice = input("Auswahl (1-6): ").strip()
+        mapping = {'1': 'whole', '2': 'day', '3': 'week', '4': 'month', '5': 'all', '6': 'all_full'}
         timeframe = mapping.get(choice, 'whole')
 
     # Parse time args (kann None, int oder Timestamp zurückgeben)
@@ -183,6 +209,22 @@ def main():
         if timeframe == 'whole':
             final_start = None
             final_end = None
+        elif timeframe == 'all_full':
+            # Alle LG für den gesamten Zeitraum
+            final_start = None
+            final_end = None
+        elif timeframe == 'all':
+            # Alle LG für 1 Woche
+            if isinstance(start_arg, int):
+                s_idx = start_arg
+                e_idx = s_idx + 7 * 96
+                final_start = s_idx
+                final_end = e_idx
+            else:
+                ts_start = start_arg if start_arg is not None else df.index[0]
+                ts_end = ts_start + pd.Timedelta(days=7) - pd.Timedelta(minutes=15)
+                final_start = ts_start
+                final_end = ts_end
         else:
             # Bestimme Start (Timestamp oder Index)
             if isinstance(start_arg, int):
@@ -212,14 +254,37 @@ def main():
                 final_end = ts_end
 
     # Wende den Slice an
-    sub = select_slice(df, final_start, final_end)
+    if timeframe in ['all', 'all_full']:
+        # Plotte alle Profile
+        save_dir = args.save_dir
+        if not save_dir:
+            save_dir = input("Gib das Verzeichnis zum Speichern der Plots ein (oder drücke Enter für Anzeige): ").strip()
+            if not save_dir:
+                save_dir = None
+        plot_all_profiles(df, final_start, final_end, save_dir=save_dir)
+    else:
+        # Plotte einzelnes Profil
+        profile_name = None
+        if args.profile:
+            p = args.profile.strip()
+            if p.isdigit():
+                profile_name = f"LG {int(p)}"
+            else:
+                profile_name = p
+            if profile_name not in df.columns:
+                raise SystemExit(f"Profil '{profile_name}' nicht in CSV vorhanden. Verfügbare Profile: {', '.join(df.columns)}")
+        else:
+            # interaktiv
+            profile_name = choose_profile_from_input(df)
 
-    if profile_name not in sub.columns:
-        raise SystemExit(f"Profil '{profile_name}' nicht im ausgewählten Zeitfenster vorhanden.")
+        sub = select_slice(df, final_start, final_end)
 
-    series = sub[profile_name]
-    title = f"Profile {profile_name} from {os.path.basename(args.csv)} ({timeframe})"
-    plot_profile(series, title=title, save=args.save)
+        if profile_name not in sub.columns:
+            raise SystemExit(f"Profil '{profile_name}' nicht im ausgewählten Zeitfenster vorhanden.")
+
+        series = sub[profile_name]
+        title = f"Profile {profile_name} from {os.path.basename(args.csv)} ({timeframe})"
+        plot_profile(series, title=title, save=args.save)
 
 
 if __name__ == '__main__':
