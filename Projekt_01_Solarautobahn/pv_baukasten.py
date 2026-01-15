@@ -217,7 +217,7 @@ class AzimutCalculator:
 
     def load_geometry(self):
         try:
-            self.gdf = gpd.read_file(self.geojson_path, engine="pyogrio")
+            self.gdf = gpd.read_file(self.geojson_path)  # nutzt fiona
         except Exception:
             # Fallback zur alten Methode falls pyogrio nicht verfügbar ist
             self.gdf = gpd.read_file(self.geojson_path)

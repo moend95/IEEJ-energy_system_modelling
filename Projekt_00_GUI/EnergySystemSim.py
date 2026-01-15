@@ -4,13 +4,12 @@ import folium
 from streamlit_folium import st_folium
 import json
 from pathlib import Path
-from streamlit.components.v1 import html
-import pandas as pd
-import matplotlib.pyplot as plt
-import math
+from core.io_types import GuiInput, SimOutput
 
 st.set_page_config(layout="centered")
 
+Input = GuiInput()
+Output = SimOutput()
 
 #Überschrift
 st.title("Energiesystem Modelierung - Innovationspark Jüchen")
@@ -28,8 +27,8 @@ with st.container(key="Erzeugung", width=1000, height=500):
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
         with col1_tab1:
-            highway_selection = st.multiselect("Autobahn auswählen", ["A44", "A46"])
-            highway_pv_type = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+            Input.highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
+            Input.h_pv_types = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
 
         with col2_tab1:
             # Mapping Autobahn → GeoJSON
@@ -42,9 +41,9 @@ with st.container(key="Erzeugung", width=1000, height=500):
             m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
 
             # Loop über ausgewählte Autobahnen
-            for highway in highway_selection:
+            for highway in Input.highways:
                 selected_file = pv_geojson_mapping_col2_tab1[highway]
-                geojson_path = os.path.join(script_dir, "Geometry", selected_file)
+                geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
                 # GeoJSON laden
                 with open(geojson_path, "r", encoding="utf-8") as f:
@@ -65,8 +64,8 @@ with st.container(key="Erzeugung", width=1000, height=500):
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
-            energy_landscape_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal"])
-            tractor_width = st.segmented_control("Traktorbreite", ["10m", "100m", "200m"], default="100m")
+            Input.el_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal"])
+            Input.tractor_width = st.segmented_control("Traktorbreite", ["10m", "100m", "200m"], default="100m")
 
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
@@ -79,8 +78,8 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 ("Horizontal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
             }
 
-            selected_file = pv_geojson_mapping_col2_tab2[energy_landscape_pv_type, tractor_width]
-            geojson_path = os.path.join(script_dir, "Geometry", selected_file)
+            selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type, Input.tractor_width]
+            geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
             # GeoJSON laden
             with open(geojson_path, "r", encoding="utf-8") as f:
@@ -92,7 +91,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
             # GeoJSON Layer hinzufügen
             folium.GeoJson(
                 geojson_data,
-                name=f"{energy_landscape_pv_type}{tractor_width}"
+                name=f"{Input.el_pv_type}{Input.tractor_width}"
             ).add_to(m)
 
             # Layer Control (falls mehrere Layer kommen)
@@ -102,9 +101,9 @@ with st.container(key="Erzeugung", width=1000, height=500):
             st_data = st_folium(m, width=400, height=400)
 
     with tab3:
-        pv_build_industry_roof = st.slider("Dachfläche mit PV bebaut [%]", 0, 100)
-        st.write(f"{pv_build_industry_roof/100*50000} qm Dachfläche mit PV bebaut")
-        parking_ground_pv_activated = st.toggle("Parkplatz PV instalieren?")
+        Input.pv_equip_pct = st.slider("Dachfläche mit PV bebaut [%]", 0, 100)
+        st.write(f"{Input.pv_equip_pct/100*50000} qm Dachfläche mit PV bebaut")
+        Input.is_parking_pv_equip = st.toggle("Parkplatz PV instalieren?")
 
 
 
@@ -120,12 +119,12 @@ with st.container(key="Verbrauch", width=1500, height=600):
 
         st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
-        selections = []
+        Input.companies = []
         for i in range(5):
             choice = st.selectbox(f"Unternehmen {i + 1}", ["Keine"] + options, key=f"selection_{i}")
-            selections.append(choice)
+            Input.companies.append(choice)
 
-        valid_selections = [s for s in selections if s != "Keine"]
+        valid_selections = [s for s in Input.companies if s != "Keine"]
 
 
     with tab5:
