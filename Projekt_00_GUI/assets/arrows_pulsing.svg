@@ -26,11 +26,21 @@
   100% { transform: scale(1); }
 }
 
+ @keyframes pulseOpacity {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
 .pulsing {
   transform-box: fill-box;
   transform-origin: center;
-  animation: pulse 1s infinite;
+  animation: pulseOpacity 1s infinite;
 }
+
+
+
+
 </style>
 
   <sodipodi:namedview
