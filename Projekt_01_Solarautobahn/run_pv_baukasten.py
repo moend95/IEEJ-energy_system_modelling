@@ -1,24 +1,52 @@
 import os
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
 from pv_baukasten import PV_System, PV_TYPEN
 
 
+USE_EXISTING_WEATHER = True
+weather_csv = "./Input/test_solarautobahn.csv"
+
+
+
+
 if __name__ == "__main__":
     # ------------------------------------------------------------
-    # 1) Wetterdaten vom DWD holen
+    # 1) Wetterdaten laden (CSV ODER DWD)
     # ------------------------------------------------------------
-    cfg = DWDWeatherConfig(
-        coords=(51.08579, 6.47554),
-        start="2022-01-01",
-        end="2022-12-31",
-        station_id=None,
-        auto_select=True,
-        min_quality=0.95,
-        save_path="./Input/wetterdaten_solarautobahn_2022.csv",
-    )
-    weather_df = DWDWeatherFetcher(cfg).run()
+    if USE_EXISTING_WEATHER:
+        print("→ Verwende vorhandene Wetterdaten-CSV")
+        weather_df = pd.read_csv(weather_csv, index_col=0, parse_dates=True)
+        weather_df.index = pd.to_datetime(weather_df.index, utc=True).tz_convert(None)
+    else:
+        print("→ Hole Wetterdaten neu vom DWD")
+        cfg = DWDWeatherConfig(
+            coords=(51.08579, 6.47554),
+            start="2022-01-01",
+            end="2022-12-31",
+            station_id=None,
+            auto_select=False,
+            min_quality=0.95,
+            save_path=weather_csv,
+        )
+        weather_df = DWDWeatherFetcher(cfg).run()
+
+# if __name__ == "__main__":
+#     # ------------------------------------------------------------
+#     # 1) Wetterdaten vom DWD holen
+#     # ------------------------------------------------------------
+#     cfg = DWDWeatherConfig(
+#         coords=(51.08579, 6.47554),
+#         start="2022-01-01",
+#         end="2022-12-31",
+#         station_id=None,
+#         auto_select=False,
+#         min_quality=0.95,
+#         save_path="./Input/wetterdaten_solarautobahn_2022.csv",
+#     )
+#     weather_df = DWDWeatherFetcher(cfg).run()
 
     # ------------------------------------------------------------
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
@@ -32,7 +60,7 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
-        step_size=4,             # Punktabstand in m
+        step_size=200,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
     )
