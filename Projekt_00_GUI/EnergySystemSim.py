@@ -44,7 +44,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
             # Loop über ausgewählte Autobahnen
             for highway in highway_selection:
                 selected_file = pv_geojson_mapping_col2_tab1[highway]
-                geojson_path = os.path.join(script_dir, "Geometry", selected_file)
+                geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
                 # GeoJSON laden
                 with open(geojson_path, "r", encoding="utf-8") as f:
@@ -80,7 +80,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
             }
 
             selected_file = pv_geojson_mapping_col2_tab2[energy_landscape_pv_type, tractor_width]
-            geojson_path = os.path.join(script_dir, "Geometry", selected_file)
+            geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
             # GeoJSON laden
             with open(geojson_path, "r", encoding="utf-8") as f:
