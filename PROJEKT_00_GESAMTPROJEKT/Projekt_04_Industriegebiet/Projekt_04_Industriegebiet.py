@@ -45,7 +45,7 @@ try:
         exit()
     print(f"Ausgewählte Unternehmen: {ausgewahlte_unternehmen}")
     # Erstelle einen sauberen Dateinamen-Suffix (nur Zahlen und Unterstriche)
-    basisname = "Projekt_04_Gesamtverbrauch_Industriegebiet"
+    basisname = "Projekt_04_Erzeugter_Gesamtverbrauch_Industriegebiet"
 except ValueError:
     print("Ungültige Eingabe. Bitte nur Zahlen und Kommas verwenden.")
     exit()

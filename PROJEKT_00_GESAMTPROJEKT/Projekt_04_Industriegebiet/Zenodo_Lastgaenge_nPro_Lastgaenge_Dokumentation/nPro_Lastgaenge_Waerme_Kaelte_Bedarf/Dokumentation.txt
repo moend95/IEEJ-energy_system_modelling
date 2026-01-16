@@ -1,0 +1,5 @@
+1. Wetterdaten CSV-Datei wird eingelesen
+2. Jede Spalte wird als einzelne CSV-Datei abgespeichert für Import Wetterdaten in nPro
+3. Wärme- und Kühlbedarf Lastgänge werden in nPro erzeugt (mit ausgewählten Wetterdaten)
+4. nPro Lastgänge werden aufgearbeitet (Pro Branche/Unternehmen wird Wärme- und Kühlbedarf in jedem Zeitschritt addiert)
+5. Export CSV-Datei mit jeweils einem Lastgang (Wärme- und Kühlbedarf addiert) für Industriegebiet Skript 
