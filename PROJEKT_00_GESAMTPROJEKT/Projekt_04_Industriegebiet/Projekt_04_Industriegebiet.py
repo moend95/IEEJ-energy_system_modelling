@@ -9,20 +9,21 @@ import collections
 
 # Pfade zu den CSV-Dateien (im gleichen Ordner wie das Skript)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-path_2016 = os.path.join(script_dir, "LoadProfile_20IPs_2016.csv")
-path_2017 = os.path.join(script_dir, "LoadProfile_30IPs_2017.csv")
+path_2017 = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet.csv")
 
 # Einlesen der CSV-Dateien
-df_2016 = pd.read_csv(path_2016, sep=';', decimal=',', header=1)
-df_2017 = pd.read_csv(path_2017, sep=';', decimal=',', header=1)
+df_2017 = pd.read_csv(path_2017, sep=';', decimal=',', header=0)
 
 # Liste der verfügbaren Unternehmen
 unternehmen = [
-    "Stahlindustrie",
-    "Entsorgungswirtschaft",
-    "Lebensmittel-Einzelhandel",
-    "Immobilien-Entwicklung",
-    "Logistikdienstleistung"
+    "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)",
+    "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)",
+    "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)",
+    "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)",
+    "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)", 
+    "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)", 
+    "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)", 
+    "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)"
 ]
 
 # User-Input für die Auswahl der Unternehmen
@@ -43,18 +44,22 @@ try:
         print("Keine gültige Auswahl getroffen. Programm beendet.")
         exit()
     print(f"Ausgewählte Unternehmen: {ausgewahlte_unternehmen}")
-    name_suffix = "_".join(ausgewahlte_unternehmen)
+    # Erstelle einen sauberen Dateinamen-Suffix (nur Zahlen und Unterstriche)
+    basisname = "Projekt_04_Gesamtverbrauch_Industriegebiet"
 except ValueError:
     print("Ungültige Eingabe. Bitte nur Zahlen und Kommas verwenden.")
     exit()
 
 # Zuordnung der Unternehmen zu Lastgängen
 zuordnung = {
-    "Stahlindustrie": ("LG 15", "2016"),
-    "Entsorgungswirtschaft": ("LG 9", "2016"),
-    "Lebensmittel-Einzelhandel": ("LG 12", "2016"),
-    "Immobilien-Entwicklung": ("LG 6", "2016"),
-    "Logistikdienstleistung": ("LG 2", "2016")
+    "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)": ("Entsorgung", "2017"),
+    "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_1", "2017"),
+    "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik und Lagerung", "2017"),
+    "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)": ("Schrott Metallhandel", "2017"),
+    "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)": ("Lagerung", "2017"), 
+    "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)": ("Buero", "2017"),
+    "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik Lebensmittel", "2017"),
+    "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_2", "2017")
 }
 
 # Extrahiere die relevanten Lastgänge basierend auf der Auswahl
@@ -68,12 +73,7 @@ for idx in auswahl_indices:
         unternehmen_counts[u] += 1
         key = f"{u}_{unternehmen_counts[u]}"
         lg, year = zuordnung[u]
-        if year == "2016":
-            selected_columns.append(lg)
-            selected_data[key] = df_2016[['Time stamp', lg]].copy()
-            selected_data[key].rename(columns={lg: key}, inplace=True)
-            selected_data[key][key] = pd.to_numeric(selected_data[key][key], errors='coerce')
-        elif year == "2017":
+        if year == "2017":
             selected_columns.append(lg)
             selected_data[key] = df_2017[['Time stamp', lg]].copy()
             selected_data[key].rename(columns={lg: key}, inplace=True)
@@ -87,22 +87,22 @@ if selected_data:
             combined_df = df
         else:
             combined_df = pd.merge(combined_df, df, on='Time stamp', how='outer')
-    print("\nKombinierte Lastgänge für ausgewählte Unternehmen:")
-    print(combined_df.head())
+    #print("\nKombinierte Lastgänge für ausgewählte Unternehmen:")
+    #print(combined_df.head())
 
     # Berechne die Summe der Lastgänge
     combined_df['Gesamtlast'] = combined_df.drop('Time stamp', axis=1).sum(axis=1)
-    print("\nSumme der Lastgänge:")
-    print(combined_df[['Time stamp', 'Gesamtlast']].head())
+    print("\nSumme der Lastgänge (kW je 15 Minuten):")
+    print(combined_df[['Time stamp', 'Gesamtlast']].head(96)) # Zeige die ersten 24 Stunden (96 Intervalle)
 
     # Konvertiere Time stamp zu datetime für Plots
-    combined_df['Time stamp'] = pd.to_datetime(combined_df['Time stamp'], format='%d.%m.%Y %H:%M:%S', errors='coerce')
+    combined_df['Time stamp'] = pd.to_datetime(combined_df['Time stamp'], errors='coerce')
 
     # Ausgabe als CSV-Datei
     # Formatiere Zeitstempel ohne Jahreszahl für CSV
     combined_df_csv = combined_df.copy()
     combined_df_csv['Time stamp'] = combined_df_csv['Time stamp'].dt.strftime('%d.%m %H:%M')
-    output_path = os.path.join(script_dir, f"combined_load_profiles_{name_suffix}.csv")
+    output_path = os.path.join(script_dir, f"{basisname}.csv")
     combined_df_csv[['Time stamp', 'Gesamtlast']].to_csv(output_path, sep=';', decimal=',', index=False)
     print(f"\nKombinierte Lastgänge gespeichert in: {output_path}")
 
@@ -121,7 +121,7 @@ if selected_data:
         ax.xaxis.set_major_locator(MonthLocator())
         ax.xaxis.set_major_formatter(DateFormatter('%B'))  # %B für vollen Monatsnamen (Januar, Februar, etc.)
         plt.xlim(combined_df_plot['Time stamp'].min(), combined_df_plot['Time stamp'].max())
-        plot_path = os.path.join(script_dir, f"gesamtlast_plot_{name_suffix}.png")
+        plot_path = os.path.join(script_dir, f"{basisname}.png")
         plt.savefig(plot_path)
         print(f"Balkenplot gespeichert als: {plot_path}")
 
@@ -132,8 +132,6 @@ else:
     print("Keine Daten zu extrahieren.")
 
 # Überprüfung der eingelesenen Daten (optional)
-print("Daten für 2016 eingelesen:")
-print(df_2016.head())
-print("\nDaten für 2017 eingelesen:")
-print(df_2017.head())
+# print("Daten für 2017 eingelesen:")
+# print(df_2017.head())
 
