@@ -10,9 +10,11 @@ import collections
 # Pfade zu den CSV-Dateien (im gleichen Ordner wie das Skript)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 path_2017 = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet.csv")
+path_waerme_kaelte = os.path.join(script_dir, "Projekt_04_Lastgaenge_nPro_Waerme_Kaelte.csv")
 
 # Einlesen der CSV-Dateien
 df_2017 = pd.read_csv(path_2017, sep=';', decimal=',', header=0)
+df_waerme_kaelte = pd.read_csv(path_waerme_kaelte, sep=';', decimal=',', header=0)
 
 # Liste der verfügbaren Unternehmen
 unternehmen = [
