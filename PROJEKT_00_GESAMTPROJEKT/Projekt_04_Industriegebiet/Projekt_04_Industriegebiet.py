@@ -33,7 +33,7 @@ print("Verfügbare Unternehmen:")
 for i, u in enumerate(unternehmen, 1):
     print(f"{i}. {u}")
 
-auswahl_input = input("Geben Sie die Nummern der Unternehmen ein, die betrachtet werden sollen (mehrere durch Kommas trennen, Doppelauswahl möglich, z.B. 1,3,5): ")
+auswahl_input = input("Geben Sie die Nummern der Unternehmen ein, die betrachtet werden sollen (Durch Kommas trennen, Doppelauswahl möglich, Minimal 1 Unternehmen, Maximal 5 Unternehmen, z.B. 1,3,5): ")
 
 # Parsen der Eingabe
 try:
