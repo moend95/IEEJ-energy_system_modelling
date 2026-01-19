@@ -9,12 +9,25 @@ import collections
 
 # Pfade zu den CSV-Dateien (im gleichen Ordner wie das Skript)
 script_dir = os.path.dirname(os.path.abspath(__file__))
-path_2017 = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet.csv")
-path_waerme_kaelte = os.path.join(script_dir, "Projekt_04_Lastgaenge_nPro_Waerme_Kaelte.csv")
+path_standard = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet.csv")
+path_waerme_kaelte = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv")
+
+print("Welche Daten sollen genutzt werden?")
+print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen)")
+print("2) Mit Wärme/Kälte Stromverbrauch (Nutzung reversibler Luftwärmepumpen und Geothermie-Sonden)")
+wahl = input("Auswahl (1 oder 2): ")
+
+if wahl == "2":
+    path_aktiv = path_waerme_kaelte
+    modus_name = "Mit_Waerme_Kaelte"
+    print("Modus: Mit Wärme/Kälte ausgewählt.\n")
+else:
+    path_aktiv = path_standard
+    modus_name = "Ohne_Waerme_Kaelte"
+    print("Modus: Ohne Wärme/Kälte ausgewählt.\n")
 
 # Einlesen der CSV-Dateien
-df_2017 = pd.read_csv(path_2017, sep=';', decimal=',', header=0)
-df_waerme_kaelte = pd.read_csv(path_waerme_kaelte, sep=';', decimal=',', header=0)
+df_2017 = pd.read_csv(path_aktiv, sep=';', decimal=',', header=0)
 
 # Liste der verfügbaren Unternehmen
 unternehmen = [
