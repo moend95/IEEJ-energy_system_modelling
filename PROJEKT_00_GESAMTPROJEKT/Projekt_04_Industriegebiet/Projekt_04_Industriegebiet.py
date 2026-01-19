@@ -149,4 +149,3 @@ else:
 # Überprüfung der eingelesenen Daten (optional)
 # print("Daten für 2017 eingelesen:")
 # print(df_2017.head())
-
