@@ -1,151 +1,227 @@
-# Industriegebiet - Lastgänge Unternehmen 
-# Auswahl der Lastgänge für verschiedene Unternehmen im Industriegebiet
+"""
+Industriegebiet – Lastgänge Unternehmen (OOP-Version)
+
+Dieses Modul aggregiert Lastgänge für ausgewählte Unternehmen und erzeugt
+CSV- und PNG-Ausgaben. Die prozedurale Logik wurde in eine Klasse
+`IndustryLoadAggregator` überführt, die sowohl interaktiv als auch
+programmatisch genutzt werden kann.
+"""
+
+import os
+import collections
+from typing import List, Dict, Tuple, Optional
 
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.dates import MonthLocator, DateFormatter
-import os
-import collections
 
-# Pfade zu den CSV-Dateien (im gleichen Ordner wie das Skript)
-script_dir = os.path.dirname(os.path.abspath(__file__))
-path_standard = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet.csv")
-path_waerme_kaelte = os.path.join(script_dir, "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv")
 
-print("Welche Daten sollen genutzt werden?")
-print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen)")
-print("2) Mit Wärme/Kälte Stromverbrauch (Nutzung reversibler Luftwärmepumpen und Geothermie-Sonden)")
-wahl = input("Auswahl (1 oder 2): ")
+class IndustryLoadAggregator:
+    """Aggregiert Lastgänge für ein Industriegebiet und erzeugt Ausgaben.
 
-if wahl == "2":
-    path_aktiv = path_waerme_kaelte
-    modus_name = "Mit_Waerme_Kaelte"
-    print("Modus: Mit Wärme/Kälte ausgewählt.\n")
-else:
-    path_aktiv = path_standard
-    modus_name = "Ohne_Waerme_Kaelte"
-    print("Modus: Ohne Wärme/Kälte ausgewählt.\n")
+    Nutzung:
+    - Interaktiv: `IndustryLoadAggregator().run_interactive()`
+    - Programmgesteuert: `IndustryLoadAggregator().run(mode_choice="1", selection_indices=[0, 2])`
+    """
 
-# Einlesen der CSV-Dateien
-df_2017 = pd.read_csv(path_aktiv, sep=';', decimal=',', header=0)
+    # Liste der verfügbaren Unternehmen (Anzeige und Schlüssel zugleich)
+    UNTERNEHMEN: List[str] = [
+        "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)",
+        "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)",
+        "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)",
+        "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)",
+        "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)",
+        "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)",
+        "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)",
+        "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)",
+    ]
 
-# Liste der verfügbaren Unternehmen
-unternehmen = [
-    "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)",
-    "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)",
-    "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)",
-    "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)",
-    "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)", 
-    "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)", 
-    "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)", 
-    "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)"
-]
+    # Zuordnung der Unternehmen zu Spaltennamen/Lastgängen und Jahr
+    ZUORDNUNG: Dict[str, Tuple[str, str]] = {
+        "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)": ("Entsorgung", "2017"),
+        "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_1", "2017"),
+        "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik und Lagerung", "2017"),
+        "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)": ("Schrott Metallhandel", "2017"),
+        "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)": ("Lagerung", "2017"),
+        "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)": ("Buero", "2017"),
+        "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik Lebensmittel", "2017"),
+        "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_2", "2017"),
+    }
 
-# User-Input für die Auswahl der Unternehmen
-print("Verfügbare Unternehmen:")
-for i, u in enumerate(unternehmen, 1):
-    print(f"{i}. {u}")
+    BASISNAME_AUSGABE: str = "Projekt_04_Erzeugter_Gesamtverbrauch_Industriegebiet"
 
-auswahl_input = input("Geben Sie die Nummern der Unternehmen ein, die betrachtet werden sollen (Durch Kommas trennen, Doppelauswahl möglich, Minimal 1 Unternehmen, Maximal 5 Unternehmen, z.B. 1,3,5): ")
+    def __init__(self, base_dir: Optional[str] = None) -> None:
+        self.script_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
+        self.path_standard = os.path.join(self.script_dir, "Projekt_04_Lastgaenge_Industriegebiet.csv")
+        self.path_waerme_kaelte = os.path.join(
+            self.script_dir,
+            "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv",
+        )
+        self.mode_choice: str = "1"
+        self.mode_name: str = "Ohne_Waerme_Kaelte"
+        self.active_path: str = self.path_standard
+        self.df_2017: Optional[pd.DataFrame] = None
 
-# Parsen der Eingabe
-try:
-    auswahl_indices = [int(x.strip()) - 1 for x in auswahl_input.split(',') if x.strip().isdigit()]
-    if len(auswahl_indices) > 5:
-        print("Maximal 5 Auswahlen erlaubt.")
-        exit()
-    ausgewahlte_unternehmen = [unternehmen[i] for i in auswahl_indices if 0 <= i < len(unternehmen)]
-    if not ausgewahlte_unternehmen:
-        print("Keine gültige Auswahl getroffen. Programm beendet.")
-        exit()
-    print(f"Ausgewählte Unternehmen: {ausgewahlte_unternehmen}")
-    # Erstelle einen sauberen Dateinamen-Suffix (nur Zahlen und Unterstriche)
-    basisname = "Projekt_04_Erzeugter_Gesamtverbrauch_Industriegebiet"
-except ValueError:
-    print("Ungültige Eingabe. Bitte nur Zahlen und Kommas verwenden.")
-    exit()
+    # -------------------- Interaktion --------------------
+    def run_interactive(self) -> None:
+        """Interaktive Ausführung mit Benutzereingaben."""
+        print("Welche Daten sollen genutzt werden?")
+        print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen)")
+        print("2) Mit Wärme/Kälte Stromverbrauch (Nutzung reversibler Luftwärmepumpen und Geothermie-Sonden)")
+        self.mode_choice = input("Auswahl (1 oder 2): ")
+        self._set_mode(self.mode_choice)
 
-# Zuordnung der Unternehmen zu Lastgängen
-zuordnung = {
-    "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)": ("Entsorgung", "2017"),
-    "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_1", "2017"),
-    "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik und Lagerung", "2017"),
-    "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)": ("Schrott Metallhandel", "2017"),
-    "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)": ("Lagerung", "2017"), 
-    "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)": ("Buero", "2017"),
-    "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik Lebensmittel", "2017"),
-    "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_2", "2017")
-}
+        self._print_companies()
+        auswahl_input = input(
+            "Geben Sie die Nummern der Unternehmen ein, die betrachtet werden sollen (Durch Kommas trennen, Doppelauswahl möglich, Minimal 1 Unternehmen, Maximal 5 Unternehmen, z.B. 1,3,5): "
+        )
+        selection_indices = self._parse_selection(auswahl_input)
+        if selection_indices is None:
+            return
 
-# Extrahiere die relevanten Lastgänge basierend auf der Auswahl
-selected_columns = ['Time stamp']
-selected_data = {}
-unternehmen_counts = collections.defaultdict(int)
+        self.load_data()
+        combined_df = self.aggregate(selection_indices)
+        if combined_df is None:
+            print("Keine Daten zu extrahieren.")
+            return
 
-for idx in auswahl_indices:
-    if 0 <= idx < len(unternehmen):
-        u = unternehmen[idx]
-        unternehmen_counts[u] += 1
-        key = f"{u}_{unternehmen_counts[u]}"
-        lg, year = zuordnung[u]
-        if year == "2017":
-            selected_columns.append(lg)
-            selected_data[key] = df_2017[['Time stamp', lg]].copy()
-            selected_data[key].rename(columns={lg: key}, inplace=True)
-            selected_data[key][key] = pd.to_numeric(selected_data[key][key], errors='coerce')
+        csv_path = self.save_csv(combined_df)
+        print(f"\nKombinierte Lastgänge gespeichert in: {csv_path}")
+        plot_path = self.plot_daily_bar(combined_df)
+        if plot_path:
+            print(f"Balkenplot gespeichert als: {plot_path}")
 
-# Kombiniere die Daten in einem DataFrame
-if selected_data:
-    combined_df = pd.DataFrame()
-    for df in selected_data.values():
-        if combined_df.empty:
-            combined_df = df
+    def run(self, mode_choice: str, selection_indices: List[int]) -> Tuple[Optional[pd.DataFrame], Optional[str], Optional[str]]:
+        """Programmgesteuerte Ausführung ohne Eingabeaufforderungen.
+
+        Returns: (combined_df, csv_path, plot_path)
+        """
+        self._set_mode(mode_choice)
+        self.load_data()
+        combined_df = self.aggregate(selection_indices)
+        if combined_df is None:
+            return None, None, None
+        csv_path = self.save_csv(combined_df)
+        plot_path = self.plot_daily_bar(combined_df)
+        return combined_df, csv_path, plot_path
+
+    # -------------------- Modus & Daten --------------------
+    def _set_mode(self, choice: str) -> None:
+        if choice == "2":
+            self.active_path = self.path_waerme_kaelte
+            self.mode_name = "Mit_Waerme_Kaelte"
+            print("Modus: Mit Wärme/Kälte ausgewählt.\n")
         else:
-            combined_df = pd.merge(combined_df, df, on='Time stamp', how='outer')
-    #print("\nKombinierte Lastgänge für ausgewählte Unternehmen:")
-    #print(combined_df.head())
+            self.active_path = self.path_standard
+            self.mode_name = "Ohne_Waerme_Kaelte"
+            print("Modus: Ohne Wärme/Kälte ausgewählt.\n")
 
-    # Berechne die Summe der Lastgänge
-    combined_df['Gesamtlast'] = combined_df.drop('Time stamp', axis=1).sum(axis=1)
-    print("\nSumme der Lastgänge (kW je 15 Minuten):")
-    print(combined_df[['Time stamp', 'Gesamtlast']].head(96)) # Zeige die ersten 24 Stunden (96 Intervalle)
+    def load_data(self) -> None:
+        """Lädt die CSV-Daten für 2017 aus dem aktiven Pfad."""
+        self.df_2017 = pd.read_csv(self.active_path, sep=";", decimal=",", header=0)
 
-    # Konvertiere Time stamp zu datetime für Plots
-    combined_df['Time stamp'] = pd.to_datetime(combined_df['Time stamp'], errors='coerce')
+    # -------------------- Auswahl & Parsing --------------------
+    def _print_companies(self) -> None:
+        print("Verfügbare Unternehmen:")
+        for i, u in enumerate(self.UNTERNEHMEN, 1):
+            print(f"{i}. {u}")
 
-    # Ausgabe als CSV-Datei
-    # Formatiere Zeitstempel ohne Jahreszahl für CSV
-    combined_df_csv = combined_df.copy()
-    combined_df_csv['Time stamp'] = combined_df_csv['Time stamp'].dt.strftime('%d.%m %H:%M')
-    output_path = os.path.join(script_dir, f"{basisname}.csv")
-    combined_df_csv[['Time stamp', 'Gesamtlast']].to_csv(output_path, sep=';', decimal=',', index=False)
-    print(f"\nKombinierte Lastgänge gespeichert in: {output_path}")
+    def _parse_selection(self, auswahl_input: str) -> Optional[List[int]]:
+        try:
+            auswahl_indices = [
+                int(x.strip()) - 1 for x in auswahl_input.split(",") if x.strip().isdigit()
+            ]
+            if len(auswahl_indices) > 5:
+                print("Maximal 5 Auswahlen erlaubt.")
+                return None
+            ausgewahlte_unternehmen = [
+                self.UNTERNEHMEN[i] for i in auswahl_indices if 0 <= i < len(self.UNTERNEHMEN)
+            ]
+            if not ausgewahlte_unternehmen:
+                print("Keine gültige Auswahl getroffen. Programm beendet.")
+                return None
+            print(f"Ausgewählte Unternehmen: {ausgewahlte_unternehmen}")
+            return auswahl_indices
+        except ValueError:
+            print("Ungültige Eingabe. Bitte nur Zahlen und Kommas verwenden.")
+            return None
 
-    # Erstelle ein Balkendiagramm der Gesamtlast
-    try:
-        combined_df_plot = combined_df.copy()
-        # Aggregiere auf tägliche Summen für bessere Darstellung
-        combined_df_plot = combined_df_plot.set_index('Time stamp').resample('D').sum().reset_index()
-        plt.figure(figsize=(20, 10))
-        plt.bar(combined_df_plot['Time stamp'], combined_df_plot['Gesamtlast'], width=1)  # Breite 1 Tag
-        plt.xlabel('Zeit')
-        plt.ylabel('Tägliche Gesamtlast (kW)')
-        plt.title('Tägliche Gesamtlast über das Jahr')
-        plt.xticks(rotation=45)
-        ax = plt.gca()
-        ax.xaxis.set_major_locator(MonthLocator())
-        ax.xaxis.set_major_formatter(DateFormatter('%B'))  # %B für vollen Monatsnamen (Januar, Februar, etc.)
-        plt.xlim(combined_df_plot['Time stamp'].min(), combined_df_plot['Time stamp'].max())
-        plot_path = os.path.join(script_dir, f"{basisname}.png")
-        plt.savefig(plot_path)
-        print(f"Balkenplot gespeichert als: {plot_path}")
+    # -------------------- Aggregation & Ausgabe --------------------
+    def aggregate(self, selection_indices: List[int]) -> Optional[pd.DataFrame]:
+        if self.df_2017 is None:
+            print("Daten wurden nicht geladen.")
+            return None
 
-    except Exception as e:
-        print(f"Fehler beim Erstellen des Plots: {e}")
+        selected_data: Dict[str, pd.DataFrame] = {}
+        unternehmen_counts = collections.defaultdict(int)
 
-else:
-    print("Keine Daten zu extrahieren.")
+        for idx in selection_indices:
+            if 0 <= idx < len(self.UNTERNEHMEN):
+                u = self.UNTERNEHMEN[idx]
+                unternehmen_counts[u] += 1
+                key = f"{u}_{unternehmen_counts[u]}"
+                lg, year = self.ZUORDNUNG[u]
+                if year == "2017":
+                    df = self.df_2017[["Time stamp", lg]].copy()
+                    df.rename(columns={lg: key}, inplace=True)
+                    df[key] = pd.to_numeric(df[key], errors="coerce")
+                    selected_data[key] = df
 
-# Überprüfung der eingelesenen Daten (optional)
-# print("Daten für 2017 eingelesen:")
-# print(df_2017.head())
+        if not selected_data:
+            return None
+
+        combined_df = pd.DataFrame()
+        for df in selected_data.values():
+            if combined_df.empty:
+                combined_df = df
+            else:
+                combined_df = pd.merge(combined_df, df, on="Time stamp", how="outer")
+
+        # Summe der Lastgänge berechnen
+        combined_df["Gesamtlast"] = combined_df.drop("Time stamp", axis=1).sum(axis=1)
+        print("\nSumme der Lastgänge (kW je 15 Minuten):")
+        print(combined_df[["Time stamp", "Gesamtlast"]].head(96))
+
+        # Zeitstempel konvertieren für Plot
+        combined_df["Time stamp"] = pd.to_datetime(combined_df["Time stamp"], errors="coerce")
+        return combined_df
+
+    def save_csv(self, combined_df: pd.DataFrame) -> str:
+        combined_df_csv = combined_df.copy()
+        combined_df_csv["Time stamp"] = combined_df_csv["Time stamp"].dt.strftime("%d.%m %H:%M")
+        output_path = os.path.join(self.script_dir, f"{self.BASISNAME_AUSGABE}.csv")
+        combined_df_csv[["Time stamp", "Gesamtlast"]].to_csv(
+            output_path, sep=";", decimal=",", index=False
+        )
+        return output_path
+
+    def plot_daily_bar(self, combined_df: pd.DataFrame) -> Optional[str]:
+        try:
+            combined_df_plot = combined_df.copy()
+            combined_df_plot = (
+                combined_df_plot.set_index("Time stamp").resample("D").sum().reset_index()
+            )
+            plt.figure(figsize=(20, 10))
+            plt.bar(combined_df_plot["Time stamp"], combined_df_plot["Gesamtlast"], width=1)
+            plt.xlabel("Zeit")
+            plt.ylabel("Tägliche Gesamtlast (kW)")
+            plt.title("Tägliche Gesamtlast über das Jahr")
+            plt.xticks(rotation=45)
+            ax = plt.gca()
+            ax.xaxis.set_major_locator(MonthLocator())
+            ax.xaxis.set_major_formatter(DateFormatter("%B"))
+            plt.xlim(
+                combined_df_plot["Time stamp"].min(),
+                combined_df_plot["Time stamp"].max(),
+            )
+            plot_path = os.path.join(self.script_dir, f"{self.BASISNAME_AUSGABE}.png")
+            plt.savefig(plot_path)
+            plt.close()
+            return plot_path
+        except Exception as e:
+            print(f"Fehler beim Erstellen des Plots: {e}")
+            return None
+
+
+if __name__ == "__main__":
+    IndustryLoadAggregator().run_interactive()
