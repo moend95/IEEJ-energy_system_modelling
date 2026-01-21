@@ -956,8 +956,14 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 		# Generiere PV-Reihen (LineStrings statt Punkte)
 		geojson_points = generate_pv_reihen(rest_poly, ausrichtung, row_spacing, 
 											transformer_to_wgs84=to_wgs84)
-		n_points = len(geojson_points.get("features", []))
+		features_list = geojson_points.get("features", [])
+		n_points = len(features_list)
+		# Gesamtlänge aller erzeugten Reihen (in Metern, aus UTM berechnet)
+		total_rows_length_m = sum(
+			f.get("properties", {}).get("length_m", 0.0) for f in features_list
+		)
 		print(f"  ✓ Generierte PV-Reihen: {n_points}")
+		print(f"    - Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
 		print(f"    - Geometrie: LineString (durchgehende Reihen)\n")
 	except Exception as e:
 		print(f"  ✗ Fehler bei Reihengenerierung: {e}\n")
@@ -986,6 +992,29 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 		
 		export_geojson(geojson_points, output_file)
 		print(f"  ✓ GeoJSON exportiert: {output_file}\n")
+
+		# Zusätzlicher Export: Mittelpunkt (Centroid) der ursprünglich eingelesenen Fläche
+		# Verwende explizit das Original-Polygon (geom_utm), nicht die Restfläche
+		centroid_source = geom_utm
+		centroid_utm = centroid_source.centroid
+		lon_c, lat_c = to_wgs84.transform(centroid_utm.x, centroid_utm.y)
+		centroid_fc = {
+			"type": "FeatureCollection",
+			"features": [
+				{
+					"type": "Feature",
+					"geometry": {"type": "Point", "coordinates": [lon_c, lat_c]},
+					"properties": {
+						"name": "Flaeche_Centroid",
+						"source": "original_area"
+					}
+				}
+			]
+		}
+		centroid_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}_Centroid.geojson"
+		centroid_file = os.path.join(output_dir, centroid_filename)
+		export_geojson(centroid_fc, centroid_file)
+		print(f"  ✓ Centroid-GeoJSON exportiert: {centroid_file}\n")
 	except Exception as e:
 		print(f"  ✗ Fehler beim Export: {e}\n")
 		raise
@@ -1011,6 +1040,7 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 		"usable_area_m2": usable_area,
 		"row_spacing_m": row_spacing,
 		"n_pv_reihen": n_points,
+		"total_rows_length_m": total_rows_length_m,
 			"output_file": output_file,
 		}
 	}
@@ -1022,6 +1052,7 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 	print(f"Reihenabstand (Zeile-zu-Zeile: Traktor Fahrspur plus Breite PV-Anlage (Horizontale Ausrichtung 9.2 Meter, Vertikale Ausrichtung 0.5 Meter)): {row_spacing:.2f} m")
 	print(f"Orientierung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})") 
 	print(f"Generierte PV-Reihen: {n_points}")
+	print(f"Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
 	print(f"Output: {output_file}")
 	print("="*70 + "\n")
 
