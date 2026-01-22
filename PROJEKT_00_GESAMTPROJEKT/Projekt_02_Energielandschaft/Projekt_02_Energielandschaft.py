@@ -240,7 +240,7 @@ class GeoJSONReader:
 
 
 class PVTypeSelector:
-	"""Fragt den PV-Typ ab ("horizontal", "vertical" oder "horizontal_tracking").
+	"""Fragt den PV-Typ ab ("horizontal", "vertical" oder "horizontal_tracking") via 1/2/3-Auswahl.
 
 	Parameter:
 	- default: Standardwert falls Enter gedrückt wird.
@@ -253,12 +253,25 @@ class PVTypeSelector:
 	def select(default: str = "horizontal", interactive: bool = True) -> str:
 		if not interactive:
 			return default
-		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert Anlage, Ost-West): 'horizontal', Vertikale PV-Anlage (Senkrechte Anlage (Zaun), Nord-Süd): 'vertical', oder Horizontale PV-Anlage mit Single-Axis-Tracking (Aufgeständerte Anlage, Nord-Süd): 'horizontal_tracking'): "
-		val = input(prompt).strip().lower() or default
-		if val not in PVTypeSelector.VALID:
-			print("Ungültige Auswahl, verwende Default: %s" % default)
-			return default
-		return val
+
+		options = {
+			"1": "horizontal",
+			"2": "vertical",
+			"3": "horizontal_tracking",
+		}
+		default_key = next((k for k, v in options.items() if v == default), "1")
+		prompt = (
+			f"Bitte PV-Typ auswählen [Default: {default_key}]\n"
+			"1) Horizontale PV-Anlage (aufgeständert, Ost-West)\n"
+			"2) Vertikale PV-Anlage (Zaun, Nord-Süd)\n"
+			"3) Horizontale PV-Anlage mit Single-Axis-Tracking (aufgeständert, Nord-Süd)\n"
+			"Auswahl (1, 2 oder 3): "
+		)
+		choice = input(prompt).strip() or default_key
+		if choice not in options:
+			print("Ungültige Auswahl, verwende Default: %s" % options[default_key])
+			return options[default_key]
+		return options[choice]
 
 
 class TractorParameters:
@@ -987,7 +1000,9 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 			orientation_abbrev = "Horizontal_Tracking"
 		else:  # vertical
 			orientation_abbrev = "Vertikal"
-		output_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}.geojson"
+		# output_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}.geojson"
+		# output_file = os.path.join(output_dir, output_filename)
+		output_filename = f"P_02_Agri_PV_Reihen.geojson"
 		output_file = os.path.join(output_dir, output_filename)
 		
 		export_geojson(geojson_points, output_file)
@@ -1011,7 +1026,9 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 				}
 			]
 		}
-		centroid_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}_Centroid.geojson"
+		# centroid_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}_Centroid.geojson"
+		# centroid_file = os.path.join(output_dir, centroid_filename)
+		centroid_filename = f"P_02_Agri_PV_Mittelpunkt.geojson"
 		centroid_file = os.path.join(output_dir, centroid_filename)
 		export_geojson(centroid_fc, centroid_file)
 		print(f"  ✓ Centroid-GeoJSON exportiert: {centroid_file}\n")
