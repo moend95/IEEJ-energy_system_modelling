@@ -261,10 +261,11 @@ class PVTypeSelector:
 		}
 		default_key = next((k for k, v in options.items() if v == default), "1")
 		prompt = (
-			f"Bitte PV-Typ auswählen [Default: {default_key}] "
-			"1) Horizontale PV-Anlage (aufgeständert, Ost-West), "
-			"2) Vertikale PV-Anlage (Zaun, Nord-Süd), "
-			"3) Horizontale PV-Anlage mit Single-Axis-Tracking (aufgeständert, Nord-Süd): "
+			f"Bitte PV-Typ auswählen [Default: {default_key}]\n"
+			"1) Horizontale PV-Anlage (aufgeständert, Ost-West)\n"
+			"2) Vertikale PV-Anlage (Zaun, Nord-Süd)\n"
+			"3) Horizontale PV-Anlage mit Single-Axis-Tracking (aufgeständert, Nord-Süd)\n"
+			"Auswahl (1, 2 oder 3): "
 		)
 		choice = input(prompt).strip() or default_key
 		if choice not in options:
