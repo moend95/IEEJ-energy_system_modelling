@@ -240,7 +240,7 @@ class GeoJSONReader:
 
 
 class PVTypeSelector:
-	"""Fragt den PV-Typ ab ("horizontal", "vertical" oder "horizontal_tracking").
+	"""Fragt den PV-Typ ab ("horizontal", "vertical" oder "horizontal_tracking") via 1/2/3-Auswahl.
 
 	Parameter:
 	- default: Standardwert falls Enter gedrückt wird.
@@ -253,12 +253,24 @@ class PVTypeSelector:
 	def select(default: str = "horizontal", interactive: bool = True) -> str:
 		if not interactive:
 			return default
-		prompt = f"Bitte PV-Typ auswählen [Default: {default}] Horizontale PV-Anlage (Aufgeständert Anlage, Ost-West): 'horizontal', Vertikale PV-Anlage (Senkrechte Anlage (Zaun), Nord-Süd): 'vertical', oder Horizontale PV-Anlage mit Single-Axis-Tracking (Aufgeständerte Anlage, Nord-Süd): 'horizontal_tracking'): "
-		val = input(prompt).strip().lower() or default
-		if val not in PVTypeSelector.VALID:
-			print("Ungültige Auswahl, verwende Default: %s" % default)
-			return default
-		return val
+
+		options = {
+			"1": "horizontal",
+			"2": "vertical",
+			"3": "horizontal_tracking",
+		}
+		default_key = next((k for k, v in options.items() if v == default), "1")
+		prompt = (
+			f"Bitte PV-Typ auswählen [Default: {default_key}] "
+			"1) Horizontale PV-Anlage (aufgeständert, Ost-West), "
+			"2) Vertikale PV-Anlage (Zaun, Nord-Süd), "
+			"3) Horizontale PV-Anlage mit Single-Axis-Tracking (aufgeständert, Nord-Süd): "
+		)
+		choice = input(prompt).strip() or default_key
+		if choice not in options:
+			print("Ungültige Auswahl, verwende Default: %s" % options[default_key])
+			return options[default_key]
+		return options[choice]
 
 
 class TractorParameters:
