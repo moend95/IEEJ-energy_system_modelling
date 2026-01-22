@@ -1000,7 +1000,9 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 			orientation_abbrev = "Horizontal_Tracking"
 		else:  # vertical
 			orientation_abbrev = "Vertikal"
-		output_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}.geojson"
+		# output_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}.geojson"
+		# output_file = os.path.join(output_dir, output_filename)
+		output_filename = f"P_02_Agri_PV_Reihen.geojson"
 		output_file = os.path.join(output_dir, output_filename)
 		
 		export_geojson(geojson_points, output_file)
@@ -1024,7 +1026,9 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 				}
 			]
 		}
-		centroid_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}_Centroid.geojson"
+		# centroid_filename = f"P_02_Agri_PV_{traktor_params}_{orientation_abbrev}_Centroid.geojson"
+		# centroid_file = os.path.join(output_dir, centroid_filename)
+		centroid_filename = f"P_02_Agri_PV_Mittelpunkt.geojson"
 		centroid_file = os.path.join(output_dir, centroid_filename)
 		export_geojson(centroid_fc, centroid_file)
 		print(f"  ✓ Centroid-GeoJSON exportiert: {centroid_file}\n")

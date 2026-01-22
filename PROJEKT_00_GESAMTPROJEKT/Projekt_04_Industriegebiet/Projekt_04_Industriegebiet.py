@@ -26,14 +26,14 @@ class IndustryLoadAggregator:
 
     # Liste der verfügbaren Unternehmen (Anzeige und Schlüssel zugleich)
     UNTERNEHMEN: List[str] = [
-        "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)",
-        "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)",
-        "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)",
-        "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)",
-        "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)",
-        "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)",
-        "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)",
-        "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)",
+        "Entsorgung: \n5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste\n",
+        "Stahl: \n5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro\n",
+        "Logistik und Lagerung: \n5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen\n",
+        "Schrott- und Metallhandel: \n5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner\n",
+        "Lagerung: \n5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik\n",
+        "Büro: \n5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser\n",
+        "Logistik Lebensmittel: \n6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen\n",
+        "Stahl: \n7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro\n",
     ]
 
     # Zuordnung der Unternehmen zu Spaltennamen/Lastgängen und Jahr
@@ -66,7 +66,7 @@ class IndustryLoadAggregator:
     def run_interactive(self) -> None:
         """Interaktive Ausführung mit Benutzereingaben."""
         print("Welche Daten sollen genutzt werden?")
-        print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen)")
+        print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen für Wärme, keine Kälte)")
         print("2) Mit Wärme/Kälte Stromverbrauch (Nutzung reversibler Luftwärmepumpen und Geothermie-Sonden)")
         self.mode_choice = input("Auswahl (1 oder 2): ")
         self._set_mode(self.mode_choice)
