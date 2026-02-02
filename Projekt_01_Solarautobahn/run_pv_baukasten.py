@@ -60,7 +60,7 @@ if __name__ == "__main__":
     # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[5]],   # 0 = Windschutzwand
+        pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
         step_size=50,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
@@ -100,19 +100,20 @@ if __name__ == "__main__":
         # ------------------------------------------------------------
         # Zusatz: Tagesplot für einen Sommertag (z. B. 21. Juni)
         # ------------------------------------------------------------
-        summer_day = "2022-06-21"
-        day_ac = total_ac.loc[summer_day].copy()
+        summer_day_start = "2022-06-21"
+        summer_day_end = "2022-06-24"
+        day_ac = total_ac.loc[summer_day_start:summer_day_end].copy()
 
         # Aufräumen für Plot:
         day_ac = day_ac.dropna()
         day_ac = day_ac.clip(lower=0)  # negative Werte (z.B. -0.1) auf 0 setzen
 
         # Optional: nur Tagesstunden anzeigen (sieht meist besser aus)
-        day_ac = day_ac.between_time("06:00", "22:00")
+        #day_ac = day_ac.between_time("06:00", "22:00")
 
         plt.figure(figsize=(10, 4))
         plt.plot(day_ac.index, day_ac.values, linewidth=1.2)
-        plt.title(f"Tagesverlauf AC-Leistung – {pv_type.name} ({summer_day})")
+        plt.title(f"Tagesverlauf AC-Leistung – {pv_type.name} ({summer_day_start}-{summer_day_end})")
         plt.xlabel("Uhrzeit")
         plt.ylabel("AC-Leistung [W]")
         plt.grid(True, alpha=0.3)
