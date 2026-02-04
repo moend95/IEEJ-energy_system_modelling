@@ -153,7 +153,7 @@ PV_TYPEN = [
         modules_per_string=10,
         strings_per_inverter=5,
         # NEU:
-        is_bifacial_detailed=False,
+        is_bifacial_detailed=True,
         bifaciality=0.75,
         gcr=0.35,                   # GCR = Ground Coverage Ratio (Bodenbedeckungsgrad).
         row_height=3.0,
@@ -255,7 +255,7 @@ class AzimutCalculator:
         # Sonderfall: nur ein Punkt
         if len(self.number_of_points) == 1:
             p1 = self.number_of_points[0]
-            azimut_final = 0.0 if self.pv_type.azimut == "variabel" else self.pv_type.azimut
+            azimut_final = 180.0 if self.pv_type.azimut == "variabel" else self.pv_type.azimut
             self._append_point(point=p1, azimut=azimut_final)
         else:
             # 2) Punkte durchlaufen und Azimut berechnen
