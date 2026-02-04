@@ -824,14 +824,14 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	"""Gibt Reihenparameter zurück abhängig von der Ausrichtung.
 
 	**Reihenabstand (Zeile-zu-Zeile-Abstand in Meters):**
-	- Bei "horizontal": Reihenabstand = Fahrspurbreite + 8 m (EW-Ausrichtung)
+	- Bei "horizontal": Reihenabstand = Fahrspurbreite + 4 m (EW-Ausrichtung)
 	- Bei "vertical": Reihenabstand = Fahrspurbreite + 0.5 m (NS-Ausrichtung)
-	- Bei "horizontal_tracking": Reihenabstand = Fahrspurbreite + 8 m (NS-Ausrichtung)
+	- Bei "horizontal_tracking": Reihenabstand = Fahrspurbreite + 4 m (NS-Ausrichtung)
 
 	**Orientierung der PV-Reihen:**
-	- Bei "horizontal": Reihen verlaufen Ost–West (EW), Reihenbreite = 8 m
+	- Bei "horizontal": Reihen verlaufen Ost–West (EW), Reihenbreite = 4 m
 	- Bei "vertical": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 0.5 m
-	- Bei "horizontal_tracking": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 8 m, Single-Axis-Tracking
+	- Bei "horizontal_tracking": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 4 m, Single-Axis-Tracking
 
 	Parameter:
 	- ausrichtung: Erwartet 'horizontal', 'vertical' oder 'horizontal_tracking' (Groß-/Kleinschreibung ignoriert).
@@ -852,17 +852,17 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	a = str(ausrichtung).strip().lower()
 	
 	if a == "horizontal":
-		result = {"orientation": "EW", "reihenbreite_m": 5.5}
+		result = {"orientation": "EW", "reihenbreite_m": 2.5}
 		if fahrspur_breite is not None:
-			result["row_spacing_m"] = fahrspur_breite + 5.5
+			result["row_spacing_m"] = fahrspur_breite + 2.5
 	elif a == "vertical":
 		result = {"orientation": "NS", "reihenbreite_m": 0.5}
 		if fahrspur_breite is not None:
 			result["row_spacing_m"] = fahrspur_breite + 0.5
 	elif a == "horizontal_tracking":
-		result = {"orientation": "NS", "reihenbreite_m": 5}
+		result = {"orientation": "NS", "reihenbreite_m": 2}
 		if fahrspur_breite is not None:
-			result["row_spacing_m"] = fahrspur_breite + 5
+			result["row_spacing_m"] = fahrspur_breite + 2
 	else:
 		raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal', 'vertical' oder 'horizontal_tracking'.")
 	
