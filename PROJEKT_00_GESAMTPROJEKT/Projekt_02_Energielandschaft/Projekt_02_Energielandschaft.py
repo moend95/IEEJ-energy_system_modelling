@@ -852,17 +852,17 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	a = str(ausrichtung).strip().lower()
 	
 	if a == "horizontal":
-		result = {"orientation": "EW", "reihenbreite_m": 8}
+		result = {"orientation": "EW", "reihenbreite_m": 5.5}
 		if fahrspur_breite is not None:
-			result["row_spacing_m"] = fahrspur_breite + 8
+			result["row_spacing_m"] = fahrspur_breite + 5.5
 	elif a == "vertical":
 		result = {"orientation": "NS", "reihenbreite_m": 0.5}
 		if fahrspur_breite is not None:
 			result["row_spacing_m"] = fahrspur_breite + 0.5
 	elif a == "horizontal_tracking":
-		result = {"orientation": "NS", "reihenbreite_m": 8}
+		result = {"orientation": "NS", "reihenbreite_m": 5}
 		if fahrspur_breite is not None:
-			result["row_spacing_m"] = fahrspur_breite + 8
+			result["row_spacing_m"] = fahrspur_breite + 5
 	else:
 		raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal', 'vertical' oder 'horizontal_tracking'.")
 	
