@@ -824,14 +824,14 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	"""Gibt Reihenparameter zurück abhängig von der Ausrichtung.
 
 	**Reihenabstand (Zeile-zu-Zeile-Abstand in Meters):**
-	- Bei "horizontal": Reihenabstand = Fahrspurbreite + 9.2 m (EW-Ausrichtung)
+	- Bei "horizontal": Reihenabstand = Fahrspurbreite + 4 m (EW-Ausrichtung)
 	- Bei "vertical": Reihenabstand = Fahrspurbreite + 0.5 m (NS-Ausrichtung)
-	- Bei "horizontal_tracking": Reihenabstand = Fahrspurbreite + 9.2 m (NS-Ausrichtung)
+	- Bei "horizontal_tracking": Reihenabstand = Fahrspurbreite + 4 m (NS-Ausrichtung)
 
 	**Orientierung der PV-Reihen:**
-	- Bei "horizontal": Reihen verlaufen Ost–West (EW), Reihenbreite = 9.2 m
+	- Bei "horizontal": Reihen verlaufen Ost–West (EW), Reihenbreite = 4 m
 	- Bei "vertical": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 0.5 m
-	- Bei "horizontal_tracking": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 9.2 m, Single-Axis-Tracking
+	- Bei "horizontal_tracking": Reihen verlaufen Nord–Süd (NS), Reihenbreite = 4 m, Single-Axis-Tracking
 
 	Parameter:
 	- ausrichtung: Erwartet 'horizontal', 'vertical' oder 'horizontal_tracking' (Groß-/Kleinschreibung ignoriert).
@@ -852,17 +852,17 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	a = str(ausrichtung).strip().lower()
 	
 	if a == "horizontal":
-		result = {"orientation": "EW", "reihenbreite_m": 9.2}
+		result = {"orientation": "EW", "reihenbreite_m": 2.5}
 		if fahrspur_breite is not None:
-			result["row_spacing_m"] = fahrspur_breite + 9.2
+			result["row_spacing_m"] = fahrspur_breite + 2.5
 	elif a == "vertical":
 		result = {"orientation": "NS", "reihenbreite_m": 0.5}
 		if fahrspur_breite is not None:
 			result["row_spacing_m"] = fahrspur_breite + 0.5
 	elif a == "horizontal_tracking":
-		result = {"orientation": "NS", "reihenbreite_m": 9.2}
+		result = {"orientation": "NS", "reihenbreite_m": 2}
 		if fahrspur_breite is not None:
-			result["row_spacing_m"] = fahrspur_breite + 9.2
+			result["row_spacing_m"] = fahrspur_breite + 2
 	else:
 		raise ValueError(f"Ungültige Ausrichtung '{ausrichtung}': erwartet 'horizontal', 'vertical' oder 'horizontal_tracking'.")
 	
@@ -1066,7 +1066,7 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 	print(f"Traktor - Breite: {tractor.width_m} m, Länge: {tractor.length_m} m, Radius: {tractor.turn_radius_m} m")
 	print(f"Wendestreifen: {wendestreifen:.2f} m | Fahrspur: {fahrspur:.2f} m")
 	print(f"Nutzbare Fläche: {usable_area:.2f} m²")
-	print(f"Reihenabstand (Zeile-zu-Zeile: Traktor Fahrspur plus Breite PV-Anlage (Horizontale Ausrichtung 9.2 Meter, Vertikale Ausrichtung 0.5 Meter)): {row_spacing:.2f} m")
+	print(f"Reihenabstand (Zeile-zu-Zeile: Traktor Fahrspur plus Breite PV-Anlage (Horizontale Ausrichtung 8 Meter, Vertikale Ausrichtung 0.5 Meter)): {row_spacing:.2f} m")
 	print(f"Orientierung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})") 
 	print(f"Generierte PV-Reihen: {n_points}")
 	print(f"Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
