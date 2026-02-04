@@ -227,11 +227,21 @@ class AzimutCalculator:
         return self.merged_line
 
     def interpolate_points(self):
+        # Point-GeoJSON: genau einen Punkt nutzen
+        if self.merged_line.geom_type == "Point":
+            self.number_of_points = [self.merged_line]
+            return self.number_of_points
+
         total_length = self.merged_line.length
         self.number_of_points = [
             self.merged_line.interpolate(distance)
             for distance in range(0, int(total_length), self.step_size)
         ]
+
+        # Falls Linie Länge 0 hat: einen Punkt setzen
+        if not self.number_of_points and total_length == 0:
+            self.number_of_points = [self.merged_line.interpolate(0)]
+
         return self.number_of_points
 
     def _append_point(self, point, azimut):
@@ -242,23 +252,29 @@ class AzimutCalculator:
         self.load_geometry()
         self.interpolate_points()
 
-        # 2) Punkte durchlaufen und Azimut berechnen
-        for i in range(len(self.number_of_points) - 1):
-            p1 = self.number_of_points[i]
-            p2 = self.number_of_points[i + 1]
-
-            dx = p2.x - p1.x
-            dy = p2.y - p1.y
-            theta_rad = math.atan2(dy, dx)
-            theta_deg = math.degrees(theta_rad)
-            azimut_tangent = (90 - theta_deg) % 360  # Norden = 0°, Osten = 90°, ...
-
-            if self.pv_type.azimut == "variabel":
-                azimut_final = azimut_tangent
-            else:
-                azimut_final = self.pv_type.azimut
-
+        # Sonderfall: nur ein Punkt
+        if len(self.number_of_points) == 1:
+            p1 = self.number_of_points[0]
+            azimut_final = 0.0 if self.pv_type.azimut == "variabel" else self.pv_type.azimut
             self._append_point(point=p1, azimut=azimut_final)
+        else:
+            # 2) Punkte durchlaufen und Azimut berechnen
+            for i in range(len(self.number_of_points) - 1):
+                p1 = self.number_of_points[i]
+                p2 = self.number_of_points[i + 1]
+
+                dx = p2.x - p1.x
+                dy = p2.y - p1.y
+                theta_rad = math.atan2(dy, dx)
+                theta_deg = math.degrees(theta_rad)
+                azimut_tangent = (90 - theta_deg) % 360  # Norden = 0°, Osten = 90°, ...
+
+                if self.pv_type.azimut == "variabel":
+                    azimut_final = azimut_tangent
+                else:
+                    azimut_final = self.pv_type.azimut
+
+                self._append_point(point=p1, azimut=azimut_final)
 
         # 3) Ergebnis nach WGS84 zurückprojizieren und speichern
         points_geom = [p for p, _ in self.point_azimut_list]
