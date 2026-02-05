@@ -38,14 +38,14 @@ class IndustryLoadAggregator:
 
     # Zuordnung der Unternehmen zu Spaltennamen/Lastgängen und Jahr
     ZUORDNUNG: Dict[str, Tuple[str, str]] = {
-        "Entsorgung (5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste)": ("Entsorgung", "2017"),
-        "Stahl (5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_1", "2017"),
-        "Logistik und Lagerung (5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik und Lagerung", "2017"),
-        "Schrott- und Metallhandel (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner)": ("Schrott Metallhandel", "2017"),
-        "Lagerung (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik)": ("Lagerung", "2017"),
-        "Büro (5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser)": ("Buero", "2017"),
-        "Logistik Lebensmittel (6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen)": ("Logistik Lebensmittel", "2017"),
-        "Stahl (7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro)": ("Stahl_2", "2017"),
+        "Entsorgung: \n5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste\n": ("Entsorgung", "2017"),
+        "Stahl: \n5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro\n": ("Stahl_1", "2017"),
+        "Logistik und Lagerung: \n5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen\n": ("Logistik und Lagerung", "2017"),
+        "Schrott- und Metallhandel: \n5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner\n": ("Schrott Metallhandel", "2017"),
+        "Lagerung: \n5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik\n": ("Lagerung", "2017"),
+        "Büro: \n5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser\n": ("Buero", "2017"),
+        "Logistik Lebensmittel: \n6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen\n": ("Logistik Lebensmittel", "2017"),
+        "Stahl: \n7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro\n": ("Stahl_2", "2017"),
     }
 
     BASISNAME_AUSGABE: str = "Projekt_04_Erzeugter_Gesamtverbrauch_Industriegebiet"
