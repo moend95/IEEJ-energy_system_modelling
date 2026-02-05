@@ -291,13 +291,13 @@ class TractorParameters:
 		self.turn_radius_m = float(turn_radius_m)
 
 	@staticmethod
-	def from_input(interactive: bool = True, defaults: Tuple[float, float, float] = (2.5, 3.0, 4.0)) -> "TractorParameters":
+	def from_input(interactive: bool = True, defaults: Tuple[float, float, float] = (12, 15, 9)) -> "TractorParameters":
 		if not interactive:
 			return TractorParameters(*defaults)
 		try:
-			w = input(f"Traktorbreite in Meter [{defaults[0]}]: ") or str(defaults[0])
-			l = input(f"Traktorlaenge in Meter [{defaults[1]}]: ") or str(defaults[1])
-			r = input(f"Wenderadius in Meter [{defaults[2]}]: ") or str(defaults[2])
+			w = input(f"Traktorbreite in Meter [{defaults[0]} m]: ") or str(defaults[0])
+			l = input(f"Traktorlaenge in Meter [{defaults[1]} m]: ") or str(defaults[1])
+			r = input(f"Wenderadius in Meter [{defaults[2]} m]: ") or str(defaults[2])
 			return TractorParameters(float(w), float(l), float(r))
 		except ValueError:
 			print("Ungültige Eingabe, benutze Defaultwerte.")

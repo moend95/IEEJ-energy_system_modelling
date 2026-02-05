@@ -12,6 +12,7 @@ from merge_teilprojekte_test.functions.Industriegebiet import IndustryLoadAggreg
 #ENERGIELANDSCHAFT IMPORT
 from merge_teilprojekte_test.functions.Energielandschaft import main
 
+'''
 
 
 #WETTERDATEN CSV
@@ -86,7 +87,7 @@ if __name__ == "__main__":
 #INDUSTRIEGEBIET
 if __name__ == "__main__":
     IndustryLoadAggregator().run_interactive()
-
+'''
 
 
 #ENERGIELANDSCHAFT
