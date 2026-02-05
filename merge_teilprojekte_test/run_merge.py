@@ -1,22 +1,24 @@
+import os
+import pandas as pd
+import matplotlib.pyplot as plt
+
 #PV IMPORTS
 from merge_teilprojekte_test.functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
 from merge_teilprojekte_test.functions.pv_baukasten import PV_System, PV_TYPEN
 
-
-#industrie imports
-import os
-
-import pandas as pd
-import matplotlib.pyplot as plt
-
+#INDUSTRIE IMPORT
 from merge_teilprojekte_test.functions.Industriegebiet import IndustryLoadAggregator
 
-# Ausgabe Punkte die man auf der linienbasierten Karte sehen kann
+#ENERGIELANDSCHAFT IMPORT
+from merge_teilprojekte_test.functions.Energielandschaft import main
 
+
+
+#WETTERDATEN CSV
 USE_EXISTING_WEATHER = True
-weather_csv = "./inputs/wetter_daten.csv"
+weather_csv = "./functions/inputs/wetter_daten.csv"
 
-
+#SOLARAUTOBAHN
 if __name__ == "__main__":
     # ------------------------------------------------------------
     # 1) Wetterdaten laden (CSV ODER DWD)
@@ -38,33 +40,19 @@ if __name__ == "__main__":
         )
         weather_df = DWDWeatherFetcher(cfg).run()
 
-# if __name__ == "__main__":
-#     # ------------------------------------------------------------
-#     # 1) Wetterdaten vom DWD holen
-#     # ------------------------------------------------------------
-#     cfg = DWDWeatherConfig(
-#         coords=(51.08579, 6.47554),
-#         start="2022-01-01",
-#         end="2022-12-31",
-#         station_id=None,
-#         auto_select=False,
-#         min_quality=0.95,
-#         save_path="./Input/wetterdaten_solarautobahn_2022.csv",
-#     )
-#     weather_df = DWDWeatherFetcher(cfg).run()
-
     # ------------------------------------------------------------
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
-    base_input = "./inputs"
-    geojson_path = os.path.join(base_input, "geometrien", "agri_pv_short_line.geojson")
+    base_input = "./functions/inputs"
+    geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
     # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
+    #0 = Windschutzwand, 1 = Schallschutzwand, 2 = Schallschutzwand_Dach, 3 = Böschung
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
+        pvtypes=[PV_TYPEN[0],PV_TYPEN[3]],
         step_size=50,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
@@ -91,41 +79,26 @@ if __name__ == "__main__":
         energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, csv_path)
         print(f"  {pv_type.name}: {energy_kwh:.1f} kWh")
 
-        # Plot der AC-Leistung über das Jahr
-        plt.figure(figsize=(15, 4))
-        plt.plot(total_ac.index, total_ac.values, linewidth=0.6)
-        plt.title(f"Jahresverlauf AC-Leistung – {pv_type.name}")
-        plt.xlabel("Datum")
-        plt.ylabel("AC-Leistung [W]")
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
-
-        # ------------------------------------------------------------
-        # Zusatz: Tagesplot für einen Sommertag (z. B. 21. Juni)
-        # ------------------------------------------------------------
-        summer_day_start = "2022-06-21"
-        summer_day_end = "2022-06-24"
-        day_ac = total_ac.loc[summer_day_start:summer_day_end].copy()
-
-        # Aufräumen für Plot:
-        day_ac = day_ac.dropna()
-        day_ac = day_ac.clip(lower=0)  # negative Werte (z.B. -0.1) auf 0 setzen
-
-        # Optional: nur Tagesstunden anzeigen (sieht meist besser aus)
-        #day_ac = day_ac.between_time("06:00", "22:00")
-
-        plt.figure(figsize=(10, 4))
-        plt.plot(day_ac.index, day_ac.values, linewidth=1.2)
-        plt.title(f"Tagesverlauf AC-Leistung – {pv_type.name} ({summer_day_start}-{summer_day_end})")
-        plt.xlabel("Uhrzeit")
-        plt.ylabel("AC-Leistung [W]")
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
 
 
 
 
+#INDUSTRIEGEBIET
 if __name__ == "__main__":
     IndustryLoadAggregator().run_interactive()
+
+
+
+#ENERGIELANDSCHAFT
+if __name__ == "__main__":
+	try:
+		result = main(interactive=True, output_dir="./outputs")
+		if result.get("success"):
+			print("✓ Verarbeitung erfolgreich abgeschlossen!")
+		else:
+			print(f"✗ Verarbeitung abgebrochen: {result.get('error')}")
+	except Exception as e:
+		print(f"✗ Kritischer Fehler: {e}")
+		import traceback
+		traceback.print_exc()
+

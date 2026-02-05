@@ -1070,7 +1070,7 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 	print(f"Orientierung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})") 
 	print(f"Generierte PV-Reihen: {n_points}")
 	print(f"Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
-	print(f"Output: {output_file}")
+	print(f"Output: {output_file} & {centroid_file}")
 	print("="*70 + "\n")
 
 	return result
@@ -1078,7 +1078,7 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 
 if __name__ == "__main__":
 	try:
-		result = main(interactive=True, output_dir="../outputs")
+		result = main(interactive=True, output_dir="./outputs")
 		if result.get("success"):
 			print("✓ Verarbeitung erfolgreich abgeschlossen!")
 		else:

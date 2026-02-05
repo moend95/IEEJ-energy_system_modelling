@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "P_02_Agri_PV_Breite25.0_Laenge3.0_Wenderadius4.0_Vertikal_Centroid.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
