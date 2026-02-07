@@ -35,7 +35,7 @@ def get_pv_configuration(step_size_default, pv_typen):
         # Validierung: sind alle Indizes gültig?
         if all(0 <= i < len(pv_typen) for i in indices):
             selected_types = [pv_typen[i] for i in indices]
-            print(f"✅ Gewählte Typen: {selected_types}")
+            #print(f"✅ Gewählte Typen: {selected_types}")
         else:
             raise ValueError("Index außerhalb des Bereichs")
 
