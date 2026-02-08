@@ -97,7 +97,7 @@ PV_TYPEN = [
         modules_per_string=4,
         strings_per_inverter=1,
         # NEU:
-        is_bifacial_detailed=True,
+        is_bifacial_detailed=False,
         bifaciality=0.75,
         gcr=0.35,
         row_height=3.0,
@@ -153,7 +153,7 @@ PV_TYPEN = [
         modules_per_string=10,
         strings_per_inverter=5,
         # NEU:
-        is_bifacial_detailed=True,
+        is_bifacial_detailed=False,
         bifaciality=0.75,
         gcr=0.35,                   # GCR = Ground Coverage Ratio (Bodenbedeckungsgrad).
         row_height=3.0,

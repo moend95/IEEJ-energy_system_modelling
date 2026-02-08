@@ -47,7 +47,7 @@ else:
 # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
 # ------------------------------------------------------------
 base_input = "./functions/inputs"
-geojson_path = os.path.join(base_input, "geometrien", "agri_pv_short_line.geojson")
+geojson_path = os.path.join(base_input, "geometrien", "Agri_PV_Centroid.geojson")
 output_dir = os.path.join(base_input, "punkte")
 os.makedirs(output_dir, exist_ok=True)
 
@@ -55,7 +55,7 @@ os.makedirs(output_dir, exist_ok=True)
 step_size_default = 100
 
 #step_size = hf.get_float_input(f'Schrittweite für PV Berechnung [default: {step_size_default}m]: ', step_size_default)
-
+#100, [PV_TYPEN[1]] #
 step_size, pv_auswahl = hf.get_pv_configuration(step_size_default, PV_TYPEN)
 print('test done')
 # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
