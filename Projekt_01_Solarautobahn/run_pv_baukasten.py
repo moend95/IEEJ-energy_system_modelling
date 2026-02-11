@@ -1,9 +1,8 @@
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
-from pv_baukasten import PV_System, PV_TYPEN
+from pv_baukasten import PV_System, PV_TYPEN, AzimutCalculator, AzimutVisualizer
 
 # Ausgabe Punkte die man auf der linienbasierten Karte sehen kann
 
@@ -57,19 +56,41 @@ if __name__ == "__main__":
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
-    # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
+    # PV Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
-        step_size=50,             # Punktabstand in m
+        step_size=500,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
+        debug=True,
     )
 
     # ------------------------------------------------------------
     # 3) Punkte + Azimut für alle gewählten PV-Typen generieren
     # ------------------------------------------------------------
+
     results = pv_system.generate_pv_points()
+
+    # ------------------------------------------------------------
+    # 3b) Azimut-Plot anzeigen (Visual Debug)
+    # ------------------------------------------------------------
+    print("\n→ Azimut-Visualisierung...")
+
+    for pv_type in pv_system.pvtypes:
+        csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+        csv_path = os.path.join(output_dir, csv_name)
+
+        calc = AzimutCalculator(
+            geojson_path=geojson_path,
+            step_size=pv_system.step_size,
+            pv_type=pv_type,
+            output_csv_path=csv_path,
+        )
+        calc.calculate_azimut()
+
+        viz = AzimutVisualizer(calc)
+        viz.plot(every_nth_arrow=10)
 
     print("Berechnete PV-Typen:")
     for pv_type in pv_system.pvtypes:
@@ -84,7 +105,11 @@ if __name__ == "__main__":
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
         csv_path = os.path.join(output_dir, csv_name)
 
-        energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, csv_path)
+        df_one = pd.read_csv(csv_path).head(1)
+        test_csv = os.path.join(output_dir, "test_single_point.csv")
+        df_one.to_csv(test_csv, index=False)
+
+        energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, test_csv)
         print(f"  {pv_type.name}: {energy_kwh:.1f} kWh")
 
         # Plot der AC-Leistung über das Jahr
@@ -100,8 +125,8 @@ if __name__ == "__main__":
         # ------------------------------------------------------------
         # Zusatz: Tagesplot für einen Sommertag (z. B. 21. Juni)
         # ------------------------------------------------------------
-        summer_day_start = "2022-06-21"
-        summer_day_end = "2022-06-24"
+        summer_day_start = "2022-06-01"
+        summer_day_end = "2022-06-07"
         day_ac = total_ac.loc[summer_day_start:summer_day_end].copy()
 
         # Aufräumen für Plot:

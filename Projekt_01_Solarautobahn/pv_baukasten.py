@@ -6,10 +6,8 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 from pvlib.location import Location
-from pvlib.pvsystem import PVSystem
 from pvlib.modelchain import ModelChain
 from pvlib.bifacial.pvfactors import pvfactors_timeseries
-from pvlib import location as pv_location, pvsystem
 from pvlib import pvsystem
 from shapely.geometry import Point
 
