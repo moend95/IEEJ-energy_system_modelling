@@ -1,3 +1,6 @@
+
+
+
 def get_int_input(prompt, default):
     """Fragt Float mit Default ab"""
     try:
@@ -16,10 +19,9 @@ def get_pv_configuration(step_size_default, pv_typen):
     print("=" * 50)
 
     # Schrittweite
-    step_size = get_int_input(
-        f'📏 Schrittweite für PV Berechnung [default: {step_size_default}m]: ',
-        step_size_default
-    )
+    step_size = step_size_default
+    #SCHRITTWEITEN ABFRAGE gerade ausgeschaltet...
+    #step_size = get_int_input(f'📏 Schrittweite für PV Berechnung [default: {step_size_default}m]: ',step_size_default)
 
     # PV-Typen auswählen
     print("\n📋 Verfügbare PV-Typen:")

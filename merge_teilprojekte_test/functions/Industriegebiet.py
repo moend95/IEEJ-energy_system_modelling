@@ -90,6 +90,7 @@ class IndustryLoadAggregator:
         plot_path = self.plot_daily_bar(combined_df)
         #if plot_path:
             #print(f"Balkenplot gespeichert als: {plot_path}")
+        return combined_df
 
     def run(self, mode_choice: str, selection_indices: List[int]) -> Tuple[Optional[pd.DataFrame], Optional[str], Optional[str]]:
         """Programmgesteuerte Ausführung ohne Eingabeaufforderungen.
