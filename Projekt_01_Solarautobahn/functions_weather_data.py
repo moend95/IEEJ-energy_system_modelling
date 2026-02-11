@@ -184,7 +184,7 @@ class DWDWeatherFetcher:
                 ghi=df["ghi"].values,  # Global horizontal irradiance [W/m²]
                 solar_zenith=df["zenith"].values,  # Zenitwinkel [°]
                 times=df.index,  # Zeitstempel (tz-aware)
-                pressure=df["pressure_hpa"].values if "pressure_hpa" in df.columns else None,  # hPa
+                pressure=df["pressure_pa"].values if "pressure_pa" in df.columns else None,  # Pa
                 temp_dew=df["temp_dew"].values if "temp_dew" in df.columns else None  # °C
             )
             dni = pd.Series(dni_vals, index=df.index)
@@ -250,6 +250,7 @@ class DWDWeatherFetcher:
         plt.grid()
         plt.show()
 
+
     @staticmethod
     def plot_range(df, start_plot: str, end_plot: str, tz: str = "Europe/Berlin"):
         import pandas as pd
@@ -313,7 +314,7 @@ def plot_single_series(df: pd.DataFrame, col: str, title: str = None):
 # plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
 # plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")
 #
-#
+
 # # ------------------------test Monatssummen ---------------------------------
 #
 # import numpy as np

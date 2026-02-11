@@ -11,6 +11,7 @@ from pvlib.modelchain import ModelChain
 from pvlib.bifacial.pvfactors import pvfactors_timeseries
 from pvlib import location as pv_location, pvsystem
 from pvlib import pvsystem
+from shapely.geometry import Point
 
 
 sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
@@ -307,28 +308,45 @@ class AzimutVisualizer:
 
     def plot(self, every_nth_arrow = 10):  #Funktionsinformation: nur jeden x-ten (=10) Richtungspfeil anzeigen
         gdf = self.calc.gdf
-        points = self.calc.point_list
-        azimuts = self.calc.azimut_list
-        pv_typ = self.calc.pv_typ
+        pv_typ = self.calc.pv_type
+
+        # Punkte + Azimute korrekt aus point_azimut_list holen
+        points = [p for p, _ in self.calc.point_azimut_list]
+        azimuts = [a for _, a in self.calc.point_azimut_list]
 
         fig, ax = plt.subplots(figsize=(10, 8))
-        ax.set_title(f"PV-Punkte mit Azimut ({pv_typ})")
+        ax.set_title(f"PV-Punkte mit Azimut ({pv_typ.name})")
         ax.set_xlabel("X [m]")
         ax.set_ylabel("Y [m]")
 
-        # Richtungspfeile zeichnen
+        # Linienplot
+        gdf.plot(ax=ax, color="gray", linewidth=2)
+
+        # Punkteplot
+        geo_gdf = gpd.GeoDataFrame(
+            geometry=[Point(pt.x, pt.y) for pt in points],
+            crs=gdf.crs,
+        )
+        geo_gdf.plot(ax=ax, color="red", markersize=5)
+
+        # Richtungspfeile
         for i in range(0, len(points), every_nth_arrow):
             if isinstance(azimuts[i], (int, float)):
                 dx = 5 * math.cos(math.radians(90 - azimuts[i]))
                 dy = 5 * math.sin(math.radians(90 - azimuts[i]))
-                ax.arrow(points[i].x, points[i].y, dx, dy, head_width=2, fc="blue", ec="blue")
+                ax.arrow(
+                    points[i].x,
+                    points[i].y,
+                    dx,
+                    dy,
+                    head_width=2,
+                    fc="blue",
+                    ec="blue",
+                )
 
-        # Linien & Punkte
-        geo_gdf = gpd.GeoDataFrame(geometry=[Point(pt.x, pt.y) for pt in points], crs=gdf.crs)
-        gdf.plot(ax=ax, color="gray", linewidth=2)
-        geo_gdf.plot(ax=ax, color="red", markersize=5)
         plt.grid(True)
         plt.axis("equal")
+        plt.tight_layout()
         plt.show()
 
 
@@ -344,12 +362,17 @@ class PV_System:
     - pvtypes: Liste von PVType-Objekten
     """
 
-    def __init__(self, geojson_path, pvtypes, step_size, weather_df, base_output_dir):
+    def __init__(self, geojson_path, pvtypes, step_size, weather_df, base_output_dir, debug=True):
         self.geojson_path = geojson_path
         self.pvtypes = pvtypes
         self.step_size = step_size
         self.weather_df = weather_df      # Wetterdaten aus DWD-Skript
         self.base_output_dir = base_output_dir  # z. B. "./Input/punkte"
+        self.debug = debug
+
+    def _dbg(self, msg: str):
+        if getattr(self, "debug", False):
+            print(msg)
 
     # -------------------------------------------------
     # 1) Punkte + Azimut generieren
@@ -439,6 +462,10 @@ class PV_System:
             solar_azimuth=solar_position["azimuth"],
         )
 
+        import time
+        t0 = time.time()
+
+
         # 2) pvfactors: nutze Wetterdaten (dni/dhi)
         irrad = pvfactors_timeseries(
             solar_azimuth=solar_position["azimuth"],
@@ -456,7 +483,10 @@ class PV_System:
             n_pvrows=3,
             index_observed_pvrow=1,
         )
+
+        t1 = time.time()
         irrad = pd.concat(irrad, axis=1)
+        self._dbg(f"[pvfactors] took {time.time() - t0:.2f}s")
 
         # 3) Effective Irradiance bilden
         if pv_type.bifaciality is None:
@@ -514,10 +544,24 @@ class PV_System:
         - total_ac: Zeitreihe der AC-Gesamtleistung [W]
         """
         df_points = pd.read_csv(points_csv_path)
+        modules_per_point = pv_type.modules_per_string * pv_type.strings_per_inverter
+
+
 
         total_ac = None
 
         for _, row in df_points.iterrows():
+
+            self._dbg(
+                f"\n[SIM] PVType={pv_type.name} | point={_} | "
+                f"lat={row['latitude']:.6f}, lon={row['longitude']:.6f} | "
+                f"az={float(row['azimut']):.1f}°, tilt={float(row['tilt']):.1f}° | "
+                f"mount={pv_type.mount_type} | "
+                f"modules_per_point={modules_per_point} "
+                f"(mps={pv_type.modules_per_string}, spi={pv_type.strings_per_inverter}) | "
+                f"bifacial_detailed={getattr(pv_type, 'is_bifacial_detailed', False)}"
+            )
+
             if getattr(pv_type, "is_bifacial_detailed", False):
                 ac = self._simulate_bifacial_point(pv_type, row)
             else:
@@ -527,6 +571,7 @@ class PV_System:
                 total_ac = ac
             else:
                 total_ac = total_ac + ac
+
 
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
         energy_Wh = (total_ac * dt_hours).sum()
