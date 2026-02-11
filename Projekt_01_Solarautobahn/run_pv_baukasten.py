@@ -61,7 +61,7 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
-        step_size=50,             # Punktabstand in m
+        step_size=1000,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
     )
@@ -80,6 +80,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     print("\nJahresenergie je PV-Typ:")
     for pv_type in pv_system.pvtypes:
+        print("")
         # CSV-Name so, wie ihn generate_pv_points gespeicher hat
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
         csv_path = os.path.join(output_dir, csv_name)

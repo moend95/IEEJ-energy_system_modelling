@@ -273,8 +273,8 @@ class AzimutCalculator:
                     azimut_final = azimut_tangent
                 else:
                     azimut_final = self.pv_type.azimut
-
                 self._append_point(point=p1, azimut=azimut_final)
+            print("AzimutCalculator hat ", len(self.point_azimut_list), " Punkte hinzugefügt")
 
         # 3) Ergebnis nach WGS84 zurückprojizieren und speichern
         points_geom = [p for p, _ in self.point_azimut_list]
@@ -398,6 +398,7 @@ class PV_System:
             )
 
     def _simulate_monofacial_point(self, pv_type: PVType, row):
+        print("Starte Berechnung eines monofazialen Punktes (PV_System._simulate_monofacial_point)")
         module_params = sandia_modules[pv_type.module]
         inverter_params = cec_inverters[pv_type.inverter]
         temp_params = temp_models_sapm[pv_type.temp_model]
@@ -425,11 +426,13 @@ class PV_System:
         return mc.results.ac
 
     def _simulate_bifacial_point(self, pv_type: PVType, row):
+        print("Starte Berechnung eines bifazialen Punktes (PV_System._simulate_bifacial_point)")
         loc = Location(row["latitude"], row["longitude"], tz="Europe/Berlin")
         times = self.weather_df.index
         solar_position = loc.get_solarposition(times)
 
         # 1) Orientierung: für Wände besser FixedMount
+        print("Mount und Orientation ermitteln(PV_System._simulate_bifacial_point)")
         mount = pvsystem.FixedMount(
             surface_tilt=float(row["tilt"]),
             surface_azimuth=float(row["azimut"]),
@@ -440,6 +443,7 @@ class PV_System:
         )
 
         # 2) pvfactors: nutze Wetterdaten (dni/dhi)
+        print("Starte pvfactors_timeseries (PV_System._simulate_bifacial_point)")
         irrad = pvfactors_timeseries(
             solar_azimuth=solar_position["azimuth"],
             solar_zenith=solar_position["apparent_zenith"],
@@ -459,6 +463,7 @@ class PV_System:
         irrad = pd.concat(irrad, axis=1)
 
         # 3) Effective Irradiance bilden
+        print("Effective Irradiance bilden(PV_System._simulate_bifacial_point)")
         if pv_type.bifaciality is None:
             raise ValueError(
                 f"PVType '{pv_type.name}' ist als bifacial_detailed markiert, hat aber keine bifaciality definiert."
@@ -469,6 +474,7 @@ class PV_System:
         )
 
         # 4) System + MC
+
         module_params = sandia_modules[pv_type.module]
         inverter_params = cec_inverters[pv_type.inverter]
         temp_params = temp_models_sapm[pv_type.temp_model]
@@ -484,11 +490,12 @@ class PV_System:
             modules_per_string=pv_type.modules_per_string,
             strings_per_inverter=pv_type.strings_per_inverter,
         )
-
+        print("ModelChain starten(PV_System._simulate_bifacial_point)")
         mc = ModelChain(system, loc, aoi_model="no_loss")
 
         # 5) DataFrame für run_model_from_effective_irradiance bauen
         #    pvlib erwartet hier eine Spalte 'effective_irradiance'
+        print("DataFrame für run_model_from_effective_irradiance bauen(PV_System._simulate_bifacial_point)")
         data = pd.DataFrame(index=self.weather_df.index)
         data["effective_irradiance"] = irrad["effective_irradiance"].reindex(data.index)
 
@@ -513,6 +520,7 @@ class PV_System:
         - energy_kwh: Jahresenergie [kWh/Jahr]
         - total_ac: Zeitreihe der AC-Gesamtleistung [W]
         """
+        print("Starte Funktion PV_System.simulate_pv_type_energy")
         df_points = pd.read_csv(points_csv_path)
 
         total_ac = None
@@ -527,6 +535,7 @@ class PV_System:
                 total_ac = ac
             else:
                 total_ac = total_ac + ac
+            print("Ein Punkt wurde berechnet")
 
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
         energy_Wh = (total_ac * dt_hours).sum()
