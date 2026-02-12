@@ -195,3 +195,4 @@ print(f'Energielandschaft Gesamtproduktion: {agri_pv_energy:.2f} kWh')
 
 agri_pv_total_ac = total_ac_2*agri_pv_laenge*module_pro_meter
 agri_pv_total_ac.plot()
+plt.show()
