@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # PV Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[0]],   # 0 = Windschutzwand
+        pvtypes=[PV_TYPEN[1]],   # 0 = Windschutzwand
         step_size=500,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
@@ -111,6 +111,8 @@ if __name__ == "__main__":
 
         energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, test_csv)
         print(f"  {pv_type.name}: {energy_kwh:.1f} kWh")
+
+        # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
 
         # Plot der AC-Leistung über das Jahr
         plt.figure(figsize=(15, 4))

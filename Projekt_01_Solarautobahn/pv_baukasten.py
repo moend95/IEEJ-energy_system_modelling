@@ -115,6 +115,9 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
+        row_height=3.0,
+        row_width=4.0,
+
     ),
     PVType(
         3,
@@ -127,6 +130,8 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=2,
+        row_height=1.0,
+        row_width=4.0,
     ),
     PVType(
         4,
@@ -139,6 +144,8 @@ PV_TYPEN = [
         temp_model="close_mount_glass_glass",
         modules_per_string=5,
         strings_per_inverter=3,
+        row_height=5.0,
+        row_width=4.0,
     ),
     PVType(
         5,
@@ -176,6 +183,8 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=10,
         strings_per_inverter=5,
+        row_height=2.0,
+        row_width=4.0,
     ),
 
     PVType(
@@ -189,6 +198,8 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=10,
         strings_per_inverter=5,
+        row_height=5.0,
+        row_width=12.0,
     ),
 
 # Test
