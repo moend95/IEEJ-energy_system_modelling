@@ -119,7 +119,7 @@ class IndustryLoadAggregator:
 
     def load_data(self) -> None:
         """Lädt die CSV-Daten für 2017 aus dem aktiven Pfad."""
-        self.df_2017 = pd.read_csv(self.active_path, sep=";", decimal=",", header=0)
+        self.df_2017 = pd.read_csv(self.active_path, sep=";", decimal=".", header=0)
 
     # -------------------- Auswahl & Parsing --------------------
     def _print_companies(self) -> None:
@@ -179,9 +179,9 @@ class IndustryLoadAggregator:
                 combined_df = pd.merge(combined_df, df, on="Time stamp", how="outer")
 
         # Summe der Lastgänge berechnen
-        combined_df["Gesamtlast"] = combined_df.drop("Time stamp", axis=1).sum(axis=1)
+        combined_df["Gesamtlast [kW]"] = combined_df.drop("Time stamp", axis=1).sum(axis=1)
         print("\nSumme der Lastgänge (kW je 15 Minuten):")
-        print(combined_df[["Time stamp", "Gesamtlast"]].head(96))
+        print(combined_df[["Time stamp", "Gesamtlast [kW]"]].head(96))
 
         # Zeitstempel konvertieren für Plot
         combined_df["Time stamp"] = pd.to_datetime(combined_df["Time stamp"], errors="coerce")
@@ -195,8 +195,8 @@ class IndustryLoadAggregator:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(self.script_dir,output_dir, f"{self.BASISNAME_AUSGABE}.csv")
-        combined_df_csv[["Time stamp", "Gesamtlast"]].to_csv(
-            output_path, sep=";", decimal=",", index=False
+        combined_df_csv[["Time stamp", "Gesamtlast [kW]"]].to_csv(
+            output_path, sep=";", decimal=".", index=False
         )
         return output_path
 
@@ -207,7 +207,7 @@ class IndustryLoadAggregator:
                 combined_df_plot.set_index("Time stamp").resample("D").sum().reset_index()
             )
             plt.figure(figsize=(20, 10))
-            plt.bar(combined_df_plot["Time stamp"], combined_df_plot["Gesamtlast"], width=1)
+            plt.bar(combined_df_plot["Time stamp"], combined_df_plot["Gesamtlast [kW]"], width=1)
             plt.xlabel("Zeit")
             plt.ylabel("Tägliche Gesamtlast (kW)")
             plt.title("Tägliche Gesamtlast über das Jahr")

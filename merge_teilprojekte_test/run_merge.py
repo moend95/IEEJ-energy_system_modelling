@@ -40,6 +40,10 @@ else:
 		save_path=weather_csv,
 	)
 	weather_df = DWDWeatherFetcher(cfg).run()
+# --------------------------------------------------
+# Data Frame für Ergebnisse
+# --------------------------------------------------
+res_df = pd.DataFrame()
 
 
 
@@ -78,7 +82,7 @@ pv_system = PV_System(
 # ------------------------------------------------------------
 # 3) Punkte + Azimut für alle gewählten PV-Typen generieren
 # ------------------------------------------------------------
-results_1 = pv_system.generate_pv_points()
+pv_points_return_1 = pv_system.generate_pv_points()
 
 print("Berechnete PV-Typen:")
 for pv_type in pv_system.pvtypes:
@@ -94,22 +98,29 @@ for pv_type in pv_system.pvtypes:
 	csv_path = os.path.join(output_dir, csv_name)
 
 	energy_kwh_1, total_ac_1 = pv_system.simulate_pv_type_energy(pv_type, csv_path)
+	total_ac_1.clip(lower=0)
 	print(f"  {pv_type.name}: {energy_kwh_1:.1f} kWh")
+	res_df[pv_type.name] = total_ac_1.values
 '''
 
 
 
-
 '''
+
 #--------------------------------------------------------
 #INDUSTRIEGEBIET
 #--------------------------------------------------------
 df_industrie = pd.DataFrame()
 df_industrie = IndustryLoadAggregator().run_interactive() #return lastgang als df oder output path
 #falls output path, dann die csv einlesen
+res_df['Last_Industrie [kW]'] = df_industrie['Gesamtlast [kW]']
 print(df_industrie.head())
 print(df_industrie.describe())
+print(res_df.head())
+print(res_df.describe())
+
 '''
+
 
 
 
@@ -117,10 +128,10 @@ print(df_industrie.describe())
 #ENERGIELANDSCHAFT
 #--------------------------------------------------------
 #agri PV code für geojson und agri pv länge
-result = main(interactive=True, output_dir="./outputs")
-agri_pv_laenge = result.get("metadata").get('total_rows_length_m')
+agri_result = main(interactive=True, output_dir="./outputs")
+agri_pv_laenge = agri_result.get("metadata").get('total_rows_length_m')
 
-agri_pv_ausrichtung = result.get("ausrichtung")
+agri_pv_ausrichtung = agri_result.get("ausrichtung")
 print('Ausrichtung: ', agri_pv_ausrichtung)
 
 a = agri_pv_ausrichtung.lower()
@@ -141,11 +152,11 @@ else:
 	print('Agri PV Typ unbestimmt, Berechnung basierend auf geneigter PV ohne Tracking')
 
 
-if result.get("success"):
+if agri_result.get("success"):
 	print("✓ Verarbeitung erfolgreich abgeschlossen!")
 	print(f'Länge der PV Reihen: {agri_pv_laenge:.1f}')
 else:
-	print(f"✗ Verarbeitung abgebrochen: {result.get('error')}")
+	print(f"✗ Verarbeitung abgebrochen: {agri_result.get('error')}")
 
 
 #INPUT für PV Baukasten - ENERGIELANDSCHAFT
@@ -171,7 +182,7 @@ pv_system = PV_System(
 # ------------------------------------------------------------
 # 3) Punkte + Azimut für alle gewählten PV-Typen generieren
 # ------------------------------------------------------------
-results_2 = pv_system.generate_pv_points()
+pv_points_return_2 = pv_system.generate_pv_points()
 
 print("Berechnete PV-Typen:")
 for pv_type in pv_system.pvtypes:
@@ -188,11 +199,20 @@ print('PV Simulation:')
 energy_kwh_2, total_ac_2 = pv_system.simulate_pv_type_energy(pv_type, csv_path)
 print(f"  {pv_type.name}: {energy_kwh_2:.1f} kWh")
 
+total_ac_2.clip(lower=0)
 
 agri_pv_energy = energy_kwh_2*agri_pv_laenge*module_pro_meter
 print('Module pro Meter: ',module_pro_meter)
 print(f'Energielandschaft Gesamtproduktion: {agri_pv_energy:.2f} kWh')
 
 agri_pv_total_ac = total_ac_2*agri_pv_laenge*module_pro_meter
+
+res_df['Agri_PV'] = agri_pv_total_ac.values
+
 agri_pv_total_ac.plot()
 plt.show()
+
+power_15min = agri_pv_total_ac.resample("15min").interpolate("linear")
+
+print(res_df.head())
+
