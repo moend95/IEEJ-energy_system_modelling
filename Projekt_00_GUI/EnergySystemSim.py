@@ -5,6 +5,7 @@ from streamlit_folium import st_folium
 import json
 from pathlib import Path
 from core.io_types import GuiInput, SimOutput
+import pandas as pd
 
 st.set_page_config(layout="centered")
 
@@ -186,3 +187,4 @@ svg_code2 = svg_code2.replace(
 )
 # Vollbreite SVG Container
 st.markdown(f'<div class="full-width-svg">{svg_code1}</div>', unsafe_allow_html=True)
+

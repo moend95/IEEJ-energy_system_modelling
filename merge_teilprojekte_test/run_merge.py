@@ -119,11 +119,31 @@ print(df_industrie.describe())
 #agri PV code für geojson und agri pv länge
 result = main(interactive=True, output_dir="./outputs")
 agri_pv_laenge = result.get("metadata").get('total_rows_length_m')
-print(agri_pv_laenge)
+
+agri_pv_ausrichtung = result.get("ausrichtung")
+print('Ausrichtung: ', agri_pv_ausrichtung)
+
+a = agri_pv_ausrichtung.lower()
+print(a)
+
+if a == "horizontal":
+	pv_auswahl_2 = [PV_TYPEN[6]]
+	module_pro_meter = 2
+elif a == "horizontal_tracking":
+	pv_auswahl_2 = [PV_TYPEN[4]]
+	module_pro_meter = 2
+elif a == "vertical":
+	pv_auswahl_2 = [PV_TYPEN[5]]
+	module_pro_meter = 1
+else:
+	pv_auswahl_2 = [PV_TYPEN[6]]
+	module_pro_meter = 2
+	print('Agri PV Typ unbestimmt, Berechnung basierend auf geneigter PV ohne Tracking')
+
 
 if result.get("success"):
 	print("✓ Verarbeitung erfolgreich abgeschlossen!")
-	print(f'Länge der PV Reihen: {agri_pv_laenge}')
+	print(f'Länge der PV Reihen: {agri_pv_laenge:.1f}')
 else:
 	print(f"✗ Verarbeitung abgebrochen: {result.get('error')}")
 
@@ -136,14 +156,14 @@ step_size_default = 1000
 #step_size = hf.get_float_input(f'Schrittweite für PV Berechnung [default: {step_size_default}m]: ', step_size_default)
 #100, [PV_TYPEN[1]]
 print('\n \nPV abfrage zu folgender Geometrie:\n', geojson_file_2)
-step_size_2, pv_auswahl_2 = get_pv_configuration(step_size_default, PV_TYPEN)
+#step_size_2, pv_auswahl_2 = get_pv_configuration(step_size_default, PV_TYPEN)
 
 # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
 # 0 = Windschutzwand, 1 = Schallschutzwand, 2 = Schallschutzwand_Dach, 3 = Böschung
 pv_system = PV_System(
 	geojson_path=geojson_path_2,
 	pvtypes=pv_auswahl_2, #[PV_TYPEN[0],PV_TYPEN[3]],
-	step_size=step_size_2,             # Punktabstand in m
+	step_size=step_size_default,             # Punktabstand in m
 	weather_df=weather_df,
 	base_output_dir=output_dir,
 )
@@ -160,15 +180,19 @@ for pv_type in pv_system.pvtypes:
 # ------------------------------------------------------------
 # 4) Jahresenergie je PV-Typ simulieren + Zeitreihe plotten
 # ------------------------------------------------------------
-print("\nJahresenergie je PV-Typ:")
-for pv_type in pv_system.pvtypes:
-	# CSV-Name so, wie ihn generate_pv_points gespeicher hat
-	csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
-	csv_path = os.path.join(output_dir, csv_name)
+# CSV-Name so, wie ihn generate_pv_points gespeicher hat
+csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+csv_path = os.path.join(output_dir, csv_name)
 
-	energy_kwh_2, total_ac_2 = pv_system.simulate_pv_type_energy(pv_type, csv_path)
-	print(f"  {pv_type.name}: {energy_kwh_2:.1f} kWh")
+print('PV Simulation:')
+energy_kwh_2, total_ac_2 = pv_system.simulate_pv_type_energy(pv_type, csv_path)
+print(f"  {pv_type.name}: {energy_kwh_2:.1f} kWh")
 
 
-agri_pv_energy = energy_kwh_2*agri_pv_laenge
-print('Energielandschaft Gesamtproduktion: ', agri_pv_energy.round(2),' kWh')
+agri_pv_energy = energy_kwh_2*agri_pv_laenge*module_pro_meter
+print('Module pro Meter: ',module_pro_meter)
+print(f'Energielandschaft Gesamtproduktion: {agri_pv_energy:.2f} kWh')
+
+agri_pv_total_ac = total_ac_2*agri_pv_laenge*module_pro_meter
+agri_pv_total_ac.plot()
+plt.show()

@@ -58,4 +58,6 @@ class SimOutput:
     Ergebnisse der Simulation. Die auf der Website dargestellt werden sollen.
     """
 
-
+    def __init__(self,
+                 power_data=None,):
+        self.power_data = power_data
