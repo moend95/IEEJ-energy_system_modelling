@@ -430,7 +430,6 @@ class PV_System:
             )
 
     def _simulate_monofacial_point(self, pv_type: PVType, row):
-        print("Starte Berechnung eines monofazialen Punktes (PV_System._simulate_monofacial_point)")
         module_params = sandia_modules[pv_type.module]
         inverter_params = cec_inverters[pv_type.inverter]
         temp_params = temp_models_sapm[pv_type.temp_model]
@@ -588,7 +587,7 @@ class PV_System:
                 total_ac = ac
             else:
                 total_ac = total_ac + ac
-            print("Ein Punkt wurde berechnet")
+
 
 
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
