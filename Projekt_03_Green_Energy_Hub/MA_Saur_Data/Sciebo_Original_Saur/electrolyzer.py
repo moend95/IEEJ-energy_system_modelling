@@ -1,4 +1,4 @@
-# Externer Code von Moritz End
+# Externer Code von Sciebo_Original_Saur End
 
 import matplotlib.pyplot as plt
 import numpy as np

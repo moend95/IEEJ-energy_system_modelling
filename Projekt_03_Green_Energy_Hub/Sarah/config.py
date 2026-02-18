@@ -88,7 +88,7 @@ class Electrolyzer:
     """
     Elektrolyseur-Adapter:
     - Heute: nur Nameplate & Schnittstelle.
-    - Später: a) einfaches η+LHV-Modell, b) Moritz-Modell einbinden.
+    - Später: a) einfaches η+LHV-Modell, b) Sciebo_Original_Saur-Modell einbinden.
     """
     nameplate_kw: float
 

@@ -1,0 +1,9 @@
+Model;Range (km);Electic motor (PS);Tank capacity (kg);Fuel consumption (H2) combined (kg/100km);CO2 emissions combined  (g/km);Type;Speicherdruck (bar);Price (€)
+FAUN Bluepower;250;240;16.1;15.52795031;0;LKW;700;
+FAUN Citypower;500;140;32;15.625;0;LKW;700;
+Hyundai Xcient Fuel Cell;400;350;31.08;12.87001287;0;LKW;350;
+HYZON HyMax-160;400;260;32;8;0;LKW;350;
+HYZON HYMax-250;400;136;37.48;9.37;0;LKW;350;
+HYZON HYMax-450;400;136;42.8;10.7;0;LKW;350;
+QUANTRON QHM FCEV 44-1000 / 27-1000;700;550;54;12.96296296;0;LKW;700;
+QUANTRON QHM FCEV 66-2000 / 44-2000;1500;550;116;12.93103448;0;LKW;700;

@@ -8,6 +8,7 @@ __pycache__/
 *.pyd
 
 # Virtuelle Umgebung
+.venv/
 venv/
 env/
 
