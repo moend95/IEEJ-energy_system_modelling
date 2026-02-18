@@ -52,7 +52,7 @@ if __name__ == "__main__":
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "a46_west.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[1]],   # 0 = Windschutzwand
-        step_size=500,             # Punktabstand in m
+        step_size=8,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
         debug=True,
@@ -71,6 +71,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
 
     results = pv_system.generate_pv_points()
+    number_of_points = len(results[pv_system.pvtypes[0].id])
 
     # ------------------------------------------------------------
     # 3b) Azimut-Plot anzeigen (Visual Debug)
@@ -90,7 +91,9 @@ if __name__ == "__main__":
         calc.calculate_azimut()
 
         viz = AzimutVisualizer(calc)
-        viz.plot(every_nth_arrow=10)
+
+        viz.plot(every_nth_arrow=1)
+
 
     print("Berechnete PV-Typen:")
     for pv_type in pv_system.pvtypes:
@@ -109,10 +112,17 @@ if __name__ == "__main__":
         test_csv = os.path.join(output_dir, "test_single_point.csv")
         df_one.to_csv(test_csv, index=False)
 
-        energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, test_csv)
+        energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, csv_path)
         print(f"  {pv_type.name}: {energy_kwh:.1f} kWh")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
+        if pv_system.step_size >= pv_type.row_width:
+            scaling_factor = pv_system.step_size // pv_type.row_width # Ganzzahldivision -> keine halben Elemente
+            print("Scaling Faktor:", scaling_factor)
+            scaled_energy_kwh = energy_kwh * scaling_factor
+            print(f"Skalierte Gesamtenergie ,  {pv_type.name}: {scaled_energy_kwh:.1f} kWh")
+        else:
+            print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
         # Plot der AC-Leistung über das Jahr
         plt.figure(figsize=(15, 4))

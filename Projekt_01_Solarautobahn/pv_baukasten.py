@@ -275,9 +275,10 @@ class AzimutCalculator:
 
                 dx = p2.x - p1.x
                 dy = p2.y - p1.y
+
                 theta_rad = math.atan2(dy, dx)
                 theta_deg = math.degrees(theta_rad)
-                azimut_tangent = (90 - theta_deg) % 360  # Norden = 0°, Osten = 90°, ...
+                azimut_tangent = (180-theta_deg) % 360  # Norden = 0°, Osten = 90°, ... 90 - entfernt
 
                 if self.pv_type.azimut == "variabel":
                     azimut_final = azimut_tangent
@@ -315,7 +316,7 @@ class AzimutVisualizer:
     def __init__(self, calculator: AzimutCalculator):
         self.calc = calculator
 
-    def plot(self, every_nth_arrow = 10):  #Funktionsinformation: nur jeden x-ten (=10) Richtungspfeil anzeigen
+    def plot(self, every_nth_arrow = 2):  #Funktionsinformation: nur jeden x-ten (=10) Richtungspfeil anzeigen
         gdf = self.calc.gdf
         pv_typ = self.calc.pv_type
 
@@ -341,8 +342,8 @@ class AzimutVisualizer:
         # Richtungspfeile
         for i in range(0, len(points), every_nth_arrow):
             if isinstance(azimuts[i], (int, float)):
-                dx = 5 * math.cos(math.radians(90 - azimuts[i]))
-                dy = 5 * math.sin(math.radians(90 - azimuts[i]))
+                dx = 200 * math.cos(math.radians(90 - azimuts[i]))
+                dy = 200 * math.sin(math.radians(90 - azimuts[i]))
                 ax.arrow(
                     points[i].x,
                     points[i].y,
@@ -357,6 +358,7 @@ class AzimutVisualizer:
         plt.axis("equal")
         plt.tight_layout()
         plt.show()
+
 
 
 
@@ -430,7 +432,6 @@ class PV_System:
             )
 
     def _simulate_monofacial_point(self, pv_type: PVType, row):
-        print("Starte Berechnung eines monofazialen Punktes (PV_System._simulate_monofacial_point)")
         module_params = sandia_modules[pv_type.module]
         inverter_params = cec_inverters[pv_type.inverter]
         temp_params = temp_models_sapm[pv_type.temp_model]
@@ -552,6 +553,7 @@ class PV_System:
     # -------------------------------------------------
     # 3) Energiesimulation für PV-Typ
     # -------------------------------------------------
+
     def simulate_pv_type_energy(self, pv_type: PVType, points_csv_path: str):
         """
         Liest die Punkte-CSV eines PV-Typs ein, simuliert alle Punkte
@@ -588,7 +590,7 @@ class PV_System:
                 total_ac = ac
             else:
                 total_ac = total_ac + ac
-            print("Ein Punkt wurde berechnet")
+
 
 
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
