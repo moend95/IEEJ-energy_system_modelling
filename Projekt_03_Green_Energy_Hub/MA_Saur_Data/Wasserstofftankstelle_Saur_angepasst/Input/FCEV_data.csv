@@ -1,0 +1,7 @@
+Model;Range (km);Electic motor (PS);Tank capacity (kg);Fuel consumption (H2) combined (kg/100km);CO2 emissions combined  (g/km);Type;Price (€)
+Toyota MIRAI II;650;184;5.6;0.76;0;Sedan;63900
+Hyundai NEXO;756;163;6.33;0.84;0;SUV;69000
+Mercedes Benz GLC F-CELL;478;211;4.4;0.97;0;SUV;
+Honda Clarity Fuel Cell;589;176;5;;0;Saloon ;
+Hyundai ix35;594;136;5.64;1;0;SUV;65450
+Toyota MIRAI;650;184;5.6;0.76;0;Sedan;63900
