@@ -4,13 +4,8 @@ import pandas as pd
 from functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
 from pv_baukasten import PV_System, PV_TYPEN, AzimutCalculator, AzimutVisualizer
 
-# Ausgabe Punkte die man auf der linienbasierten Karte sehen kann
-
 USE_EXISTING_WEATHER = True
 weather_csv = "./Input/test_solarautobahn.csv"
-
-
-
 
 if __name__ == "__main__":
     # ------------------------------------------------------------
@@ -37,7 +32,7 @@ if __name__ == "__main__":
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "a46_west.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "one_point.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
@@ -45,7 +40,7 @@ if __name__ == "__main__":
     pv_system = PV_System(
         geojson_path=geojson_path,
         pvtypes=[PV_TYPEN[1]],   # 0 = Windschutzwand
-        step_size=8,             # Punktabstand in m
+        step_size=100,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
         debug=True,
@@ -59,26 +54,33 @@ if __name__ == "__main__":
     number_of_points = len(results[pv_system.pvtypes[0].id])
 
     # ------------------------------------------------------------
-    # 3b) Azimut-Plot anzeigen (Visual Debug)
+    # 3b) Azimut-Plot anzeigen (Visual Debug) - optional
     # ------------------------------------------------------------
-    print("\n→ Azimut-Visualisierung...")
+    user_input = input(
+        "\nWillst du die berechneten Punkte mit Azimut plotten? [j/n]: "
+    ).strip().lower()
 
-    for pv_type in pv_system.pvtypes:
-        csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
-        csv_path = os.path.join(output_dir, csv_name)
+    plot_azimut = user_input in ["j", "ja", "y", "yes"]
+    if plot_azimut:
+        print("\n→ Azimut-Visualisierung...")
 
-        calc = AzimutCalculator(
-            geojson_path=geojson_path,
-            step_size=pv_system.step_size,
-            pv_type=pv_type,
-            output_csv_path=csv_path,
-        )
-        calc.calculate_azimut()
+        for pv_type in pv_system.pvtypes:
+            csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+            csv_path = os.path.join(output_dir, csv_name)
 
-        viz = AzimutVisualizer(calc)
+            calc = AzimutCalculator(
+                geojson_path=geojson_path,
+                step_size=pv_system.step_size,
+                pv_type=pv_type,
+                output_csv_path=csv_path,
+            )
+            calc.calculate_azimut()
 
-        viz.plot(every_nth_arrow=1)
+            viz = AzimutVisualizer(calc)
 
+            viz.plot(every_nth_arrow=1)
+    else:
+        print("→ Azimut-Plot übersprungen")
 
     print("Berechnete PV-Typen:")
     for pv_type in pv_system.pvtypes:

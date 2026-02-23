@@ -380,6 +380,7 @@ class PV_System:
         self.weather_df = weather_df      # Wetterdaten aus DWD-Skript
         self.base_output_dir = base_output_dir  # z. B. "./Input/punkte"
         self.debug = debug
+        self.debug_every_n = 10
 
     def _dbg(self, msg: str):
         if getattr(self, "debug", False):
@@ -571,15 +572,16 @@ class PV_System:
 
         for _, row in df_points.iterrows():
 
-            self._dbg(
-                f"\n[SIM] PVType={pv_type.name} | point={_} | "
-                f"lat={row['latitude']:.6f}, lon={row['longitude']:.6f} | "
-                f"az={float(row['azimut']):.1f}°, tilt={float(row['tilt']):.1f}° | "
-                f"mount={pv_type.mount_type} | "
-                f"modules_per_point={modules_per_point} "
-                f"(mps={pv_type.modules_per_string}, spi={pv_type.strings_per_inverter}) | "
-                f"bifacial_detailed={getattr(pv_type, 'is_bifacial_detailed', False)}"
-            )
+            if self.debug and _ % self.debug_every_n == 0:
+                self._dbg(
+                    f"\n[SIM] PVType={pv_type.name} | point={_} | "
+                    f"lat={row['latitude']:.6f}, lon={row['longitude']:.6f} | "
+                    f"az={float(row['azimut']):.1f}°, tilt={float(row['tilt']):.1f}° | "
+                    f"mount={pv_type.mount_type} | "
+                    f"modules_per_point={modules_per_point} "
+                    f"(mps={pv_type.modules_per_string}, spi={pv_type.strings_per_inverter}) | "
+                    f"bifacial_detailed={getattr(pv_type, 'is_bifacial_detailed', False)}"
+                )
 
             if getattr(pv_type, "is_bifacial_detailed", False):
                 ac = self._simulate_bifacial_point(pv_type, row)
