@@ -34,21 +34,6 @@ if __name__ == "__main__":
         )
         weather_df = DWDWeatherFetcher(cfg).run()
 
-# if __name__ == "__main__":
-#     # ------------------------------------------------------------
-#     # 1) Wetterdaten vom DWD holen
-#     # ------------------------------------------------------------
-#     cfg = DWDWeatherConfig(
-#         coords=(51.08579, 6.47554),
-#         start="2022-01-01",
-#         end="2022-12-31",
-#         station_id=None,
-#         auto_select=False,
-#         min_quality=0.95,
-#         save_path="./Input/wetterdaten_solarautobahn_2022.csv",
-#     )
-#     weather_df = DWDWeatherFetcher(cfg).run()
-
     # ------------------------------------------------------------
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
