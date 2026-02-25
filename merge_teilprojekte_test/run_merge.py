@@ -55,7 +55,7 @@ output_dir = os.path.join(base_input, "punkte")
 os.makedirs(output_dir, exist_ok=True)
 
 
-'''
+
 # ------------------------------------------------------------
 # 2) SOLARAUTOBAHN
 # ------------------------------------------------------------
@@ -101,11 +101,11 @@ for pv_type in pv_system.pvtypes:
 	total_ac_1.clip(lower=0)
 	print(f"  {pv_type.name}: {energy_kwh_1:.1f} kWh")
 	res_df[pv_type.name] = total_ac_1.values
-'''
 
 
 
-'''
+
+
 
 #--------------------------------------------------------
 #INDUSTRIEGEBIET
@@ -119,7 +119,7 @@ print(df_industrie.describe())
 print(res_df.head())
 print(res_df.describe())
 
-'''
+
 
 
 

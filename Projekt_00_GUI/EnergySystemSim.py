@@ -5,7 +5,7 @@ from streamlit_folium import st_folium
 import json
 from pathlib import Path
 from core.io_types import GuiInput, SimOutput
-import pandas as pd
+from Simulation import run_simulation
 
 st.set_page_config(layout="centered")
 
@@ -20,7 +20,7 @@ st.write("### Erzeugung Eingabewerte")
 # Fester Container für Darstellung der Erzeugungseingabe -> Fixierte Größe damit nachfolgender Inhalt nicht rutscht
 with st.container(key="Erzeugung", width=1000, height=500):
 
-    tab1, tab2, tab3 = st.tabs(["Solarautobahn", "Energielandschaft", "Industriegebiet"])
+    tab1, tab2 = st.tabs(["Solarautobahn", "Energielandschaft"])
 
     # SOLARAUTOBAHN
     with tab1:
@@ -67,25 +67,27 @@ with st.container(key="Erzeugung", width=1000, height=500):
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
-            Input.el_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal", "Horizontal Single-Axis-Tracking"])
-            Input.tractor_width = st.segmented_control("Traktorbreite", ["10m", "100m", "200m"], default="100m")
+            Input.el_pv_type = st.selectbox("PV-Typ", ["Vertikal (Zaun, Nord-Süd)",
+                                                       "Horizontal (aufgeständert, Ost-West)",
+                                                       "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)"])
+            Input.tractor_width = st.segmented_control("Traktorbreite", ["9m", "12m", "15m"], default="12m")
+            Input.tractor_length = st.segmented_control("Traktorlänge", ["12m", "15m", "18m"], default="15m")
+            Input.tractor_turn_radius = st.segmented_control("Traktor-Wenderadius", ["6m", "9m", "12m"], default="9m")
+
 
 
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
             pv_geojson_mapping_col2_tab2 = {
-                ("Vertikal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Vertikal.geojson",
-                ("Vertikal", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Vertikal.geojson",
-                ("Vertikal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Vertikal.geojson",
-                ("Horizontal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Horizontal.geojson",
-                ("Horizontal", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Horizontal.geojson",
-                ("Horizontal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
-                ("Horizontal Single-Axis-Tracking", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Horizontal.geojson",
-                ("Horizontal Single-Axis-Tracking", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Horizontal.geojson",
-                ("Horizontal Single-Axis-Tracking", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
+                "Vertikal (Zaun, Nord-Süd)":
+                    "Geometry_Vertikal_Traktorbreite_20m.geojson",
+                "Horizontal (aufgeständert, Ost-West)":
+                    "Geometry_Horizontal_Traktorbreite_20m.geojson",
+                "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":
+                    "Geometry_Horizontal_Traktorbreite_20m.geojson",
             }
 
-            selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type, Input.tractor_width]
+            selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type]
             geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
             # GeoJSON laden
@@ -93,7 +95,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 geojson_data = json.load(f)
 
             # Karte erstellen
-            m = folium.Map(location=[51.07629, 6.48268], zoom_start=14)
+            m = folium.Map(location=[51.07596, 6.48599], zoom_start=14)
 
             # GeoJSON Layer hinzufügen
             folium.GeoJson(
@@ -107,33 +109,72 @@ with st.container(key="Erzeugung", width=1000, height=500):
             # Karte in Streamlit rendern
             st_data = st_folium(m, width=400, height=400)
 
-    #INDUSTRIEGEBIET
-    with tab3:
-        Input.pv_equip_pct = st.slider("Dachfläche mit PV bebaut [%]", 0, 100)
-        st.write(f"{Input.pv_equip_pct/100*50000} qm Dachfläche mit PV bebaut")
-        Input.is_parking_pv_equip = st.toggle("Parkplatz PV instalieren?")
-
-
-
 
 st.write("### Verbrauch Eingabewerte")
 
-with st.container(key="Verbrauch", width=1500, height=600):
+with st.container(key="Verbrauch", width=1500, height=1000):
 
     tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
 
+    #INDUSTRIEGEBIET
     with tab4:
-        options = ["Logistik", "Stahl", "Entsorgung", "Lebensmittel", "Büro"]
+        col1_tab4, col2_tab4 = st.columns(2)
 
-        st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
+        with col1_tab4:
+            options = ["Entsorgung",
+                       "Stahl, 5-Tage-Woche, 3-Schicht",
+                       "Logistik und Lagerung",
+                       "Schrott- und Metallhandel",
+                       "Lagerung",
+                       "Büro",
+                       "Logistik Lebensmittel",
+                       "Stahl, 7-Tage-Woche, 2-Schicht" ]
 
-        Input.companies = []
-        for i in range(5):
-            choice = st.selectbox(f"Unternehmen {i + 1}", ["Keine"] + options, key=f"selection_{i}")
-            Input.companies.append(choice)
+            st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
-        valid_selections = [s for s in Input.companies if s != "Keine"]
+            Input.companies = []
+            for i in range(5):
+                choice = st.selectbox(f"Unternehmen {i + 1}", ["Keine"] + options, key=f"selection_{i}")
+                Input.companies.append(choice)
 
+            valid_selections = [s for s in Input.companies if s != "Keine"]
+
+
+        with col2_tab4:
+            Input.is_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
+            expander = st.expander("Erklärung Wärme/Kälte")
+            expander.write('''
+                                Bei Auswahl "ohne Wärme/Kälte Stromverbrauch" werden fossiler Energiequellen für Wärme benutzt und es gibt keine Kälte
+                                
+                                Bei Auswahl "mit Wärme/Kälte Stromverbrauch" werden reversible Luftwärmepumpen und Geothermie-Sonden verwendet
+                                ''')
+
+        expander = st.expander("Erklärung Unternehmen")
+        expander.write('''
+                    1. Entsorgung: 
+                    5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste
+
+                    2. Stahl: 
+                    5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro
+
+                    3. Logistik und Lagerung: 
+                    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
+
+                    4. Schrott- und Metallhandel: 
+                    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner
+
+                    5. Lagerung: 
+                    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik
+
+                    6. Büro: 
+                    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser
+
+                    7. Logistik Lebensmittel: 
+                    6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
+
+                    8. Stahl: 
+                    7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro
+                        ''')
 
     with tab5:
         col1_tab5, col2_tab5 = st.columns(2)
@@ -153,6 +194,10 @@ with st.container(key="Verbrauch", width=1500, height=600):
             Für Elektroladesäulen ist die Annahme 50 Autos/Tag.
         ''')
 
+if st.button("Simulation starten"):
+    Output = run_simulation(Input)
+
+    st.write("Der neue Traktor-Wenderadius ist:", Output.TEST_NUMBER)
 
 st.markdown(
     """

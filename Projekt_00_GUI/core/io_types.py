@@ -17,15 +17,19 @@ class GuiInput:
                  h_pv_types=None,
                  el_pv_type=None,
                  tractor_width=None,
+                 tractor_length=None,
+                 tractor_turn_radius=None,
                  pv_equip_pct=None,
-                 is_parking_pv_equip=None,
+                 is_heat_cooling_electric=None,
                  companies=None):
         self.highways = highways
         self.h_pv_types = h_pv_types
         self.el_pv_type = el_pv_type
         self.tractor_width = tractor_width
+        self.tractor_length = tractor_length
+        self.tractor_turn_radius = tractor_turn_radius
         self.pv_equip_pct = pv_equip_pct
-        self.is_parking_pv_equip = is_parking_pv_equip
+        self.is_heat_cooling_electric = is_heat_cooling_electric
         self.companies = companies
 
     # ERZEUGUNG
@@ -36,14 +40,17 @@ class GuiInput:
     # Energielandschaft
     el_pv_type: str                     # Auswahl PV-Types für die Energielandschaft
     tractor_width: str                  # Traktorbreite [m]
+    tractor_length: str                 # Traktorlänge [m]
+    tractor_turn_radius: str            # Traktor-Wenderadius [m]
 
     # Industriegebiet
     pv_equip_pct: float                 # PV Ausbau Dachfläche Indurstriegebiet [%]
-    is_parking_pv_equip: bool           # Parkplatz pv installiert [true/false]
+
 
     # VERBRAUCH
     # Industriegebiet
     companies: list[str]                #Auswahl der Unternehmenstypen im Industriegebiet
+    is_heat_cooling_electric: bool      # Wärme/Kälte elektrisch? [true/false]
 
     # Green Energy Hub
 
@@ -59,5 +66,9 @@ class SimOutput:
     """
 
     def __init__(self,
-                 power_data=None,):
+                 power_data=None,
+                 TEST_NUMBER=None,):
         self.power_data = power_data
+        self.TEST_NUMBER = TEST_NUMBER
+
+    TEST_NUMBER: str
