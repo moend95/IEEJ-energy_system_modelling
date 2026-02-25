@@ -87,7 +87,7 @@ PV_TYPEN = [
     PVType(
         1,
         "Windschutzwand",
-        bifazial=0,                 # Faktor für prozentual mehr erzeugung dadurch das es bifazial ist
+        bifazial=0.1,               # DE 5 - 15% mehr Erzeugung
         azimut="variabel",
         tilt=90,
         module="Canadian_Solar_CS6X_300M__2013_",
@@ -95,9 +95,9 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
-        # NEU:
-        is_bifacial_detailed=True,
-        bifaciality=0.75,
+        # Bifazial berechnung True setzen:
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
         gcr=0.35,
         row_height=3.0,
         row_width=4.0,
@@ -107,7 +107,7 @@ PV_TYPEN = [
     PVType(
         2,
         "Schallschutzwand",
-        bifazial=0.0,
+        bifazial=0.1,
         azimut="variabel",
         tilt=90,
         module="Canadian_Solar_CS6X_300M__2013_",
@@ -115,23 +115,34 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
+        # Bifazial berechnung True setzen:
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
+        gcr=0.35,
         row_height=3.0,
         row_width=4.0,
+        albedo=0.2,
 
     ),
     PVType(
         3,
         "Schallschutzwand_Dach",
-        bifazial=0.0,
+        bifazial=0.1,
         azimut="variabel",
         tilt=30,
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
-        strings_per_inverter=2,
-        row_height=1.0,
+        strings_per_inverter=1,
+        # Bifazial berechnung True setzen:
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
+        gcr=0.35,
+        row_height=3.0,
         row_width=4.0,
+        albedo=0.2,
+
     ),
     PVType(
         4,
@@ -142,15 +153,21 @@ PV_TYPEN = [
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="close_mount_glass_glass",
-        modules_per_string=5,
-        strings_per_inverter=3,
-        row_height=5.0,
+        modules_per_string=4,
+        strings_per_inverter=1,
+        # Bifazial berechnung True setzen :
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
+        gcr=0.35,
+        row_height=3.0,
         row_width=4.0,
+        albedo=0.2,
+
     ),
     PVType(
         5,
         "Freifläche_bzw_Agri_geneigt",
-        bifazial=0.0,
+        bifazial=0.1,
         azimut=180,
         tilt=30,  # 90 war hier eher ein Vertikal-Wert – kannst du anpassen, wie ihr wollt
         module="Canadian_Solar_CS6X_300M__2013_",
@@ -159,7 +176,7 @@ PV_TYPEN = [
         modules_per_string=10,
         strings_per_inverter=5,
         # NEU:
-        is_bifacial_detailed=True,
+        is_bifacial_detailed=False,
         bifaciality=0.75,
         gcr=0.35,                   # GCR = Ground Coverage Ratio (Bodenbedeckungsgrad).
         row_height=3.0,
@@ -172,17 +189,18 @@ PV_TYPEN = [
         max_angle=60,
         backtrack=True,
     ),
+
     PVType(
         6,
         "Agri_vertikal",
-        bifazial=0.0,
+        bifazial=0.1,
         azimut=90,  # oder "variabel", je nach späterem Konzept
         tilt=90,
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=10,
-        strings_per_inverter=5,
+        modules_per_string=4,
+        strings_per_inverter=1,
         row_height=2.0,
         row_width=4.0,
     ),
@@ -196,10 +214,8 @@ PV_TYPEN = [
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=10,
-        strings_per_inverter=5,
-        row_height=5.0,
-        row_width=12.0,
+        modules_per_string=4,
+        strings_per_inverter=1,
     ),
 
 # Test
@@ -211,7 +227,6 @@ PV_TYPEN = [
 
 # Azimut
 # -----------------------------------------------------
-
 
 class AzimutCalculator:
     def __init__(self, geojson_path, step_size, pv_type: PVType, output_csv_path):
