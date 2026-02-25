@@ -610,12 +610,12 @@ class PV_System:
 
 
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
-        energy_Wh = (total_ac * dt_hours).sum()
 
         # einfacher Mehrertragsfaktor nur für "nicht-detaillierte" Bifazialität
         if (not getattr(pv_type, "is_bifacial_detailed", False)) and getattr(pv_type, "bifazial", 0) > 0:
-            energy_Wh *= (1 + pv_type.bifazial)
+            total_ac *= (1 + pv_type.bifazial)
 
+        energy_Wh = (total_ac * dt_hours).sum()
         energy_kWh = energy_Wh / 1000.0
 
         return energy_kWh, total_ac
