@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # PV Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[1], PV_TYPEN[3]],   # 0 = Windschutzwand, 1 = Schallschutzwand
+        pvtypes=[PV_TYPEN[1], PV_TYPEN[4]],   # 0 = Windschutzwand, 1 = Schallschutzwand
         step_size=400,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         df_one.to_csv(test_csv, index=False)
 
         energy_kwh_pv_type, total_ac_pv_type = pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f" Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh" , " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
+        print(f"Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh" , " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
         scaled_energy_kwh_pv_type = 0
@@ -114,7 +114,6 @@ if __name__ == "__main__":
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
         energy_kwh_sum += scaled_energy_kwh_pv_type
-        print(f"TOTAL ENERGY {energy_kwh_sum:.1f} kWh")
         total_ac_sum += total_ac_pv_type
 
     # Plot der AC-Leistung über das Jahr
@@ -122,7 +121,7 @@ if __name__ == "__main__":
     plt.plot(total_ac_sum.index, total_ac_sum.values, linewidth=0.6)
     plt.title(f"Jahresverlauf AC-Leistung")
     plt.xlabel("Datum")
-    plt.ylabel("AC-Leistung [W]")
+    plt.ylabel("AC-Leistung [kW]")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()
@@ -145,7 +144,7 @@ if __name__ == "__main__":
     plt.plot(day_ac.index, day_ac.values, linewidth=1.2)
     plt.title(f"Tagesverlauf AC-Leistung – ({summer_day_start}-{summer_day_end})")
     plt.xlabel("Uhrzeit")
-    plt.ylabel("AC-Leistung [W]")
+    plt.ylabel("AC-Leistung [kW]")
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.show()

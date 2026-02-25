@@ -577,7 +577,6 @@ class PV_System:
         - energy_kwh: Jahresenergie [kWh/Jahr]
         - total_ac: Zeitreihe der AC-Gesamtleistung [W]
         """
-        print("Starte Funktion PV_System.simulate_pv_type_energy")
         df_points = pd.read_csv(points_csv_path)
         modules_per_point = pv_type.modules_per_string * pv_type.strings_per_inverter
 
