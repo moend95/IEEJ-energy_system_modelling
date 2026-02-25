@@ -22,7 +22,7 @@ from merge_teilprojekte_test.functions.Energielandschaft import main
 # ------------------------------------------------------------
 #WETTERDATEN CSV
 USE_EXISTING_WEATHER = True
-weather_csv = "./functions/inputs/wetter_daten.csv"
+weather_csv = "./functions/inputs/wetter_daten_15min.csv"
 
 if USE_EXISTING_WEATHER:
 	print("→ Verwende vorhandene Wetterdaten-CSV")
