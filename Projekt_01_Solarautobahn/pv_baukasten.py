@@ -166,15 +166,15 @@ PV_TYPEN = [
     ),
     PVType(
         5,
-        "Freifläche_bzw_Agri_geneigt",
+        "Tilt_mit_tracking",
         bifazial=0.1,
         azimut=180,
         tilt=30,  # 90 war hier eher ein Vertikal-Wert – kannst du anpassen, wie ihr wollt
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=10,
-        strings_per_inverter=5,
+        modules_per_string=2,
+        strings_per_inverter=1,
         # NEU:
         is_bifacial_detailed=False,
         bifaciality=0.75,
@@ -192,14 +192,14 @@ PV_TYPEN = [
 
     PVType(
         6,
-        "Agri_vertikal",
+        "Agri_vertikal_Zaun",
         bifazial=0.1,
         azimut=90,  # oder "variabel", je nach späterem Konzept
         tilt=90,
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=4,
+        modules_per_string=1,
         strings_per_inverter=1,
         row_height=2.0,
         row_width=4.0,
@@ -207,14 +207,14 @@ PV_TYPEN = [
 
     PVType(
         7,
-        "Haus_Dach",
+        "Tilt_ohne_tracking",
         bifazial=0.0,
         azimut=180,  # Süddach
         tilt=30,
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=4,
+        modules_per_string=2,
         strings_per_inverter=1,
     ),
 
