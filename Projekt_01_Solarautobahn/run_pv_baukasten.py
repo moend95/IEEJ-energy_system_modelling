@@ -32,15 +32,15 @@ if __name__ == "__main__":
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "one_point.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "a44_nord.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
     # PV Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[1]],   # 0 = Windschutzwand
-        step_size=100,             # Punktabstand in m
+        pvtypes=[PV_TYPEN[1], PV_TYPEN[3]],   # 0 = Windschutzwand, 1 = Schallschutzwand
+        step_size=400,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
         debug=True,
@@ -89,7 +89,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     # 4) Jahresenergie je PV-Typ simulieren + Zeitreihe plotten
     # ------------------------------------------------------------
-    print("\nJahresenergie je PV-Typ:")
+    energy_kwh_sum = 0
+    total_ac_sum = 0
     for pv_type in pv_system.pvtypes:
         # CSV-Name so, wie ihn generate_pv_points gespeicher hat
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
@@ -99,47 +100,54 @@ if __name__ == "__main__":
         test_csv = os.path.join(output_dir, "test_single_point.csv")
         df_one.to_csv(test_csv, index=False)
 
-        energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"  {pv_type.name}: {energy_kwh:.1f} kWh")
+        energy_kwh_pv_type, total_ac_pv_type = pv_system.simulate_pv_type_energy(pv_type, csv_path)
+        print(f" Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh" , " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
+        scaled_energy_kwh_pv_type = 0
         if pv_system.step_size >= pv_type.row_width:
             scaling_factor = pv_system.step_size // pv_type.row_width # Ganzzahldivision -> keine halben Elemente
-            print("Scaling Faktor:", scaling_factor)
-            scaled_energy_kwh = energy_kwh * scaling_factor
-            print(f"Skalierte Gesamtenergie ,  {pv_type.name}: {scaled_energy_kwh:.1f} kWh")
+            print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
+            scaled_energy_kwh_pv_type = energy_kwh_pv_type * scaling_factor
+            print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
         else:
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
-        # Plot der AC-Leistung über das Jahr
-        plt.figure(figsize=(15, 4))
-        plt.plot(total_ac.index, total_ac.values, linewidth=0.6)
-        plt.title(f"Jahresverlauf AC-Leistung – {pv_type.name}")
-        plt.xlabel("Datum")
-        plt.ylabel("AC-Leistung [W]")
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
+        energy_kwh_sum += scaled_energy_kwh_pv_type
+        print(f"TOTAL ENERGY {energy_kwh_sum:.1f} kWh")
+        total_ac_sum += total_ac_pv_type
 
-        # ------------------------------------------------------------
-        # Zusatz: Tagesplot für einen Sommertag (z. B. 21. Juni)
-        # ------------------------------------------------------------
-        summer_day_start = "2022-06-01"
-        summer_day_end = "2022-06-07"
-        day_ac = total_ac.loc[summer_day_start:summer_day_end].copy()
+    # Plot der AC-Leistung über das Jahr
+    plt.figure(figsize=(15, 4))
+    plt.plot(total_ac_sum.index, total_ac_sum.values, linewidth=0.6)
+    plt.title(f"Jahresverlauf AC-Leistung")
+    plt.xlabel("Datum")
+    plt.ylabel("AC-Leistung [W]")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
 
-        # Aufräumen für Plot:
-        day_ac = day_ac.dropna()
-        day_ac = day_ac.clip(lower=0)  # negative Werte (z.B. -0.1) auf 0 setzen
+    # ------------------------------------------------------------
+    # Zusatz: Tagesplot für einen Sommertag (z. B. 21. Juni)
+    # ------------------------------------------------------------
+    summer_day_start = "2022-06-01"
+    summer_day_end = "2022-06-07"
+    day_ac = total_ac_sum.loc[summer_day_start:summer_day_end].copy()
 
-        # Optional: nur Tagesstunden anzeigen (sieht meist besser aus)
-        #day_ac = day_ac.between_time("06:00", "22:00")
+    # Aufräumen für Plot:
+    day_ac = day_ac.dropna()
+    day_ac = day_ac.clip(lower=0)  # negative Werte (z.B. -0.1) auf 0 setzen
 
-        plt.figure(figsize=(10, 4))
-        plt.plot(day_ac.index, day_ac.values, linewidth=1.2)
-        plt.title(f"Tagesverlauf AC-Leistung – {pv_type.name} ({summer_day_start}-{summer_day_end})")
-        plt.xlabel("Uhrzeit")
-        plt.ylabel("AC-Leistung [W]")
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
+    # Optional: nur Tagesstunden anzeigen (sieht meist besser aus)
+    #day_ac = day_ac.between_time("06:00", "22:00")
+
+    plt.figure(figsize=(10, 4))
+    plt.plot(day_ac.index, day_ac.values, linewidth=1.2)
+    plt.title(f"Tagesverlauf AC-Leistung – ({summer_day_start}-{summer_day_end})")
+    plt.xlabel("Uhrzeit")
+    plt.ylabel("AC-Leistung [W]")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+
+    print(f"Gesamtenergie PV-System = {energy_kwh_sum:.1f} kWh ")
