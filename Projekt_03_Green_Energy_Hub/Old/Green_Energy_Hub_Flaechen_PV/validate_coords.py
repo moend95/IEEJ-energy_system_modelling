@@ -3,7 +3,7 @@ Validierungsskript für Projekt_03 - Green Energy Hub Koordinaten-Update
 """
 import sys
 import os
-sys.path.insert(0, '.')
+sys.path.insert(0, '')
 
 from Projekt_03_Green_Energy_Hub_Flaeche_PV import EMBEDDED_GEOJSON
 import json

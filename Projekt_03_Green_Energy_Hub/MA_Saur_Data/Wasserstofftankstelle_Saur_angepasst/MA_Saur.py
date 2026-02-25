@@ -31,9 +31,9 @@ import seaborn as sns
 #%% User Input
 
 path = './Input/' # Pfad für den Datenimport
-output_path = './Output/' # Pfad für Export von Ergebnissen
+output_path = './Output_2050/' # Pfad für Export von Ergebnissen
 
-year = 2021 # Für welches Jahr soll die Simulation durchgeführt werden? Eingabe von 2020 bis 2050 möglich.
+year = 2050 # Für welches Jahr soll die Simulation durchgeführt werden? Eingabe von 2020 bis 2050 möglich.
 
 length = 365 # Tage, Option zur Verkürzung der Rechendauer durch Verkürzung des Betrachtungszeitraums
 
@@ -54,7 +54,7 @@ min_share_charging_point = 3 # [%] Minimal zulässiger Anteil an gesamter BEV-En
 
 # Eingabe von gewünschter Zeitspanne für Plots
 start_date_plots = f'{year}-01-01 00:00'
-end_date_plots = f'{year}-01-04 00:00'
+end_date_plots = f'{year}-12-31 00:00'
 
 #%% Inputdaten PV
 df_pv_h = pd.read_csv(f'{path}DE_1,5MWp.csv',header=3) # Einlesen der PV-Leistungsdaten aus einer CSV-Datei
@@ -222,7 +222,7 @@ H2_demand_refuel_station = H2_demand_refuel_station_FCEV + H2_demand_refuel_stat
 
 # Berechnung der monatlichen Tankwahrscheinlichkeit und nachgefragten Wasserstoffmenge
 # Funktion zur Berechnung der Anzahl der Tage im Monat
-def days_in_month(month, year=2022):
+def days_in_month(month, year=2050):
     days_in_month_dict = {
         'Jan': 31, 'Feb': 29 if (year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)) else 28, 
         'Mar': 31, 'Apr': 30, 'May': 31, 'Jun': 30, 
@@ -697,16 +697,18 @@ P_max_el_load_BEV = n_charging_points * P_max_charging_point # [MW] max el Last 
 df_load_el_15min_mw['P new (MW)'] = df_load_el_15min_mw['P new (MW)'].clip(upper=P_max_el_load_BEV) # Begrenzen der Nachfrage auf P_max_el_load_BEV
 df_load_el_15min_mw['Energy new (MWh)'] = df_load_el_15min_mw['P new (MW)'] * 0.25
 
-filename = 'load_el_15min_mw.csv' # Export als csv
+filename = 'BEV_load_el_15min_mw.csv' # Export als csv
 full_path = path + filename # Vollständigen Pfad zur Speicherung der csv-Datei erstellen
-df_load_el_15min_mw.to_csv(full_path, index=True) # DataFrame als csv-Datei speichern
+os.makedirs('./Output_2050', exist_ok=True)
+df_load_el_15min_mw.to_csv('./Output_2050/BEV_load_el_15min_mw.csv', index=True)
+
 
 #%% Daten H2 - und elctric load wieder einlesen --> Nachfragemodellierung für FCEV, FCET und BEV kann für mehrere Simulationen des gleichen Jahres ausgelassen werden
 df_load_H2_15min_mw = pd.read_csv(f'{path}load_h2_15min_mw.csv', sep=',', decimal='.') # Einlesen der H2-Lastkurve aus csv Datei
 df_load_H2_15min_mw.set_index('time_input_year', inplace=True)
 df_load_H2_15min_mw.index = pd.to_datetime(df_load_H2_15min_mw.index)
 
-df_load_el_15min_mw = pd.read_csv(f'{path}load_el_15min_mw.csv', sep=',', decimal='.') # Einlesen der elekrischen BEV Lastkurve aus csv Datei
+df_load_el_15min_mw = pd.read_csv(f'{output_path}BEV_load_el_15min_mw.csv', sep=',', decimal='.') # Einlesen der elekrischen BEV Lastkurve aus csv Datei
 df_load_el_15min_mw.set_index('time_input_year', inplace=True)
 df_load_el_15min_mw.index = pd.to_datetime(df_load_el_15min_mw.index)
 
@@ -2085,7 +2087,7 @@ fig.update_layout(
         ))
 
 # Diagramm anzeigen
-# fig.show()
+fig.show()
 
 filename = 'Kompressorstufen_Balkendiagramm.png'
 full_path = os.path.join(output_path, filename)

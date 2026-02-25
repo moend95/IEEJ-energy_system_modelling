@@ -1,0 +1,12 @@
+Elektrolyseur [16119.68] H2 Bus
+Elektrolyseur [6442.35] Elektrolyseur Verluste
+H2 Bus [15032.16] H2 HD Bus
+H2 Bus [1087.53] Kompressor Verbrauch (el)
+H2 HD Bus [15032.16] H2 Zapfsäule
+Netz [23786.28] Tankstelle
+PV [0.0] Netzeinspeisung
+PV [0.0] Tankstelle
+Tankstelle [1224.24] E-Ladesäule
+Tankstelle [22562.03] Elektrolyseur
+Wind [0.0] Netzeinspeisung
+Wind [0.0] Tankstelle

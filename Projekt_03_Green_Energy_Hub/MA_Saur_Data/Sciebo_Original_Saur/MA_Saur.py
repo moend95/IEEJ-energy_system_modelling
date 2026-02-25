@@ -662,7 +662,7 @@ P_max_el_load_BEV = n_charging_points * P_max_charging_point # [MW] max el Last 
 df_load_el_15min_mw['P new (MW)'] = df_load_el_15min_mw['P new (MW)'].clip(upper=P_max_el_load_BEV) # Begrenzen der Nachfrage auf P_max_el_load_BEV
 df_load_el_15min_mw['Energy new (MWh)'] = df_load_el_15min_mw['P new (MW)'] * 0.25
 
-filename = 'load_el_15min_mw.csv' # Export als csv
+filename = 'BEV_load_el_15min_mw.csv' # Export als csv
 full_path = path + filename # Vollständigen Pfad zur Speicherung der csv-Datei erstellen
 df_load_el_15min_mw.to_csv(full_path, index=True) # DataFrame als csv-Datei speichern
 
@@ -671,7 +671,7 @@ df_load_H2_15min_mw = pd.read_csv(f'{path}load_h2_15min_mw.csv', sep=',', decima
 df_load_H2_15min_mw.set_index('time_input_year', inplace=True)
 df_load_H2_15min_mw.index = pd.to_datetime(df_load_H2_15min_mw.index)
 
-df_load_el_15min_mw = pd.read_csv(f'{path}load_el_15min_mw.csv', sep=',', decimal='.') # Einlesen der elekrischen BEV Lastkurve aus csv Datei
+df_load_el_15min_mw = pd.read_csv(f'{path}BEV_load_el_15min_mw.csv', sep=',', decimal='.') # Einlesen der elekrischen BEV Lastkurve aus csv Datei
 df_load_el_15min_mw.set_index('time_input_year', inplace=True)
 df_load_el_15min_mw.index = pd.to_datetime(df_load_el_15min_mw.index)
 
