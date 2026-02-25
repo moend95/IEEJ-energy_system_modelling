@@ -30,20 +30,20 @@ class GuiInput:
 
     # ERZEUGUNG
     # Solarautobahn
-    highways: list                  # Auswahl Autobahnen
-    h_pv_types: list                  # Auswahl PV-Types für die Autobahnen
+    highways: list                      # Auswahl Autobahnen
+    h_pv_types: list                    # Auswahl PV-Types für die Autobahnen
 
     # Energielandschaft
-    el_pv_type: str                    # Auswahl PV-Types für die Energielandschaft
-    tractor_width: str              # Traktorbreite [m]
+    el_pv_type: str                     # Auswahl PV-Types für die Energielandschaft
+    tractor_width: str                  # Traktorbreite [m]
 
     # Industriegebiet
-    pv_equip_pct: float             # PV Ausbau Dachfläche Indurstriegebiet [%]
-    is_parking_pv_equip: bool       # Parkplatz pv installiert [true/false]
+    pv_equip_pct: float                 # PV Ausbau Dachfläche Indurstriegebiet [%]
+    is_parking_pv_equip: bool           # Parkplatz pv installiert [true/false]
 
     # VERBRAUCH
     # Industriegebiet
-    companies: list[str]            #Auswahl der Unternehmenstypen im Industriegebiet
+    companies: list[str]                #Auswahl der Unternehmenstypen im Industriegebiet
 
     # Green Energy Hub
 

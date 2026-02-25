@@ -22,6 +22,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
 
     tab1, tab2, tab3 = st.tabs(["Solarautobahn", "Energielandschaft", "Industriegebiet"])
 
+    # SOLARAUTOBAHN
     with tab1:
         col1_tab1, col2_tab1 = st.columns(2)
 
@@ -62,11 +63,13 @@ with st.container(key="Erzeugung", width=1000, height=500):
             # Karte in Streamlit rendern
             st_data = st_folium(m, width=400, height=400)
 
+    #ENERGIELANDSCHAFT
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
-            Input.el_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal"])
+            Input.el_pv_type = st.selectbox("PV-Typ", ["Vertikal", "Horizontal", "Horizontal Single-Axis-Tracking"])
             Input.tractor_width = st.segmented_control("Traktorbreite", ["10m", "100m", "200m"], default="100m")
+
 
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
@@ -77,6 +80,9 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 ("Horizontal", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Horizontal.geojson",
                 ("Horizontal", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Horizontal.geojson",
                 ("Horizontal", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
+                ("Horizontal Single-Axis-Tracking", "10m"): "P_02_Agri_PV_Breite10.0_Laenge10.0_Wenderadius10.0_Horizontal.geojson",
+                ("Horizontal Single-Axis-Tracking", "100m"): "P_02_Agri_PV_Breite100.0_Laenge100.0_Wenderadius100.0_Horizontal.geojson",
+                ("Horizontal Single-Axis-Tracking", "200m"): "P_02_Agri_PV_Breite200.0_Laenge200.0_Wenderadius200.0_Horizontal.geojson",
             }
 
             selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type, Input.tractor_width]
@@ -87,7 +93,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 geojson_data = json.load(f)
 
             # Karte erstellen
-            m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
+            m = folium.Map(location=[51.07629, 6.48268], zoom_start=14)
 
             # GeoJSON Layer hinzufügen
             folium.GeoJson(
@@ -101,6 +107,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
             # Karte in Streamlit rendern
             st_data = st_folium(m, width=400, height=400)
 
+    #INDUSTRIEGEBIET
     with tab3:
         Input.pv_equip_pct = st.slider("Dachfläche mit PV bebaut [%]", 0, 100)
         st.write(f"{Input.pv_equip_pct/100*50000} qm Dachfläche mit PV bebaut")
