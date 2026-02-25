@@ -584,9 +584,9 @@ class PV_System:
                 )
 
             if getattr(pv_type, "is_bifacial_detailed", False):
-                ac = self._simulate_bifacial_point(pv_type, row)
+                ac = self._simulate_bifacial_point(pv_type, row) * pv_type.modules_per_string * pv_type.strings_per_inverter
             else:
-                ac = self._simulate_monofacial_point(pv_type, row)
+                ac = self._simulate_monofacial_point(pv_type, row) * pv_type.modules_per_string * pv_type.strings_per_inverter
 
             if total_ac is None:
                 total_ac = ac
