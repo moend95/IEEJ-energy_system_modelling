@@ -215,4 +215,3 @@ plt.show()
 power_15min = agri_pv_total_ac.resample("15min").interpolate("linear")
 
 print(res_df.head())
-
