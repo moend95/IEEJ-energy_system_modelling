@@ -142,6 +142,9 @@ print(res_df.describe())
 #--------------------------------------------------------
 #ENERGIELANDSCHAFT
 #--------------------------------------------------------
+# PV-Ausrichtung zentral hier definieren: "horizontal", "vertical" oder "horizontal_tracking"
+pv_ausrichtung = "horizontal"
+
 # Traktorparameter zentral hier definieren
 tractor_width_m = 12.0
 tractor_length_m = 15.0
@@ -151,6 +154,7 @@ tractor_turn_radius_m = 9.0
 agri_result = main(
 	interactive=True,
 	output_dir="./outputs",
+	pv_ausrichtung=pv_ausrichtung,
 	tractor_width_m=tractor_width_m,
 	tractor_length_m=tractor_length_m,
 	tractor_turn_radius_m=tractor_turn_radius_m,

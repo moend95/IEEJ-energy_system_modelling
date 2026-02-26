@@ -886,6 +886,7 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 def main(
 	interactive: bool = True,
 	output_dir: str = "outputs",
+	pv_ausrichtung: Any = None,
 	tractor_width_m: Any = None,
 	tractor_length_m: Any = None,
 	tractor_turn_radius_m: Any = None,
@@ -926,7 +927,14 @@ def main(
 	# Schritt 2: Abfrage der Benutzerinputs
 	print("[2/6] Abfrage der Benutzerinputs...")
 	try:
-		ausrichtung = PVTypeSelector.select(interactive=interactive)
+		if pv_ausrichtung is not None:
+			ausrichtung = str(pv_ausrichtung).strip().lower()
+			if ausrichtung not in PVTypeSelector.VALID:
+				raise ValueError(
+					f"Ungültige PV-Ausrichtung '{pv_ausrichtung}': erwartet {PVTypeSelector.VALID}."
+				)
+		else:
+			ausrichtung = PVTypeSelector.select(interactive=interactive)
 		print(f"  ✓ PV-Ausrichtung: {ausrichtung}")
 
 		tractor = TractorParameters.from_input(
