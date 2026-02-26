@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# OPTION 1 - Import 
+
 # #HILFSFUNKTIONEN
 # from merge_teilprojekte_test.functions.hilfsfunktionen import *
 
@@ -14,6 +16,8 @@ import matplotlib.pyplot as plt
 
 # #ENERGIELANDSCHAFT IMPORT
 # from merge_teilprojekte_test.functions.Energielandschaft import main
+
+# OPTION 2 - Import 
 
 #HILFSFUNKTIONEN
 from functions.hilfsfunktionen import *
