@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
+import pandas as pd
 
 # =================================
 # Input aus der Streamlit-Anwendung
@@ -67,7 +68,7 @@ class SimOutput:
 
     def __init__(self,
                  h_number_of_points=None,
-                 total_ac_kw=None,
+                 total_ac_kw = None,
                  sum_energy_kwh=None,
                  error_text=None):
         self.h_number_of_points = h_number_of_points
@@ -76,6 +77,5 @@ class SimOutput:
         self.error_text = error_text
 
     h_number_of_points: int
-    total_ac_kw: float
     sum_energy_kwh: float
     error_text: str

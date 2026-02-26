@@ -39,7 +39,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             pv_system = PV_System(
                 geojson_path=geojson_path,
                 pvtypes=selected_pv_types,  # 0 = Windschutzwand, 1 = Schallschutzwand
-                step_size=400,  # Punktabstand in m
+                step_size=800,  # Punktabstand in m
                 weather_df=weather_df,
                 base_output_dir=output_dir,
                 debug=True,
