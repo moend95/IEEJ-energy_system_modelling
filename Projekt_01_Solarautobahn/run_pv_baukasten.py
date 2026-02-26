@@ -116,6 +116,8 @@ if __name__ == "__main__":
         energy_kwh_sum += scaled_energy_kwh_pv_type
         total_ac_sum += total_ac_pv_type
 
+    print(total_ac_sum.index, total_ac_sum.values)
+
     # Plot der AC-Leistung über das Jahr
     plt.figure(figsize=(15, 4))
     plt.plot(total_ac_sum.index, total_ac_sum.values, linewidth=0.6)
