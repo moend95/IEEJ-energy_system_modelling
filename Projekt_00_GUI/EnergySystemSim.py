@@ -1,11 +1,16 @@
+import sys
+from pathlib import Path
+#UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 import streamlit as st
 import os
 import folium
 from streamlit_folium import st_folium
 import json
-from pathlib import Path
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
+
+
 
 st.set_page_config(layout="centered")
 
@@ -29,8 +34,15 @@ with st.container(key="Erzeugung", width=1000, height=500):
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
         with col1_tab1:
+            pv_name_to_id = {   "Windschutzwand": 0,
+                                "Lärmschutzwand": 1,
+                                "Dach": 2,
+                                "Böschung": 3,
+                            }
+
             Input.highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
-            Input.h_pv_types = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+            selected_names = st.multiselect("PV-Typ",["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+            Input.h_pv_types = [pv_name_to_id[name] for name in selected_names]
 
         with col2_tab1:
             # Mapping Autobahn → GeoJSON
@@ -197,7 +209,11 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 if st.button("Simulation starten"):
     Output = run_simulation(Input)
 
-    st.write("Der neue Traktor-Wenderadius ist:", Output.TEST_NUMBER)
+    st.write(Output.error_text)
+    st.write("Berechnete Anzahl Punkte", Output.h_number_of_points)
+    if Output.h_number_of_points > 0:
+        st.write(f"Berechnete Gesamtenergie: {Output.sum_energy_kwh:.0f} kWh")
+
 
 st.markdown(
     """

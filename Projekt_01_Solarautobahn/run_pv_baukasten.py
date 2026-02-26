@@ -32,14 +32,14 @@ if __name__ == "__main__":
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
     base_input = "./Input"
-    geojson_path = os.path.join(base_input, "geometrien", "a44_nord.geojson")
+    geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
     # PV Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[1], PV_TYPEN[4]],   # 0 = Windschutzwand, 1 = Schallschutzwand
+        pvtypes=[PV_TYPEN[1]],   # 0 = Windschutzwand, 1 = Schallschutzwand
         step_size=400,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,

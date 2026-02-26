@@ -66,9 +66,16 @@ class SimOutput:
     """
 
     def __init__(self,
-                 power_data=None,
-                 TEST_NUMBER=None,):
-        self.power_data = power_data
-        self.TEST_NUMBER = TEST_NUMBER
+                 h_number_of_points=None,
+                 total_ac_kw=None,
+                 sum_energy_kwh=None,
+                 error_text=None):
+        self.h_number_of_points = h_number_of_points
+        self.total_ac_kw = total_ac_kw
+        self.sum_energy_kwh = sum_energy_kwh
+        self.error_text = error_text
 
-    TEST_NUMBER: str
+    h_number_of_points: int
+    total_ac_kw: float
+    sum_energy_kwh: float
+    error_text: str
