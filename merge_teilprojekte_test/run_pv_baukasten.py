@@ -8,7 +8,7 @@ from merge_teilprojekte_test.functions.pv_baukasten import PV_System, PV_TYPEN
 # Ausgabe Punkte die man auf der linienbasierten Karte sehen kann
 
 USE_EXISTING_WEATHER = True
-weather_csv = "./inputs/wetter_daten.csv"
+weather_csv = "./inputs/wetter_daten_15min.csv"
 
 
 
