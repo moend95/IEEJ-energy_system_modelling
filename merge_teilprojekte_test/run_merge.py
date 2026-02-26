@@ -2,20 +2,31 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# #HILFSFUNKTIONEN
+# from merge_teilprojekte_test.functions.hilfsfunktionen import *
+
+# #PV IMPORTS
+# from merge_teilprojekte_test.functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
+# from merge_teilprojekte_test.functions.pv_baukasten import PV_System, PV_TYPEN
+
+# #INDUSTRIE IMPORT
+# from merge_teilprojekte_test.functions.Industriegebiet import IndustryLoadAggregator
+
+# #ENERGIELANDSCHAFT IMPORT
+# from merge_teilprojekte_test.functions.Energielandschaft import main
+
 #HILFSFUNKTIONEN
-from merge_teilprojekte_test.functions.hilfsfunktionen import *
+from functions.hilfsfunktionen import *
 
 #PV IMPORTS
-from merge_teilprojekte_test.functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
-from merge_teilprojekte_test.functions.pv_baukasten import PV_System, PV_TYPEN
+from functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
+from functions.pv_baukasten import PV_System, PV_TYPEN
 
 #INDUSTRIE IMPORT
-from merge_teilprojekte_test.functions.Industriegebiet import IndustryLoadAggregator
+from functions.Industriegebiet import IndustryLoadAggregator
 
 #ENERGIELANDSCHAFT IMPORT
-from merge_teilprojekte_test.functions.Energielandschaft import main
-
-
+from functions.Energielandschaft import main
 
 # ------------------------------------------------------------
 # 1) Wetterdaten laden (CSV ODER DWD)
