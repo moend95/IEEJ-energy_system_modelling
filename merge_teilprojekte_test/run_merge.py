@@ -142,8 +142,19 @@ print(res_df.describe())
 #--------------------------------------------------------
 #ENERGIELANDSCHAFT
 #--------------------------------------------------------
+# Traktorparameter zentral hier definieren
+tractor_width_m = 12.0
+tractor_length_m = 15.0
+tractor_turn_radius_m = 9.0
+
 #agri PV code für geojson und agri pv länge
-agri_result = main(interactive=True, output_dir="./outputs")
+agri_result = main(
+	interactive=True,
+	output_dir="./outputs",
+	tractor_width_m=tractor_width_m,
+	tractor_length_m=tractor_length_m,
+	tractor_turn_radius_m=tractor_turn_radius_m,
+)
 agri_pv_laenge = agri_result.get("metadata").get('total_rows_length_m')
 
 agri_pv_ausrichtung = agri_result.get("ausrichtung")
