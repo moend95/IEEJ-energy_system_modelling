@@ -291,7 +291,21 @@ class TractorParameters:
 		self.turn_radius_m = float(turn_radius_m)
 
 	@staticmethod
-	def from_input(interactive: bool = True, defaults: Tuple[float, float, float] = (12, 15, 9)) -> "TractorParameters":
+	def from_input(
+		interactive: bool = True,
+		defaults: Tuple[float, float, float] = (12, 15, 9),
+		width_m: Any = None,
+		length_m: Any = None,
+		turn_radius_m: Any = None,
+	) -> "TractorParameters":
+		# Wenn alle drei Werte übergeben wurden, verwende sie direkt.
+		if width_m is not None and length_m is not None and turn_radius_m is not None:
+			try:
+				return TractorParameters(float(width_m), float(length_m), float(turn_radius_m))
+			except ValueError:
+				print("Ungültige übergebene Traktorparameter, benutze Defaultwerte.")
+				return TractorParameters(*defaults)
+
 		if not interactive:
 			return TractorParameters(*defaults)
 		try:
@@ -869,7 +883,14 @@ def get_reihenparameter(ausrichtung: Any, fahrspur_breite: float = None) -> Dict
 	return result
 
 
-def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any]:
+def main(
+	interactive: bool = True,
+	output_dir: str = "outputs",
+	pv_ausrichtung: Any = None,
+	tractor_width_m: Any = None,
+	tractor_length_m: Any = None,
+	tractor_turn_radius_m: Any = None,
+) -> Dict[str, Any]:
 	"""Hauptfunktion: Orchestriert alle Schritte für die PV-Flächenberechnung.
 
 	Schritte:
@@ -906,10 +927,22 @@ def main(interactive: bool = True, output_dir: str = "outputs") -> Dict[str, Any
 	# Schritt 2: Abfrage der Benutzerinputs
 	print("[2/6] Abfrage der Benutzerinputs...")
 	try:
-		ausrichtung = PVTypeSelector.select(interactive=interactive)
+		if pv_ausrichtung is not None:
+			ausrichtung = str(pv_ausrichtung).strip().lower()
+			if ausrichtung not in PVTypeSelector.VALID:
+				raise ValueError(
+					f"Ungültige PV-Ausrichtung '{pv_ausrichtung}': erwartet {PVTypeSelector.VALID}."
+				)
+		else:
+			ausrichtung = PVTypeSelector.select(interactive=interactive)
 		print(f"  ✓ PV-Ausrichtung: {ausrichtung}")
 
-		tractor = TractorParameters.from_input(interactive=interactive)
+		tractor = TractorParameters.from_input(
+			interactive=interactive,
+			width_m=tractor_width_m,
+			length_m=tractor_length_m,
+			turn_radius_m=tractor_turn_radius_m,
+		)
 		print(f"  ✓ Traktorparameter:")
 		print(f"    - Breite: {tractor.width_m} m")
 		print(f"    - Länge: {tractor.length_m} m")
