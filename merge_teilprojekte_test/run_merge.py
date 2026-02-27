@@ -109,7 +109,7 @@ for pv_type in pv_system.pvtypes:
 	csv_path = os.path.join(output_dir, csv_name)
 
 	energy_kwh_1, total_ac_1 = pv_system.simulate_pv_type_energy(pv_type, csv_path)
-	total_ac_1.clip(lower=0)
+	total_ac_1= total_ac_1.clip(lower=0) /1000
 	print(f"  {pv_type.name}: {energy_kwh_1:.1f} kWh")
 	res_df[pv_type.name] = total_ac_1.values
 
@@ -124,7 +124,7 @@ for pv_type in pv_system.pvtypes:
 df_industrie = pd.DataFrame()
 df_industrie = IndustryLoadAggregator().run_interactive() #return lastgang als df oder output path
 #falls output path, dann die csv einlesen
-res_df['Last_Industrie [kW]'] = df_industrie['Gesamtlast [kW]']
+res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
 print(df_industrie.head())
 print(df_industrie.describe())
 print(res_df.head())
@@ -132,14 +132,11 @@ print(res_df.describe())
 
 
 
-
-
-
 #--------------------------------------------------------
 #ENERGIELANDSCHAFT
 #--------------------------------------------------------
 #agri PV code für geojson und agri pv länge
-agri_result = main(interactive=True, output_dir="./outputs")
+agri_result = main(interactive=False, output_dir="./outputs")
 agri_pv_laenge = agri_result.get("metadata").get('total_rows_length_m')
 
 agri_pv_ausrichtung = agri_result.get("ausrichtung")
@@ -210,7 +207,7 @@ print('PV Simulation:')
 energy_kwh_2, total_ac_2 = pv_system.simulate_pv_type_energy(pv_type, csv_path)
 print(f"  {pv_type.name}: {energy_kwh_2:.1f} kWh")
 
-total_ac_2.clip(lower=0)
+total_ac_2 = total_ac_2.clip(lower=0) / 1000
 
 agri_pv_energy = energy_kwh_2*agri_pv_laenge*module_pro_meter
 print('Module pro Meter: ',module_pro_meter)
@@ -225,4 +222,7 @@ plt.show()
 
 power_15min = agri_pv_total_ac.resample("15min").interpolate("linear")
 
+res_df = res_df.fillna(0)
 print(res_df.head())
+
+res_df.to_csv("./outputs/res_df.csv", sep=",", index=True)

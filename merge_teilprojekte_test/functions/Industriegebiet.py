@@ -196,7 +196,7 @@ class IndustryLoadAggregator:
             os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(self.script_dir,output_dir, f"{self.BASISNAME_AUSGABE}.csv")
         combined_df_csv[["Time stamp", "Gesamtlast [kW]"]].to_csv(
-            output_path, sep=";", decimal=".", index=False
+            output_path, sep=",", decimal=".", index=False
         )
         return output_path
 
