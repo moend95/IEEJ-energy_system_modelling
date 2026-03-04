@@ -175,9 +175,9 @@ print(res_df.describe())
 pv_ausrichtung = "horizontal"      #JBtemp: Input aus IOTypes: el_pv_type aktuell str, hier string -> vergleichen
 
 # Traktorparameter zentral hier definieren
-tractor_width_m = 12.0              #JBtemp: sowohl in IOtypes als auch in run merge defaults -> bleibt so
-tractor_length_m = 15.0             #JBtemp: sowohl in IOtypes als auch in run merge defaults -> bleibt so
-tractor_turn_radius_m = 9.0         #JBtemp: sowohl in IOtypes als auch in run merge defaults -> bleibt so
+tractor_width_m = 12.0              #JBtemp Input aus IOTypes: tractor_width aktuell str, hier float
+tractor_length_m = 15.0             #JBtemp: Input aus IOTypes: tractor_length aktuell str, hier float
+tractor_turn_radius_m = 9.0         #JBtemp: Input aus IOTypes: tractor_turn_radius aktuell str, hier float
 
 #agri PV code für geojson und agri pv länge
 agri_result = main(

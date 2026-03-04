@@ -20,18 +20,21 @@ class GuiInput:
                  tractor_width=None,
                  tractor_length=None,
                  tractor_turn_radius=None,
-                 pv_equip_pct=None,
                  is_heat_cooling_electric=None,
-                 companies=None):
+                 companies=None,
+                 h2_load_scenario=None,
+                 e_load_scenario=None):
         self.highways = highways
         self.h_pv_types = h_pv_types
         self.el_pv_type = el_pv_type
         self.tractor_width = tractor_width
         self.tractor_length = tractor_length
         self.tractor_turn_radius = tractor_turn_radius
-        self.pv_equip_pct = pv_equip_pct
         self.is_heat_cooling_electric = is_heat_cooling_electric
         self.companies = companies
+        self.h2_load_scenario = h2_load_scenario
+        self.e_load_scenario = e_load_scenario
+
 
     # ERZEUGUNG
     # Solarautobahn
@@ -44,9 +47,6 @@ class GuiInput:
     tractor_length: str                 # Traktorlänge [m]
     tractor_turn_radius: str            # Traktor-Wenderadius [m]
 
-    # Industriegebiet
-    pv_equip_pct: float                 # PV Ausbau Dachfläche Indurstriegebiet [%]
-
 
     # VERBRAUCH
     # Industriegebiet
@@ -54,6 +54,8 @@ class GuiInput:
     is_heat_cooling_electric: bool      # Wärme/Kälte elektrisch? [true/false]
 
     # Green Energy Hub
+    h2_load_scenario: str               # Auswahl H2 Bedarf Szenario 2022, 2030, 2050
+    e_load_scenario: str                # Auswahl E Bedarf Szenario 2022, 2030, 2050
 
 
 # =========================
