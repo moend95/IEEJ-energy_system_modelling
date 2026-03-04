@@ -11,13 +11,13 @@ import json
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
 
-pv_name_to_id = {   "Windschutzwand": 1,
-                    "Lärmschutzwand": 2,
-                    "Dach": 3,
-                    "Böschung": 4,
-                    "Vertikal (Zaun, Nord-Süd)": 5,
-                    "Horizontal (aufgeständert, Ost-West)": 6,
-                    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":7
+pv_name_to_id = {   "Windschutzwand": 0,
+                    "Lärmschutzwand": 1,
+                    "Dach": 2,
+                    "Böschung": 3,
+                    "Vertikal (Zaun, Nord-Süd)": 4,
+                    "Horizontal (aufgeständert, Ost-West)": 5,
+                    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":6
 }
 
 

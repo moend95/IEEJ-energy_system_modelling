@@ -5,12 +5,12 @@ from core.io_types import GuiInput, SimOutput
 from functions.Industriegebiet import IndustryLoadAggregator
 from functions.pv_baukasten import PV_System, PV_TYPEN
 from functions.Energielandschaft import main
-#from merge_teilprojekte_test.run_merge import res_df
+
 
 #TYPE MAPPING
 highway_geojson_mapping= {"A44": "a44_beide.geojson", "A46": "a46_beide.geojson"}
 industrie_heating_choice_mapping = {True: "2", False: "1"}
-el_pv_type_number_text_mapping = {5:"horizontal", 6:"vertical", 7:"horizontal_tracking"}
+el_pv_type_number_text_mapping = {4:"horizontal", 5:"vertical", 6:"horizontal_tracking"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
 weather_csv = os.path.join(script_dir,"data","test_solarautobahn.csv")
@@ -32,11 +32,10 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
     h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types]
-    print(f"Selected PV types: {[pv.row_width for pv in h_selected_pv_types]}")
+    print(f"HIER Name + ID{h_selected_pv_types[0].name},{h_selected_pv_types[0].id}")
     # ------------------------------------------------------------
     # 1) Solarautobahn
     # ------------------------------------------------------------
-    print(f"inp.highways is: {inp.highways}")
     if not inp.highways:
         out.h_error_text = "Keine Autobahnen ausgewählt!"
     elif not inp.h_pv_types:
@@ -137,5 +136,5 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             base_output_dir=output_dir,
         )
         print(inp)
-
+        print(out.res_df)
     return out

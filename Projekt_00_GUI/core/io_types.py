@@ -11,8 +11,6 @@ class GuiInput:
     """
     Alle Parameter, die die GUI eingegeben werden können und an die Simulation übergeben werden sollen.
     """
-
-
     def __init__(self,
                  highways=None,
                  h_pv_types=None,
@@ -47,7 +45,6 @@ class GuiInput:
     tractor_length: float               # Traktorlänge [m]
     tractor_turn_radius: float          # Traktor-Wenderadius [m]
 
-
     # VERBRAUCH
     # Industriegebiet
     companies: list[int]                #Auswahl der Unternehmenstypen im Industriegebiet
@@ -56,7 +53,6 @@ class GuiInput:
     # Green Energy Hub
     h2_load_scenario: str               # Auswahl H2 Bedarf Szenario 2022, 2030, 2050
     e_load_scenario: str                # Auswahl E Bedarf Szenario 2022, 2030, 2050
-
 
 # =========================
 # Output der Simulation
@@ -67,7 +63,6 @@ class SimOutput:
     """
     Ergebnisse der Simulation. Die auf der Website dargestellt werden sollen.
     """
-
     def __init__(self,
                  h_number_of_points=None,
                  total_ac_kw = None,
