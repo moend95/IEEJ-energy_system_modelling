@@ -147,8 +147,8 @@ if selection_indices is None:
 	raise ValueError("Ungültige Auswahl für Industriegebiet. Skript wird beendet.")
 
 df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
-	mode_choice=mode_choice,
-	selection_indices=selection_indices,
+	mode_choice=mode_choice,                            #JBtemp: Inputs aus IOtypes -> is_heat_cooling_electric aktuell bool, hier str
+	selection_indices=selection_indices,                #JBtemp: Inputs aus IOtypes -> companies aktuell list[str], hier list[int]
 )
 
 if df_industrie is None:
@@ -172,12 +172,12 @@ print(res_df.describe())
 #ENERGIELANDSCHAFT
 #--------------------------------------------------------
 # PV-Ausrichtung zentral hier definieren: "horizontal", "vertical" oder "horizontal_tracking"
-pv_ausrichtung = "horizontal"
+pv_ausrichtung = "horizontal"      #JBtemp: Input aus IOTypes: el_pv_type aktuell str, hier string -> vergleichen
 
 # Traktorparameter zentral hier definieren
-tractor_width_m = 12.0
-tractor_length_m = 15.0
-tractor_turn_radius_m = 9.0
+tractor_width_m = 12.0              #JBtemp: sowohl in IOtypes als auch in run merge defaults -> bleibt so
+tractor_length_m = 15.0             #JBtemp: sowohl in IOtypes als auch in run merge defaults -> bleibt so
+tractor_turn_radius_m = 9.0         #JBtemp: sowohl in IOtypes als auch in run merge defaults -> bleibt so
 
 #agri PV code für geojson und agri pv länge
 agri_result = main(
