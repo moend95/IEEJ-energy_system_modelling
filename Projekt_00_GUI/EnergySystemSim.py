@@ -189,21 +189,12 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                         ''')
 
     with tab5:
-        col1_tab5, col2_tab5 = st.columns(2)
-
-        with col1_tab5:
-            electric_charger = st.slider("Anzahl Elektroladesäulen", 1, 30)
-            elctric_cars_per_day = st.slider("Anzahl beladener Elektroautos pro Tag", 0, electric_charger*50)
-
-
-        with col2_tab5:
-            electric_charger = st.slider("Anzahl Wasserstopfzapfsäulen", 1, 5)
-            elctric_cars_per_day = st.slider("Anzahl beladener Wasserstoffautos pro Tag", 0, electric_charger * 150)
+        Input.h2_load_scenario = st.segmented_control("Wasserstoff-Bedarf Szenario", ["2022", "2030", "2050"], default="2030")
+        Input.e_load_scenario = st.segmented_control("Elektro-Bedarf Szenario", ["2022", "2030", "2050"], default="2030")
 
         expander = st.expander("Erklärung")
         expander.write('''
-            Pro Wasserstoffzapfsäule wird ein maximaler Durchsatz von 150 Autos/Tag angenommen.
-            Für Elektroladesäulen ist die Annahme 50 Autos/Tag.
+            Szenarien-Erklärung
         ''')
 
 if st.button("Simulation starten"):
