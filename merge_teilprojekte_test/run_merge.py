@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 # OPTION 1 - Import
 
@@ -37,7 +38,16 @@ from functions.Energielandschaft import main
 # ------------------------------------------------------------
 #WETTERDATEN CSV
 USE_EXISTING_WEATHER = True
-weather_csv = "./functions/inputs/wetter_daten_15min.csv"
+#weather_csv = "./functions/inputs/wetter_daten_15min.csv"
+base_path = Path(__file__).resolve().parent
+weather_csv = (
+    base_path.parent
+    / "Projekt_00_GUI"
+    / "functions"
+    / "inputs"
+    / "wetter_daten_15min.csv"
+)
+
 
 if USE_EXISTING_WEATHER:
 	print("→ Verwende vorhandene Wetterdaten-CSV")
