@@ -7,9 +7,18 @@ import os
 import folium
 from streamlit_folium import st_folium
 import json
+
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
 
+pv_name_to_id = {   "Windschutzwand": 1,
+                    "Lärmschutzwand": 2,
+                    "Dach": 3,
+                    "Böschung": 4,
+                    "Vertikal (Zaun, Nord-Süd)": 5,
+                    "Horizontal (aufgeständert, Ost-West)": 6,
+                    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":7
+}
 
 
 st.set_page_config(layout="centered")
@@ -34,15 +43,10 @@ with st.container(key="Erzeugung", width=1000, height=500):
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
         with col1_tab1:
-            pv_name_to_id = {   "Windschutzwand": 0,
-                                "Lärmschutzwand": 1,
-                                "Dach": 2,
-                                "Böschung": 3,
-                            }
 
             Input.highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
-            selected_names = st.multiselect("PV-Typ",["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
-            Input.h_pv_types = [pv_name_to_id[name] for name in selected_names]
+            h_selected_names = st.multiselect("PV-Typ",["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+            Input.h_pv_types = [pv_name_to_id[name] for name in h_selected_names]
 
         with col2_tab1:
             # Mapping Autobahn → GeoJSON
@@ -79,12 +83,31 @@ with st.container(key="Erzeugung", width=1000, height=500):
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
-            Input.el_pv_type = st.selectbox("PV-Typ", ["Vertikal (Zaun, Nord-Süd)",
+            el_selected_names = st.selectbox("PV-Typ", ["Vertikal (Zaun, Nord-Süd)",
                                                        "Horizontal (aufgeständert, Ost-West)",
                                                        "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)"])
-            Input.tractor_width = st.segmented_control("Traktorbreite", ["9m", "12m", "15m"], default="12m")
-            Input.tractor_length = st.segmented_control("Traktorlänge", ["12m", "15m", "18m"], default="15m")
-            Input.tractor_turn_radius = st.segmented_control("Traktor-Wenderadius", ["6m", "9m", "12m"], default="9m")
+            Input.el_pv_type = pv_name_to_id[el_selected_names]
+
+            Input.tractor_width = st.segmented_control(
+                "Traktorbreite",
+                options=[9.0, 12.0, 15.0],
+                default=12.0,
+                format_func=lambda x: f"{x:.0f}m"
+            )
+
+            Input.tractor_length = st.segmented_control(
+                "Traktorlänge",
+                options=[12.0, 15.0, 18.0],
+                default=15.0,
+                format_func=lambda x: f"{x:.0f}m"
+            )
+
+            Input.tractor_turn_radius = st.segmented_control(
+                "Traktor-Wenderadius",
+                options=[6.0, 9.0, 12.0],
+                default=9.0,
+                format_func=lambda x: f"{x:.0f}m"
+            )
 
 
 
@@ -99,7 +122,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                     "Geometry_Horizontal_Traktorbreite_20m.geojson",
             }
 
-            selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type]
+            selected_file = pv_geojson_mapping_col2_tab2[el_selected_names]
             geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
             # GeoJSON laden
@@ -133,24 +156,25 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         col1_tab4, col2_tab4 = st.columns(2)
 
         with col1_tab4:
-            options = ["Entsorgung",
-                       "Stahl, 5-Tage-Woche, 3-Schicht",
-                       "Logistik und Lagerung",
-                       "Schrott- und Metallhandel",
-                       "Lagerung",
-                       "Büro",
-                       "Logistik Lebensmittel",
-                       "Stahl, 7-Tage-Woche, 2-Schicht" ]
+            options = {0:"Entsorgung",
+                       1:"Stahl, 5-Tage-Woche, 3-Schicht",
+                       2:"Logistik und Lagerung",
+                       3:"Schrott- und Metallhandel",
+                       4:"Lagerung",
+                       5:"Büro",
+                       6:"Logistik Lebensmittel",
+                       7:"Stahl, 7-Tage-Woche, 2-Schicht"}
 
             st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
             Input.companies = []
             for i in range(5):
-                choice = st.selectbox(f"Unternehmen {i + 1}", ["Keine"] + options, key=f"selection_{i}")
-                Input.companies.append(choice)
+                choice = st.selectbox(f"Unternehmen {i + 1}", options=[None] + list(options.keys()),
+                                        format_func=lambda x: "Keine" if x is None else options[x], key=f"selection_{i}")
+                if choice is not None:
+                    Input.companies.append(choice)
 
             valid_selections = [s for s in Input.companies if s != "Keine"]
-
 
         with col2_tab4:
             Input.is_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")

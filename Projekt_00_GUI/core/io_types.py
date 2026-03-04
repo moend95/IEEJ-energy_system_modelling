@@ -42,15 +42,15 @@ class GuiInput:
     h_pv_types: list                    # Auswahl PV-Types für die Autobahnen
 
     # Energielandschaft
-    el_pv_type: str                     # Auswahl PV-Types für die Energielandschaft
-    tractor_width: str                  # Traktorbreite [m]
-    tractor_length: str                 # Traktorlänge [m]
-    tractor_turn_radius: str            # Traktor-Wenderadius [m]
+    el_pv_type: int                     # Auswahl PV-Types für die Energielandschaft
+    tractor_width: float                # Traktorbreite [m]
+    tractor_length: float               # Traktorlänge [m]
+    tractor_turn_radius: float          # Traktor-Wenderadius [m]
 
 
     # VERBRAUCH
     # Industriegebiet
-    companies: list[str]                #Auswahl der Unternehmenstypen im Industriegebiet
+    companies: list[int]                #Auswahl der Unternehmenstypen im Industriegebiet
     is_heat_cooling_electric: bool      # Wärme/Kälte elektrisch? [true/false]
 
     # Green Energy Hub
@@ -72,12 +72,24 @@ class SimOutput:
                  h_number_of_points=None,
                  total_ac_kw = None,
                  sum_energy_kwh=None,
-                 error_text=None):
+                 error_text=None,
+                 el_error_text=None,
+                 geh_error_text=None,
+                 i_error_text=None,
+                 res_df=None):
         self.h_number_of_points = h_number_of_points
         self.total_ac_kw = total_ac_kw
         self.sum_energy_kwh = sum_energy_kwh
         self.error_text = error_text
+        self.el_error_text = el_error_text
+        self.geh_error_text = geh_error_text
+        self.i_error_text = i_error_text
+        self.res_df = res_df if res_df is not None else pd.DataFrame()
 
     h_number_of_points: int
     sum_energy_kwh: float
-    error_text: str
+    h_error_text: str
+    el_error_text: str
+    geh_error_text: str
+    i_error_text: str
+    res_df = pd.DataFrame()
