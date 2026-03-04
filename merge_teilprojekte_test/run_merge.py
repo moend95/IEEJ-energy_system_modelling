@@ -126,11 +126,40 @@ for pv_type in pv_system.pvtypes:
 #INDUSTRIEGEBIET
 #--------------------------------------------------------
 df_industrie = pd.DataFrame()
-df_industrie = IndustryLoadAggregator().run_interactive() #return lastgang als df oder output path
-#falls output path, dann die csv einlesen
+industry_aggregator = IndustryLoadAggregator()
+
+print("Welche Daten sollen genutzt werden?")
+print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen für Wärme, keine Kälte)")
+print("2) Mit Wärme/Kälte Stromverbrauch (Nutzung reversibler Luftwärmepumpen und Geothermie-Sonden)")
+mode_choice = input("Auswahl (1 oder 2): ").strip()
+
+print("Verfügbare Unternehmen:")
+for i, unternehmen in enumerate(industry_aggregator.UNTERNEHMEN, 1):
+	print(f"{i}. {unternehmen}")
+
+auswahl_input = input(
+	"Geben Sie die Nummern der Unternehmen ein, die betrachtet werden sollen. \n"
+	"(Durch Kommas trennen, Doppelauswahl möglich, Minimal 1 Unternehmen, Maximal 5 Unternehmen, z.B. 1,3,5)\n "
+)
+selection_indices = industry_aggregator.parse_selection_input(auswahl_input)
+
+if selection_indices is None:
+	raise ValueError("Ungültige Auswahl für Industriegebiet. Skript wird beendet.")
+
+df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
+	mode_choice=mode_choice,
+	selection_indices=selection_indices,
+)
+
+if df_industrie is None:
+	raise RuntimeError("Industrie-Lastgang konnte nicht berechnet werden.")
+
 res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
 print(df_industrie.head())
 print(df_industrie.describe())
+print(f"CSV gespeichert unter: {csv_path_industrie}")
+if plot_path_industrie:
+	print(f"Plot erstellt unter: {plot_path_industrie}")
 print(res_df.head())
 print(res_df.describe())
 

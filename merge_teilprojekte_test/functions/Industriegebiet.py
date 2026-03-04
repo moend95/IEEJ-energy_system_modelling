@@ -63,7 +63,7 @@ class IndustryLoadAggregator:
         self.df_2017: Optional[pd.DataFrame] = None
 
     # -------------------- Interaktion --------------------
-    def run_interactive(self) -> None:
+    def run_interactive(self) -> Optional[pd.DataFrame]:
         """Interaktive Ausführung mit Benutzereingaben."""
         print("Welche Daten sollen genutzt werden?")
         print("1) Ohne Wärme/Kälte Stromverbrauch (Nutzung fossiler Energiequellen für Wärme, keine Kälte)")
@@ -91,6 +91,10 @@ class IndustryLoadAggregator:
         #if plot_path:
             #print(f"Balkenplot gespeichert als: {plot_path}")
         return combined_df
+
+    def parse_selection_input(self, auswahl_input: str) -> Optional[List[int]]:
+        """Öffentliche Parse-Hilfe für Auswahleingaben (z.B. aus externem Skript)."""
+        return self._parse_selection(auswahl_input)
 
     def run(self, mode_choice: str, selection_indices: List[int]) -> Tuple[Optional[pd.DataFrame], Optional[str], Optional[str]]:
         """Programmgesteuerte Ausführung ohne Eingabeaufforderungen.
