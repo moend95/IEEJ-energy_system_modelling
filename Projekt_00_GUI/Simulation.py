@@ -1,10 +1,16 @@
 import os
+import sys
 import pandas as pd
 #Functions
 from core.io_types import GuiInput, SimOutput
-from functions.Industriegebiet import IndustryLoadAggregator
-from functions.pv_baukasten import PV_System, PV_TYPEN
-from functions.Energielandschaft import main
+# Absoluter Pfad zu merge_teilprojekte_test/functions
+merge_functions_path = r"C:\Users\brink\OneDrive\Documents\GitHub\IEEJ-energy_system_modelling\merge_teilprojekte_test\functions"
+if merge_functions_path not in sys.path:
+    sys.path.insert(0, merge_functions_path)
+
+from Industriegebiet import IndustryLoadAggregator
+from pv_baukasten import PV_System, PV_TYPEN
+from Energielandschaft import main
 
 
 #TYPE MAPPING
