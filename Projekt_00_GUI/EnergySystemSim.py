@@ -7,7 +7,6 @@ import os
 import folium
 from streamlit_folium import st_folium
 import json
-from functions.pv_baukasten import PV_TYPEN
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
 
