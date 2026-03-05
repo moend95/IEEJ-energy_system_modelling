@@ -184,6 +184,27 @@ print(res_df.describe())
 # PV-Ausrichtung zentral hier definieren: "horizontal", "vertical" oder "horizontal_tracking"
 pv_ausrichtung = "horizontal"      #JBtemp: Input aus IOTypes: el_pv_type aktuell str, hier string -> vergleichen
 
+# Ausbau-Status zentral hier definieren/abfragen: 0, 50 oder 100
+ausbau_status_default = 100
+ausbau_status_raw = input(
+	"Ausbau-Status Energielandschaft in % [0, 50, 100] "
+	f"(Default {ausbau_status_default}): "
+).strip()
+if ausbau_status_raw == "":
+	ausbau_status = ausbau_status_default
+else:
+	try:
+		ausbau_status = int(ausbau_status_raw)
+	except ValueError:
+		print(f"Ungültige Eingabe '{ausbau_status_raw}', verwende Default {ausbau_status_default}%")
+		ausbau_status = ausbau_status_default
+
+if ausbau_status not in (0, 50, 100):
+	print(f"Ungültiger Ausbau-Status '{ausbau_status}', verwende Default {ausbau_status_default}%")
+	ausbau_status = ausbau_status_default
+
+print(f"Ausbau-Status Energielandschaft: {ausbau_status}%")
+
 # Traktorparameter zentral hier definieren
 tractor_width_m = 12.0              #JBtemp Input aus IOTypes: tractor_width aktuell str, hier float
 tractor_length_m = 15.0             #JBtemp: Input aus IOTypes: tractor_length aktuell str, hier float
@@ -194,6 +215,7 @@ agri_result = main(
 	interactive=True,
 	output_dir="./outputs",
 	pv_ausrichtung=pv_ausrichtung,
+	ausbau_status=ausbau_status,
 	tractor_width_m=tractor_width_m,
 	tractor_length_m=tractor_length_m,
 	tractor_turn_radius_m=tractor_turn_radius_m,

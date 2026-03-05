@@ -274,6 +274,75 @@ class PVTypeSelector:
 		return options[choice]
 
 
+class AusbauStatusSelector:
+	"""Fragt den Ausbau-Status der Energielandschaft via 0/50/100-Auswahl ab.
+
+	Werte:
+	- 0: Kein Ausbau, keine Erzeugung
+	- 50: Teil-Ausbau, 50% Erzeugung
+	- 100: Voll-Ausbau, 100% Erzeugung
+	"""
+
+	VALID = (0, 50, 100)
+
+	@staticmethod
+	def select(default: int = 100, interactive: bool = True) -> int:
+		if default not in AusbauStatusSelector.VALID:
+			default = 100
+
+		if not interactive:
+			return default
+
+		prompt = (
+			f"Bitte Ausbau-Status auswählen [Default: {default}]\n"
+			"0) 0%  - Kein Ausbau, keine Erzeugung\n"
+			"50) 50% - Energielandschaft zur Hälfte ausgebaut, 50% Erzeugung\n"
+			"100) 100% - Energielandschaft komplett gebaut, 100% Erzeugung\n"
+			"Auswahl (0, 50 oder 100): "
+		)
+
+		raw = input(prompt).strip() or str(default)
+		try:
+			value = int(raw)
+		except ValueError:
+			print(f"Ungültige Auswahl '{raw}', verwende Default: {default}%")
+			return default
+
+		if value not in AusbauStatusSelector.VALID:
+			print(f"Ungültige Auswahl '{value}', verwende Default: {default}%")
+			return default
+
+		return value
+
+
+def apply_ausbau_status_to_reihen(geojson_reihen: Dict[str, Any], ausbau_status: int) -> Dict[str, Any]:
+	"""Skaliert die erzeugten PV-Reihen gemäß Ausbau-Status (0/50/100)."""
+	if not isinstance(geojson_reihen, dict):
+		raise ValueError("geojson_reihen muss ein Dictionary sein")
+	if geojson_reihen.get("type") != "FeatureCollection":
+		raise ValueError("geojson_reihen.type muss 'FeatureCollection' sein")
+
+	features = geojson_reihen.get("features", [])
+	if not isinstance(features, list):
+		raise ValueError("geojson_reihen['features'] muss eine Liste sein")
+
+	if ausbau_status not in AusbauStatusSelector.VALID:
+		raise ValueError("ausbau_status muss 0, 50 oder 100 sein")
+
+	if ausbau_status == 100:
+		selected_features = features
+	elif ausbau_status == 0:
+		selected_features = []
+	else:  # 50%
+		n_keep = int(round(len(features) * 0.5))
+		selected_features = features[:n_keep]
+
+	return {
+		"type": "FeatureCollection",
+		"features": selected_features,
+	}
+
+
 class TractorParameters:
 	"""Container für Traktorparameter und Berechnung der Randzonen.
 
@@ -887,6 +956,7 @@ def main(
 	interactive: bool = True,
 	output_dir: str = "outputs",
 	pv_ausrichtung: Any = None,
+	ausbau_status: Any = None,
 	tractor_width_m: Any = None,
 	tractor_length_m: Any = None,
 	tractor_turn_radius_m: Any = None,
@@ -936,6 +1006,17 @@ def main(
 		else:
 			ausrichtung = PVTypeSelector.select(interactive=interactive)
 		print(f"  ✓ PV-Ausrichtung: {ausrichtung}")
+
+		if ausbau_status is not None:
+			try:
+				ausbau = int(ausbau_status)
+			except (TypeError, ValueError):
+				raise ValueError("Ungültiger Ausbau-Status: erwartet 0, 50 oder 100.")
+			if ausbau not in AusbauStatusSelector.VALID:
+				raise ValueError("Ungültiger Ausbau-Status: erwartet 0, 50 oder 100.")
+		else:
+			ausbau = AusbauStatusSelector.select(interactive=interactive)
+		print(f"  ✓ Ausbau-Status: {ausbau}%")
 
 		tractor = TractorParameters.from_input(
 			interactive=interactive,
@@ -1002,6 +1083,7 @@ def main(
 		# Generiere PV-Reihen (LineStrings statt Punkte)
 		geojson_points = generate_pv_reihen(rest_poly, ausrichtung, row_spacing, 
 											transformer_to_wgs84=to_wgs84)
+		geojson_points = apply_ausbau_status_to_reihen(geojson_points, ausbau)
 		features_list = geojson_points.get("features", [])
 		n_points = len(features_list)
 		# Gesamtlänge aller erzeugten Reihen (in Metern, aus UTM berechnet)
@@ -1009,6 +1091,7 @@ def main(
 			f.get("properties", {}).get("length_m", 0.0) for f in features_list
 		)
 		print(f"  ✓ Generierte PV-Reihen: {n_points}")
+		print(f"  ✓ Berücksichtigter Ausbau-Status: {ausbau}%")
 		print(f"    - Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
 		print(f"    - Geometrie: LineString (durchgehende Reihen)\n")
 	except Exception as e:
@@ -1076,8 +1159,11 @@ def main(
 	result = {
 		"success": True,
 		"ausrichtung": ausrichtung,
+		"ausbau_status": ausbau,
 		"metadata": {
 			"ausrichtung": ausrichtung,
+			"ausbau_status": ausbau,
+			"erzeugungsfaktor": ausbau / 100.0,
 			"orientation": orientation,
 			"traktor": {
 				"width_m": tractor.width_m,
@@ -1096,6 +1182,7 @@ def main(
 	}
 
 	print(f"PV-Ausrichtung: {ausrichtung}")
+	print(f"Ausbau-Status: {ausbau}% (Erzeugung: {ausbau}%)")
 	print(f"Traktor - Breite: {tractor.width_m} m, Länge: {tractor.length_m} m, Radius: {tractor.turn_radius_m} m")
 	print(f"Wendestreifen: {wendestreifen:.2f} m | Fahrspur: {fahrspur:.2f} m")
 	print(f"Nutzbare Fläche: {usable_area:.2f} m²")
