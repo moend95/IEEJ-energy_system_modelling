@@ -21,7 +21,10 @@ class GuiInput:
                  is_heat_cooling_electric:bool | None = None,
                  companies:list[int] | None = None,
                  h2_load_scenario:str | None = None,
-                 e_load_scenario:str | None = None):
+                 e_load_scenario:str | None = None,
+                 bs_efficiency:float | None = None,
+                 bs_energy_kwh:float | None = None,
+                 bs_power_kw:float | None = None,):
         # ERZEUGUNG
         # Solarautobahn
         self.highways = highways                                    # Auswahl Autobahnen
@@ -37,8 +40,29 @@ class GuiInput:
         # Green Energy Hub
         self.h2_load_scenario = h2_load_scenario                    # Auswahl H2 Bedarf Szenario 2022, 2030, 2050
         self.e_load_scenario = e_load_scenario                      # Auswahl E Bedarf Szenario 2022, 2030, 2050
+        # Batteriespeicher
+        self.bs_efficiency = bs_efficiency
+        self.bs_energy_kwh = bs_energy_kwh
+        self.bs_power_kw = bs_power_kw
 
-
+    def __repr__(self):
+        return (
+            f"GuiInput("
+            f"highways={self.highways}, "
+            f"h_pv_types={self.h_pv_types}, "
+            f"el_pv_type={self.el_pv_type}, "
+            f"tractor_width={self.tractor_width}, "
+            f"tractor_length={self.tractor_length}, "
+            f"tractor_turn_radius={self.tractor_turn_radius}, "
+            f"is_heat_cooling_electric={self.is_heat_cooling_electric}, "
+            f"companies={self.companies}, "
+            f"h2_load_scenario={self.h2_load_scenario}, "
+            f"e_load_scenario={self.e_load_scenario}, "
+            f"bs_efficiency={self.bs_efficiency}, "
+            f"bs_energy_kwh={self.bs_energy_kwh}, "
+            f"bs_power_kw={self.bs_power_kw}"
+            f")"
+        )
 # =========================
 # Output der Simulation
 # =========================
@@ -53,6 +77,10 @@ class SimOutput:
                  el_sum_energy_kwh: float | None = None,
                  geh_sum_energy_kwh: float | None = None,
                  i_sum_energy_kwh: float | None = None,
+                 h_max_power_kw:float | None = None,
+                 el_max_power_kw:float | None = None,
+                 geh_max_power_kw:float | None = None,
+                 i_max_power_kw:float | None = None,
                  res_df:pd.DataFrame | None = None,
                  h_error_text:str | None = None,
                  el_error_text:str | None = None,
@@ -66,6 +94,10 @@ class SimOutput:
         self.geh_sum_energy_kwh = geh_sum_energy_kwh
         self.i_sum_energy_kwh = i_sum_energy_kwh
         # Maximal Leistung des Jahreslastgang pro Modul
+        self.h_max_power_kw = h_max_power_kw
+        self.el_max_power_kw = el_max_power_kw
+        self.geh_max_power_kw = geh_max_power_kw
+        self.i_max_power_kw = i_max_power_kw
         # Result Data Frame mit Lastgängen
         self.res_df = res_df if res_df is not None else pd.DataFrame()
         # Error Texte für die einzelnen Module
