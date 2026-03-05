@@ -224,19 +224,12 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 if st.button("Simulation starten"):
     Output = run_simulation(Input)
 
-    st.write(Output.error_text)
+    st.write(Output.h_error_text)
     st.write("Berechnete Anzahl Punkte", Output.h_number_of_points)
     if Output.h_number_of_points > 0:
         st.write("<u>Solarautobahn Gesamtjahr</u>", unsafe_allow_html=True)
-        st.write(f"Berechnete Gesamtenergie: {Output.sum_energy_kwh:.0f} kWh")
-        max_ac = Output.total_ac_kw.max(skipna=True)
-        st.write(f"Maximale Erzeugungsleistung: {max_ac:.0f} kW")
+        st.write(f"Berechnete Gesamtenergie: {Output.h_sum_energy_kwh:.0f} kWh")
 
-        st.write("<u>Solarautobahn Sommertag</u>", unsafe_allow_html=True)
-        summer_day_start = "2022-06-01"
-        summer_day_end = "2022-06-07"
-        day_ac = Output.total_ac_kw.loc[summer_day_start:summer_day_end].copy()
-        st.area_chart(data=day_ac, x_label="Date Time", y_label="Erzeugungsleistung [kW]")
 
 st.markdown(
     """

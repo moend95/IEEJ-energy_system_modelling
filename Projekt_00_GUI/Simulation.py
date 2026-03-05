@@ -29,7 +29,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     out = SimOutput()
     out.h_number_of_points = 0
-    out.error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
+    out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
     h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types]
     print(f"HIER Name + ID{h_selected_pv_types[0].name},{h_selected_pv_types[0].id}")
@@ -57,7 +57,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
 
         #Berechnung
-        out.sum_energy_kwh = 0
+        out.h_sum_energy_kwh = 0
         out.total_ac_kw = 0
         for pv_type in h_pv_system.pvtypes:
             # CSV-Name so, wie ihn generate_pv_points gespeichert hat
@@ -81,10 +81,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             else:
                 print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
-            out.sum_energy_kwh += scaled_energy_kwh_pv_type
-            out.total_ac_kw += total_ac_pv_type                      #Später aus Output löschen
-            out.total_ac_kw = out.total_ac_kw.clip(lower=0) / 1000
-            out.res_df[pv_type.name] = out.total_ac_kw.values
+            out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
+            #out.res_df[pv_type.name] = out.total_ac_kw.values
         
         # ------------------------------------------------------------
         # 2) Industriegebiet
