@@ -122,15 +122,15 @@ with st.container(key="Erzeugung", width=1000, height=500):
             # --- Mapping PV-Typ → GeoJSON-Datei ---
             pv_geojson_mapping_col2_tab2 = {
                 "Vertikal (Zaun, Nord-Süd)": {
-                    50: "",
+                    50: "Geometry_Vertikal_50_Prozent_20m.geojson",
                     100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
                 },
                 "Horizontal (aufgeständert, Ost-West)": {
-                    50: "",
+                    50: "Geometry_Horizontal_50_Prozent_20m.geojson",
                     100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
                 },
                 "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": {
-                    50: "",
+                    50: "Geometry_Horizontal_50_Prozent_20m.geojson",
                     100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
                 },
             }
@@ -241,9 +241,9 @@ if st.button("Simulation starten"):
 
     st.write(Output.h_error_text)
     st.write("Berechnete Anzahl Punkte", Output.h_number_of_points)
-    if Output.h_number_of_points > 0:
-        st.write("<u>Solarautobahn Gesamtjahr</u>", unsafe_allow_html=True)
-        st.write(f"Berechnete Gesamtenergie: {Output.h_sum_energy_kwh:.0f} kWh")
+
+    st.write("<u>Solarautobahn Gesamtjahr</u>", unsafe_allow_html=True)
+    st.write(f"Berechnete Gesamtenergie: {Output.h_sum_energy_kwh:.0f} kWh")
 
 
 st.markdown(

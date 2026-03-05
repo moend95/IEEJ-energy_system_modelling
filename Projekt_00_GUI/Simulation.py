@@ -31,7 +31,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.h_number_of_points = 0
     out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
-    h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types]
+    h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types] if inp.h_pv_types else []
     # ------------------------------------------------------------
     # 1) Solarautobahn
     # ------------------------------------------------------------
@@ -41,7 +41,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     #    out.h_error_text= "Keine PV Typen ausgewählt!"
     #else:   #Fall Autobahn und PV Typ ausgewählt
 
-    for highway in inp.highways:
+    for highway in inp.highways if inp.h_pv_types and inp.highways else []:
         selected_file = highway_geojson_mapping[highway]
         geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
@@ -58,7 +58,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     #Berechnung
     out.h_sum_energy_kwh = 0
     out.total_ac_kw = 0
-    for pv_type in h_pv_system.pvtypes:
+    for pv_type in h_pv_system.pvtypes if inp.h_pv_types and inp.highways else []:
         # CSV-Name so, wie ihn generate_pv_points gespeichert hat
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
         csv_path = os.path.join(output_dir, csv_name)
@@ -99,8 +99,10 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             selection_indices=inp.companies,
 
         )
-
-        out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
+        if df_industrie is None or df_industrie.empty:
+            out.res_df['Last_Industrie [kW]'] = 0
+        else:
+            out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
 
     # ------------------------------------------------------------
     # 3) Energielandschaft
@@ -132,6 +134,12 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         weather_df=weather_df,
         base_output_dir=output_dir,
     )
+
+    # ------------------------------------------------------------
+    # 3) Energielandschaft
+    # ------------------------------------------------------------
+
+
 
     print(inp)
     print(out.res_df)
