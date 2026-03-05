@@ -3,14 +3,9 @@ import sys
 import pandas as pd
 #Functions
 from core.io_types import GuiInput, SimOutput
-# Absoluter Pfad zu merge_teilprojekte_test/functions
-merge_functions_path = r"C:\Users\brink\OneDrive\Documents\GitHub\IEEJ-energy_system_modelling\merge_teilprojekte_test\functions"
-if merge_functions_path not in sys.path:
-    sys.path.insert(0, merge_functions_path)
-
-from Industriegebiet import IndustryLoadAggregator
-from pv_baukasten import PV_System, PV_TYPEN
-from Energielandschaft import main
+from functions.Industriegebiet import IndustryLoadAggregator
+from functions.pv_baukasten import PV_System, PV_TYPEN
+from functions.Energielandschaft import main
 
 
 #TYPE MAPPING
@@ -116,7 +111,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     # agri PV code für geojson und agri pv länge
     agri_result = main(
-        interactive=True,
+        interactive=False,
         output_dir="./outputs",
         pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
         tractor_width_m=inp.tractor_width,
