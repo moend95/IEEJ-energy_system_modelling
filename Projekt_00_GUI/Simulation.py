@@ -32,107 +32,107 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
     h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types]
-    print(f"HIER Name + ID{h_selected_pv_types[0].name},{h_selected_pv_types[0].id}")
     # ------------------------------------------------------------
     # 1) Solarautobahn
     # ------------------------------------------------------------
-    if not inp.highways:
-        out.h_error_text = "Keine Autobahnen ausgewählt!"
-    elif not inp.h_pv_types:
-        out.h_error_text= "Keine PV Typen ausgewählt!"
-    else:   #Fall Autobahn und PV Typ ausgewählt
+    #if not inp.highways:
+    #    out.h_error_text = "Keine Autobahnen ausgewählt!"
+    #elif not inp.h_pv_types:
+    #    out.h_error_text= "Keine PV Typen ausgewählt!"
+    #else:   #Fall Autobahn und PV Typ ausgewählt
 
-        for highway in inp.highways:
-            selected_file = highway_geojson_mapping[highway]
-            geojson_path = os.path.join(script_dir, "geometry", selected_file)
+    for highway in inp.highways:
+        selected_file = highway_geojson_mapping[highway]
+        geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
-            h_pv_system = PV_System(
-                geojson_path=geojson_path,
-                pvtypes=h_selected_pv_types,  # 0 = Windschutzwand, 1 = Schallschutzwand
-                step_size=800,  # Punktabstand in m
-                weather_df=weather_df,
-                base_output_dir=output_dir,
-            )
-            results = h_pv_system.generate_pv_points()
-            out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
-
-        #Berechnung
-        out.h_sum_energy_kwh = 0
-        out.total_ac_kw = 0
-        for pv_type in h_pv_system.pvtypes:
-            # CSV-Name so, wie ihn generate_pv_points gespeichert hat
-            csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
-            csv_path = os.path.join(output_dir, csv_name)
-            df_one = pd.read_csv(csv_path).head(1)
-            test_csv = os.path.join(output_dir, "test_single_point.csv")
-            df_one.to_csv(test_csv, index=False)
-
-            energy_kwh_pv_type, total_ac_pv_type = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-            print(f"Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh",
-                  " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
-
-            # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
-            scaled_energy_kwh_pv_type = 0
-            if h_pv_system.step_size >= pv_type.row_width:
-                scaling_factor = h_pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
-                print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
-                scaled_energy_kwh_pv_type = energy_kwh_pv_type * scaling_factor
-                print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
-            else:
-                print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
-
-            out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
-            #out.res_df[pv_type.name] = out.total_ac_kw.values
-        
-        # ------------------------------------------------------------
-        # 2) Industriegebiet
-        # ------------------------------------------------------------
-        df_industrie = pd.DataFrame()
-        industry_aggregator = IndustryLoadAggregator()
-
-        if inp.companies is None:
-            out.i_error_text = "Ungültige Auswahl für Industriegebiet. Skript wird beendet."
-        else:
-            out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
-
-            df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
-                mode_choice=industrie_heating_choice_mapping[inp.is_heat_cooling_electric],
-                selection_indices=inp.companies,
-
-            )
-
-            out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
-
-        # ------------------------------------------------------------
-        # 3) Energielandschaft
-        # ------------------------------------------------------------
-        
-        # agri PV code für geojson und agri pv länge
-        agri_result = main(
-            interactive=True,
-            output_dir="./outputs",
-            pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
-            tractor_width_m=inp.tractor_width,
-            tractor_length_m=inp.tractor_length,
-            tractor_turn_radius_m=inp.tractor_turn_radius,
-        )
-        agri_pv_laenge = agri_result.get("metadata").get('total_rows_length_m')
-
-
-        el_selected_pv_type = [PV_TYPEN[inp.el_pv_type]]
-
-        # INPUT für PV Baukasten - ENERGIELANDSCHAFT
-        geojson_file_2 = "Agri_PV_Centroid.geojson"
-        geojson_path_2 = os.path.join(base_input, "geometrien", geojson_file_2)
-        step_size_default = 1000
-
-        el_pv_system = PV_System(
-            geojson_path=geojson_path_2,
-            pvtypes=el_selected_pv_type,  # [PV_TYPEN[0],PV_TYPEN[3]],
-            step_size=step_size_default,  # Punktabstand in m
+        h_pv_system = PV_System(
+            geojson_path=geojson_path,
+            pvtypes=h_selected_pv_types,  # 0 = Windschutzwand, 1 = Schallschutzwand
+            step_size=800,  # Punktabstand in m
             weather_df=weather_df,
             base_output_dir=output_dir,
         )
-        print(inp)
-        print(out.res_df)
+        results = h_pv_system.generate_pv_points()
+        out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
+
+    #Berechnung
+    out.h_sum_energy_kwh = 0
+    out.total_ac_kw = 0
+    for pv_type in h_pv_system.pvtypes:
+        # CSV-Name so, wie ihn generate_pv_points gespeichert hat
+        csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+        csv_path = os.path.join(output_dir, csv_name)
+        df_one = pd.read_csv(csv_path).head(1)
+        test_csv = os.path.join(output_dir, "test_single_point.csv")
+        df_one.to_csv(test_csv, index=False)
+
+        energy_kwh_pv_type, total_ac_pv_type = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
+        print(f"Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh",
+              " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
+
+        # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
+        scaled_energy_kwh_pv_type = 0
+        if h_pv_system.step_size >= pv_type.row_width:
+            scaling_factor = h_pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
+            print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
+            scaled_energy_kwh_pv_type = energy_kwh_pv_type * scaling_factor
+            print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
+        else:
+            print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
+
+        out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
+        #out.res_df[pv_type.name] = out.total_ac_kw.values
+
+    # ------------------------------------------------------------
+    # 2) Industriegebiet
+    # ------------------------------------------------------------
+    df_industrie = pd.DataFrame()
+    industry_aggregator = IndustryLoadAggregator()
+
+    if inp.companies is None:
+        out.i_error_text = "Ungültige Auswahl für Industriegebiet. Skript wird beendet."
+    else:
+        out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
+
+        df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
+            mode_choice=industrie_heating_choice_mapping[inp.is_heat_cooling_electric],
+            selection_indices=inp.companies,
+
+        )
+
+        out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
+
+    # ------------------------------------------------------------
+    # 3) Energielandschaft
+    # ------------------------------------------------------------
+
+    # agri PV code für geojson und agri pv länge
+    agri_result = main(
+        interactive=True,
+        output_dir="./outputs",
+        pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
+        tractor_width_m=inp.tractor_width,
+        tractor_length_m=inp.tractor_length,
+        tractor_turn_radius_m=inp.tractor_turn_radius,
+    )
+    agri_pv_laenge = agri_result.get("metadata").get('total_rows_length_m')
+
+
+    el_selected_pv_type = [PV_TYPEN[inp.el_pv_type]]
+
+    # INPUT für PV Baukasten - ENERGIELANDSCHAFT
+    geojson_file_2 = "Agri_PV_Centroid.geojson"
+    geojson_path_2 = os.path.join(base_input, "geometrien", geojson_file_2)
+    step_size_default = 1000
+
+    el_pv_system = PV_System(
+        geojson_path=geojson_path_2,
+        pvtypes=el_selected_pv_type,  # [PV_TYPEN[0],PV_TYPEN[3]],
+        step_size=step_size_default,  # Punktabstand in m
+        weather_df=weather_df,
+        base_output_dir=output_dir,
+    )
+
+    print(inp)
+    print(out.res_df)
     return out

@@ -7,7 +7,7 @@ import os
 import folium
 from streamlit_folium import st_folium
 import json
-
+from functions.pv_baukasten import PV_TYPEN
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
 
@@ -48,6 +48,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
             h_selected_names = st.multiselect("PV-Typ",["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
             Input.h_pv_types = [pv_name_to_id[name] for name in h_selected_names]
 
+
         with col2_tab1:
             # Mapping Autobahn → GeoJSON
             pv_geojson_mapping_col2_tab1 = {
@@ -83,6 +84,12 @@ with st.container(key="Erzeugung", width=1000, height=500):
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
         with col1_tab2:
+            Input.el_build_state = st.segmented_control(
+                "Ausbaugrad der Energielandschaft in %",
+                options=[0, 50, 100],
+                default=100,
+                format_func=lambda x: f"{x:.0f}%")
+
             el_selected_names = st.selectbox("PV-Typ", ["Vertikal (Zaun, Nord-Süd)",
                                                        "Horizontal (aufgeständert, Ost-West)",
                                                        "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)"])
@@ -114,29 +121,37 @@ with st.container(key="Erzeugung", width=1000, height=500):
         with col2_tab2:
             # --- Mapping PV-Typ → GeoJSON-Datei ---
             pv_geojson_mapping_col2_tab2 = {
-                "Vertikal (Zaun, Nord-Süd)":
-                    "Geometry_Vertikal_Traktorbreite_20m.geojson",
-                "Horizontal (aufgeständert, Ost-West)":
-                    "Geometry_Horizontal_Traktorbreite_20m.geojson",
-                "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":
-                    "Geometry_Horizontal_Traktorbreite_20m.geojson",
+                "Vertikal (Zaun, Nord-Süd)": {
+                    50: "",
+                    100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
+                },
+                "Horizontal (aufgeständert, Ost-West)": {
+                    50: "",
+                    100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
+                },
+                "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": {
+                    50: "",
+                    100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
+                },
             }
 
-            selected_file = pv_geojson_mapping_col2_tab2[el_selected_names]
-            geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
-            # GeoJSON laden
-            with open(geojson_path, "r", encoding="utf-8") as f:
-                geojson_data = json.load(f)
+            if Input.el_build_state != 0:
+                selected_file = pv_geojson_mapping_col2_tab2[el_selected_names][Input.el_build_state]
+                geojson_path = os.path.join(script_dir, "geometry", selected_file)
+                # GeoJSON laden
+                with open(geojson_path, "r", encoding="utf-8") as f:
+                    geojson_data = json.load(f)
 
             # Karte erstellen
             m = folium.Map(location=[51.07596, 6.48599], zoom_start=14)
 
-            # GeoJSON Layer hinzufügen
-            folium.GeoJson(
-                geojson_data,
-                name=f"{Input.el_pv_type}{Input.tractor_width}"
-            ).add_to(m)
+            if Input.el_build_state != 0:
+                # GeoJSON Layer hinzufügen
+                folium.GeoJson(
+                    geojson_data,
+                    name=f"{Input.el_pv_type}{Input.tractor_width}"
+                ).add_to(m)
 
             # Layer Control (falls mehrere Layer kommen)
             folium.LayerControl().add_to(m)

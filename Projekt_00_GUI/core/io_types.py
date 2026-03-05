@@ -14,6 +14,7 @@ class GuiInput:
     def __init__(self,
                  highways:list | None = None,
                  h_pv_types:list | None = None,
+                 el_build_state:int | None = None,
                  el_pv_type:int | None = None,
                  tractor_width:float | None = None,
                  tractor_length:float | None = None,
@@ -30,6 +31,7 @@ class GuiInput:
         self.highways = highways                                    # Auswahl Autobahnen
         self.h_pv_types = h_pv_types                                # Auswahl PV-Types für die Autobahnen
         # Energielandschaft
+        self.el_build_state = el_build_state                        # Ausbaugrad in %
         self.el_pv_type = el_pv_type                                # Auswahl PV-Types für die Energielandschaft
         self.tractor_width = tractor_width                          # Traktorbreite [m]
         self.tractor_length = tractor_length                        # Traktorlänge [m]
