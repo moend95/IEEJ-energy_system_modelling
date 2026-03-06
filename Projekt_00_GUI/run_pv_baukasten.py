@@ -2,13 +2,17 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from merge_teilprojekte_test.functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
-from merge_teilprojekte_test.functions.pv_baukasten import PV_System, PV_TYPEN
+from functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
+from functions.pv_baukasten import PV_System, PV_TYPEN
 
 # Ausgabe Punkte die man auf der linienbasierten Karte sehen kann
 
 USE_EXISTING_WEATHER = True
-weather_csv = "./functions/inputs/wetter_daten_15min.csv"
+#weather_csv = "./functions/inputs/wetter_daten_15min.csv"
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+base_input = os.path.join(SCRIPT_DIR, "functions", "inputs")
+weather_csv = os.path.join(base_input, "wetter_daten_15min.csv")
 
 
 
@@ -37,7 +41,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
     # ------------------------------------------------------------
-    base_input = "./functions/inputs"
+    #base_input = "./functions/inputs"
     geojson_path = os.path.join(base_input, "geometrien", "P_02_Agri_PV_Mittelpunkt.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
