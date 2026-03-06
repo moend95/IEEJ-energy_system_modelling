@@ -14,9 +14,9 @@ bev_clean = pd.DataFrame({
     "power_kW": bev["P (MW)"] * 1000
 })
 
-bev_out = os.path.join(base_path, "BEV_load_el_15min_mw_clean.csv")
+bev_out = os.path.join(base_path, "BEV_load_el_15min.csv")
 bev_clean.to_csv(bev_out, index=False)
-print("BEV_load_el_15min_mw_clean.csv erstellt")
+print("BEV_load_el_15min.csv erstellt")
 
 
 # --- 2) Electrolyzer ---
@@ -30,6 +30,6 @@ ely_clean = pd.DataFrame({
     "power_kW": ely["P_ac"]
 })
 
-ely_out = os.path.join(base_path, "Electrolyzer_output_clean.csv")
+ely_out = os.path.join(base_path, "Electrolyzer_output.csv")
 ely_clean.to_csv(ely_out, index=False)
-print("Electrolyzer_output_clean.csv erstellt")
+print("Electrolyzer_output.csv erstellt")
