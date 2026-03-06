@@ -9,6 +9,7 @@ from streamlit_folium import st_folium
 import json
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
+from functions.plot_functions import plot_industry_preview, plot_industry_annual_energy
 
 pv_name_to_id = {   "Windschutzwand": 0,
                     "Lärmschutzwand": 1,
@@ -19,6 +20,26 @@ pv_name_to_id = {   "Windschutzwand": 0,
                     "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":6
 }
 
+industry_csv_mapping = {
+    0: "Entsorgung",
+    1: "Stahl_1",
+    2: "Logistik und Lagerung",
+    3: "Schrott Metallhandel",
+    4: "Lagerung",
+    5: "Buero",
+    6: "Logistik Lebensmittel",
+    7: "Stahl_2"
+}
+industry_order_all = [
+    "Entsorgung",
+    "Stahl_1",
+    "Logistik und Lagerung",
+    "Schrott Metallhandel",
+    "Lagerung",
+    "Buero",
+    "Logistik Lebensmittel",
+    "Stahl_2"
+]
 
 st.set_page_config(layout="centered")
 
@@ -26,7 +47,7 @@ Input = GuiInput()
 Output = SimOutput()
 
 #Überschrift
-st.title("Energiesystem Modelierung - Innovationspark Jüchen")
+st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
 
@@ -170,61 +191,97 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         col1_tab4, col2_tab4 = st.columns(2)
 
         with col1_tab4:
-            options = {0:"Entsorgung",
-                       1:"Stahl, 5-Tage-Woche, 3-Schicht",
-                       2:"Logistik und Lagerung",
-                       3:"Schrott- und Metallhandel",
-                       4:"Lagerung",
-                       5:"Büro",
-                       6:"Logistik Lebensmittel",
-                       7:"Stahl, 7-Tage-Woche, 2-Schicht"}
+            options = {
+                0: "Entsorgung",
+                1: "Stahl, 5-Tage-Woche, 3-Schicht",
+                2: "Logistik und Lagerung",
+                3: "Schrott- und Metallhandel",
+                4: "Lagerung",
+                5: "Büro",
+                6: "Logistik Lebensmittel",
+                7: "Stahl, 7-Tage-Woche, 2-Schicht"
+            }
 
             st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
             Input.companies = []
             for i in range(5):
-                choice = st.selectbox(f"Unternehmen {i + 1}", options=[None] + list(options.keys()),
-                                        format_func=lambda x: "Keine" if x is None else options[x], key=f"selection_{i}")
+                choice = st.selectbox(
+                    f"Unternehmen {i + 1}",
+                    options=[None] + list(options.keys()),
+                    format_func=lambda x: "Keine" if x is None else options[x],
+                    key=f"selection_{i}"
+                )
                 if choice is not None:
                     Input.companies.append(choice)
-
-            valid_selections = [s for s in Input.companies if s != "Keine"]
 
         with col2_tab4:
             Input.is_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
             expander = st.expander("Erklärung Wärme/Kälte")
             expander.write('''
-                                Bei Auswahl "ohne Wärme/Kälte Stromverbrauch" werden fossiler Energiequellen für Wärme benutzt und es gibt keine Kälte
-                                
-                                Bei Auswahl "mit Wärme/Kälte Stromverbrauch" werden reversible Luftwärmepumpen und Geothermie-Sonden verwendet
-                                ''')
+    Bei Auswahl "ohne Wärme/Kälte Stromverbrauch" werden fossiler Energiequellen für Wärme benutzt und es gibt keine Kälte
 
+    Bei Auswahl "mit Wärme/Kälte Stromverbrauch" werden reversible Luftwärmepumpen und Geothermie-Sonden verwendet
+            ''')
+
+        # Pfad zur Vorschau-CSV
+        preview_csv_path = os.path.join(
+            script_dir,
+            "functions",
+            "inputs",
+            "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv"
+        )
+
+        # Expander für Unternehmenserklärung + allgemeiner Balkenplot
         expander = st.expander("Erklärung Unternehmen")
-        expander.write('''
-                    1. Entsorgung: 
-                    5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste
+        with expander:
+            st.write('''
+    1. Entsorgung:  
+    5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste
 
-                    2. Stahl: 
-                    5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro
+    2. Stahl:  
+    5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro
 
-                    3. Logistik und Lagerung: 
-                    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
+    3. Logistik und Lagerung:  
+    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
 
-                    4. Schrott- und Metallhandel: 
-                    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner
+    4. Schrott- und Metallhandel:  
+    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner
 
-                    5. Lagerung: 
-                    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik
+    5. Lagerung:  
+    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik
 
-                    6. Büro: 
-                    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser
+    6. Büro:  
+    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser
 
-                    7. Logistik Lebensmittel: 
-                    6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
+    7. Logistik Lebensmittel:  
+    6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
 
-                    8. Stahl: 
-                    7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro
-                        ''')
+    8. Stahl:  
+    7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro
+            ''')
+
+            fig_annual_all = plot_industry_annual_energy(
+                preview_csv_path,
+                ordered_columns=industry_order_all,
+                title="Jahresenergie aller Unternehmensprofile"
+            )
+            st.pyplot(fig_annual_all)
+
+        # Auswahl in CSV-Spaltennamen übersetzen
+        selected_columns = [industry_csv_mapping[i] for i in Input.companies if i in industry_csv_mapping]
+        selected_columns = list(dict.fromkeys(selected_columns))  # Duplikate entfernen
+
+        # Wochenvorschau nur für ausgewählte Profile
+        if selected_columns:
+            st.write("### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen")
+
+            fig_preview = plot_industry_preview(
+                preview_csv_path,
+                selected_columns=selected_columns,
+                start="2017-03-05"
+            )
+            st.pyplot(fig_preview)
 
     with tab5:
         Input.h2_load_scenario = st.segmented_control("Wasserstoff-Bedarf Szenario", ["2022", "2030", "2050"], default="2030")
@@ -243,6 +300,7 @@ if st.button("Simulation starten"):
 
     st.write("<u>Solarautobahn Gesamtjahr</u>", unsafe_allow_html=True)
     st.write(f"Berechnete Gesamtenergie: {Output.h_sum_energy_kwh:.0f} kWh")
+
 
 
 st.markdown(
