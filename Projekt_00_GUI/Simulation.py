@@ -58,7 +58,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     #Berechnung
     out.h_sum_energy_kwh = 0
-    out.total_ac_kw = 0
+    out.total_ac_kw = None
     for pv_type in h_pv_system.pvtypes if inp.h_pv_types and inp.highways else []:
         # CSV-Name so, wie ihn generate_pv_points gespeichert hat
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
@@ -82,7 +82,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
         out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
-        #out.res_df[pv_type.name] = out.total_ac_kw.values
+        out.total_ac_kw = total_ac_pv_type / 1000 if out.total_ac_kw is None else out.total_ac_kw + (total_ac_pv_type / 1000)
+        out.res_df["Erzeugung_Solarautobahn [kW]"] = out.total_ac_kw.values
 
     # ------------------------------------------------------------
     # 2) Industriegebiet
