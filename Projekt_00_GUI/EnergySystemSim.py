@@ -9,7 +9,12 @@ from streamlit_folium import st_folium
 import json
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
-from functions.plot_functions import plot_industry_preview, plot_industry_annual_energy
+from functions.plot_functions import (
+    plot_industry_preview,
+    plot_industry_annual_energy,
+    plot_green_hub_weekly_profiles,
+    plot_green_hub_annual_energy
+)
 
 pv_name_to_id = {   "Windschutzwand": 0,
                     "Lärmschutzwand": 1,
@@ -284,13 +289,76 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             st.pyplot(fig_preview)
 
     with tab5:
-        Input.h2_load_scenario = st.segmented_control("Wasserstoff-Bedarf Szenario", ["2022", "2030", "2050"], default="2030")
-        Input.e_load_scenario = st.segmented_control("Elektro-Bedarf Szenario", ["2022", "2030", "2050"], default="2030")
+        Input.h2_load_scenario = st.segmented_control(
+            "Wasserstoff-Bedarf Szenario",
+            ["2022", "2030", "2050"],
+            default="2030"
+        )
+        Input.e_load_scenario = st.segmented_control(
+            "Elektro-Bedarf Szenario",
+            ["2022", "2030", "2050"],
+            default="2030"
+        )
+
+        green_hub_base_dir = os.path.join(
+            script_dir,
+            "functions",
+            "inputs",
+            "green_energy_hub"
+        )
 
         expander = st.expander("Erklärung")
-        expander.write('''
-            Szenarien-Erklärung
-        ''')
+        with expander:
+            st.write("""
+    **Szenario 2022**
+    - Referenzjahr 2022
+    - Keine PV- oder Windanlagen berücksichtigt
+    - Wasserstoffspeicher mit 10 MWh Kapazität
+    - Anzahl der Ladepunkte wurde so gewählt, dass auf Basis der zugrunde gelegten Fahr- bzw. Betankungsdaten keine Wartezeiten entstehen
+    - 5 BEV-Ladesäulen
+    - 3 Wasserstoff-Ladesäulen
+    - Elektrolyseur mit einer Leistung von ca. 8 MW
+    - Betrachtung des jährlichen Strombedarfs des Elektrolyseurs sowie der erzeugten Wasserstoffmenge
+
+    **Szenario 2030**
+    - Zukunftsszenario für das Jahr 2030
+    - Keine PV- oder Windanlagen berücksichtigt
+    - Wasserstoffspeicher mit 10 MWh Kapazität
+    - Anzahl der Ladepunkte wurde so gewählt, dass auf Basis der zugrunde gelegten Fahr- bzw. Betankungsdaten keine Wartezeiten entstehen
+    - 6 BEV-Ladesäulen
+    - 8 Wasserstoff-Ladesäulen (FCEV)
+    - Elektrolyseur mit einer Leistung von ca. 30 MW
+
+    **Szenario 2050**
+    - Zukunftsszenario für das Jahr 2050
+    - Keine PV- oder Windanlagen berücksichtigt
+    - Wasserstoffspeicher mit 10 MWh Kapazität
+    - Anzahl der Ladepunkte wurde so gewählt, dass auf Basis der zugrunde gelegten Fahr- bzw. Betankungsdaten keine Wartezeiten entstehen
+    - 6 BEV-Ladesäulen
+    - 8 Wasserstoff-Ladesäulen (FCEV)
+    - Elektrolyseur mit einer Leistung von ca. 17–18 MW
+
+    **Einordnung der geringeren Elektrolyseurleistung im Jahr 2050**
+    Die geringere Elektrolyseurleistung im Vergleich zum Szenario 2030 ist modellseitig dadurch begründet, dass nicht allein die Anzahl der Ladepunkte entscheidend ist, sondern vor allem die angenommene Wasserstoffnachfrage und deren zeitliche Spitzenlast am betrachteten Standort. Im 2050-Szenario verteilt sich die Nachfrage auf eine stärker ausgebaute Infrastruktur, sodass an diesem Standort trotz ausgebauter Tankstellenstruktur eine geringere Elektrolyseurleistung ausreicht.
+            """)
+
+            fig_green_hub_bar = plot_green_hub_annual_energy(
+                green_hub_base_dir,
+                years=("2022", "2030", "2050")
+            )
+            st.pyplot(fig_green_hub_bar)
+
+        # Auswahl für überlagerte Beispielwoche
+        if Input.h2_load_scenario and Input.e_load_scenario:
+            st.write("### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
+
+            fig_green_hub_week = plot_green_hub_weekly_profiles(
+                green_hub_base_dir,
+                h2_year=str(Input.h2_load_scenario),
+                e_year=str(Input.e_load_scenario),
+                start="2022-03-05"
+            )
+            st.pyplot(fig_green_hub_week)
 
 if st.button("Simulation starten"):
     Output = run_simulation(Input)
