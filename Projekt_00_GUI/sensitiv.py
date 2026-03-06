@@ -1,0 +1,153 @@
+from core.io_types import GuiInput
+from Simulation import run_simulation
+
+
+# ---------------------------------------------------
+# DEFAULT CONFIG
+# ---------------------------------------------------
+
+DEFAULT_CONFIG = {
+
+    # Solarautobahn
+    "highways": ["A46"],
+    "h_pv_types": [2, 3],   #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung
+
+    # Energielandschaft
+    "el_build_state": 100,
+    "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal
+    "tractor_width": 24.0,
+    "tractor_length": 15.0,
+    "tractor_turn_radius": 9.0,
+
+    # Industrie
+    "is_heat_cooling_electric": False,
+    "companies": [1, 2, 4],
+
+    # Green Energy Hub
+    "h2_load_scenario": "2022",
+    "e_load_scenario": "2022",
+
+    # Battery
+    "bs_efficiency": 0.95,
+    "bs_energy_kwh": 1000.0,
+    "bs_power_kw": 500.0,
+}
+
+
+# ---------------------------------------------------
+# CASE DEFINITIONS
+# ---------------------------------------------------
+
+H_CONFIGS = {
+    1: {},
+    2: {"highways": ["A44", "A46"], "h_pv_types": [0,1,2,3]}
+}
+
+EL_CONFIGS = {
+    1: {},
+    2: {"tractor_width": 12.0, "el_pv_type": 6}
+}
+
+I_CONFIGS = {
+    1: {},
+    2: {"companies": [5, 5, 6, 6, 7], "is_heat_cooling_electric": True}
+}
+
+GEH_CONFIGS = {
+    1: {},
+    2: {"h2_load_scenario": "2030", "e_load_scenario": "2030"}
+}
+
+B_CONFIGS = {
+    1: {},
+    2: {"bs_energy_kwh": 235000.0, "bs_power_kw": 1000.0}
+}
+
+
+# ---------------------------------------------------
+# INPUT BUILDER
+# ---------------------------------------------------
+
+def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
+
+    cfg = DEFAULT_CONFIG.copy()
+
+    cfg.update(H_CONFIGS[h_case])
+    cfg.update(EL_CONFIGS[el_case])
+    cfg.update(I_CONFIGS[i_case])
+    cfg.update(GEH_CONFIGS[geh_case])
+    cfg.update(B_CONFIGS[b_case])
+
+    inp = GuiInput()
+
+    inp.highways = cfg["highways"]
+    inp.h_pv_types = cfg["h_pv_types"]
+
+    inp.el_build_state = cfg["el_build_state"]
+    inp.el_pv_type = cfg["el_pv_type"]
+
+    inp.tractor_width = cfg["tractor_width"]
+    inp.tractor_length = cfg["tractor_length"]
+    inp.tractor_turn_radius = cfg["tractor_turn_radius"]
+
+    inp.is_heat_cooling_electric = cfg["is_heat_cooling_electric"]
+    inp.companies = cfg["companies"]
+
+    inp.h2_load_scenario = cfg["h2_load_scenario"]
+    inp.e_load_scenario = cfg["e_load_scenario"]
+
+    inp.bs_efficiency = cfg["bs_efficiency"]
+    inp.bs_energy_kwh = cfg["bs_energy_kwh"]
+    inp.bs_power_kw = cfg["bs_power_kw"]
+
+    return inp
+
+
+# ---------------------------------------------------
+# MAIN
+# ---------------------------------------------------
+
+def main():
+
+    # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
+    for h_case in [1]:
+        for el_case in [1]:
+            for i_case in [1]:
+                for geh_case in [1]:
+                    for b_case in [1]:
+
+                        print(f"\nRunning case: \nh: {h_case} \nel: {el_case} \ni: {i_case} \ngeh: {geh_case} \nb: {b_case}")
+
+                        inp = build_test_input(
+                            h_case=h_case,
+                            el_case=el_case,
+                            i_case=i_case,
+                            geh_case=geh_case,
+                            b_case=b_case
+                        )
+
+                        out = run_simulation(inp)
+
+                        if not out.res_df.empty:
+
+                            filename = f"outputs/sensi_res_dfs/res_df_{h_case}{el_case}{i_case}{geh_case}{b_case}.csv"
+
+                            out.res_df.to_csv(
+                                filename,
+                                sep=",",
+                                decimal="."
+                            )
+
+                            print("Saved:", filename)
+                            print(out.res_df.head())
+
+                        else:
+                            print("res_df empty")
+
+
+# ---------------------------------------------------
+# SCRIPT ENTRY
+# ---------------------------------------------------
+
+if __name__ == "__main__":
+    main()
