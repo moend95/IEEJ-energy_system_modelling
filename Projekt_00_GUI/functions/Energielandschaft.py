@@ -802,7 +802,7 @@ def export_geojson(points: Dict[str, Any], dateiname: str) -> None:
 		with open(dateiname, 'w', encoding='utf-8') as f:
 			json.dump(points, f, ensure_ascii=False, indent=2, sort_keys=True)
 
-		print(f"GeoJSON erfolgreich exportiert: {dateiname}")
+		#print(f"GeoJSON erfolgreich exportiert: {dateiname}")
 	except IOError as e:
 		raise IOError(f"Fehler beim Schreiben der Datei '{dateiname}': {e}")
 	except Exception as e:
@@ -978,24 +978,24 @@ def main(
 	Rückgabe:
 	- Dictionary mit allen Ergebnissen und Metadaten.
 	"""
-	print("\n" + "="*70)
-	print("PV-Flächenberechnung - Energielandschaft")
-	print("="*70 + "\n")
+	#("\n" + "="*70)
+	#print("PV-Flächenberechnung - Energielandschaft")
+	#print("="*70 + "\n")
 
 	# Schritt 1: Einlesen der eingebetteten GeoJSON-Fläche
-	print("[1/6] Einlesen der eingebetteten GeoJSON-Fläche...")
+	#print("[1/6] Einlesen der eingebetteten GeoJSON-Fläche...")
 	try:
 		reader = GeoJSONReader(EMBEDDED_GEOJSON)
 		geom_wgs84, geom_utm, to_utm, to_wgs84 = reader.load()
-		print(f"  ✓ Polygon geladen (WGS84)")
-		print(f"    - Fläche (WGS84): {geom_wgs84.area:.2f} deg²")
-		print(f"    - Fläche (UTM): {geom_utm.area:.2f} m²\n")
+		#print(f"  ✓ Polygon geladen (WGS84)")
+		#print(f"    - Fläche (WGS84): {geom_wgs84.area:.2f} deg²")
+		#print(f"    - Fläche (UTM): {geom_utm.area:.2f} m²\n")
 	except Exception as e:
 		print(f"  ✗ Fehler beim Laden des GeoJSON: {e}\n")
 		raise
 
 	# Schritt 2: Abfrage der Benutzerinputs
-	print("[2/6] Abfrage der Benutzerinputs...")
+	#print("[2/6] Abfrage der Benutzerinputs...")
 	try:
 		if pv_ausrichtung is not None:
 			ausrichtung = str(pv_ausrichtung).strip().lower()
@@ -1005,7 +1005,7 @@ def main(
 				)
 		else:
 			ausrichtung = PVTypeSelector.select(interactive=interactive)
-		print(f"  ✓ PV-Ausrichtung: {ausrichtung}")
+		#print(f"  ✓ PV-Ausrichtung: {ausrichtung}")
 
 		if ausbau_status is not None:
 			try:
@@ -1016,7 +1016,7 @@ def main(
 				raise ValueError("Ungültiger Ausbau-Status: erwartet 0, 50 oder 100.")
 		else:
 			ausbau = AusbauStatusSelector.select(interactive=interactive)
-		print(f"  ✓ Ausbau-Status: {ausbau}%")
+		#print(f"  ✓ Ausbau-Status: {ausbau}%")
 
 		tractor = TractorParameters.from_input(
 			interactive=interactive,
@@ -1024,33 +1024,33 @@ def main(
 			length_m=tractor_length_m,
 			turn_radius_m=tractor_turn_radius_m,
 		)
-		print(f"  ✓ Traktorparameter:")
-		print(f"    - Breite: {tractor.width_m} m")
-		print(f"    - Länge: {tractor.length_m} m")
-		print(f"    - Wenderadius: {tractor.turn_radius_m} m\n")
+		#print(f"  ✓ Traktorparameter:")
+		#print(f"    - Breite: {tractor.width_m} m")
+		#print(f"    - Länge: {tractor.length_m} m")
+		#print(f"    - Wenderadius: {tractor.turn_radius_m} m\n")
 	except Exception as e:
 		print(f"  ✗ Fehler bei Eingabeverarbeitung: {e}\n")
 		raise
 
 	# Schritt 3: Berechnung von Rand- und Fahrspurbreiten
-	print("[3/6] Berechnung von Rand- und Fahrspurbreiten...")
+	#print("[3/6] Berechnung von Rand- und Fahrspurbreiten...")
 	try:
 		wendestreifen = tractor.compute_wendestreifen_width()
 		fahrspur = tractor.compute_fahrspur_width()
-		print(f"  ✓ Wendestreifen-Breite: {wendestreifen:.2f} m (Formel: 2*r + l + 1)")
-		print(f"  ✓ Fahrspur-Breite: {fahrspur:.2f} m (Formel: b + 2)\n")
+		#print(f"  ✓ Wendestreifen-Breite: {wendestreifen:.2f} m (Formel: 2*r + l + 1)")
+		#print(f"  ✓ Fahrspur-Breite: {fahrspur:.2f} m (Formel: b + 2)\n")
 	except Exception as e:
 		print(f"  ✗ Fehler bei Breitenberechnung: {e}\n")
 		raise
 
 	# Schritt 4: Berechnung der nutzbaren Restfläche
-	print("[4/6] Berechnung der nutzbaren Restfläche...")
+	#print("[4/6] Berechnung der nutzbaren Restfläche...")
 	try:
 		margin = max(wendestreifen, fahrspur)
 		rest_poly = compute_restflaeche(geom_utm, margin)
 		usable_area = rest_poly.area if not rest_poly.is_empty else 0.0
-		print(f"  ✓ Randstreifen-Marge: {margin:.2f} m")
-		print(f"  ✓ Nutzbare Fläche: {usable_area:.2f} m²")
+		#print(f"  ✓ Randstreifen-Marge: {margin:.2f} m")
+		#print(f"  ✓ Nutzbare Fläche: {usable_area:.2f} m²")
 		if rest_poly.is_empty:
 			print(f"  ⚠ Warnung: Nutzbare Fläche ist leer (Randstreifen zu groß)\n")
 			return {
@@ -1064,21 +1064,21 @@ def main(
 					"usable_area_m2": 0.0,
 				}
 			}
-		print()
+		#print()
 	except Exception as e:
 		print(f"  ✗ Fehler bei Flächenberechnung: {e}\n")
 		raise
 
 	# Schritt 5: Abfrage der Reihenparameter und Generierung der PV-Reihen
-	print("[5/6] Generierung der PV-Reihen (LineString-basiert)...")
+	#print("[5/6] Generierung der PV-Reihen (LineString-basiert)...")
 	try:
 		reihen_info = get_reihenparameter(ausrichtung, fahrspur_breite=fahrspur)
 		row_spacing = reihen_info.get("row_spacing_m")
 		orientation = reihen_info["orientation"]
 		
-		print(f"  ✓ Reihenparameter für '{ausrichtung}':")
-		print(f"    - Ausrichtung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})")
-		print(f"    - Reihenabstand (Zeile-zu-Zeile): {row_spacing:.2f} m")
+		#print(f"  ✓ Reihenparameter für '{ausrichtung}':")
+		#print(f"    - Ausrichtung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})")
+		#print(f"    - Reihenabstand (Zeile-zu-Zeile): {row_spacing:.2f} m")
 
 		# Generiere PV-Reihen (LineStrings statt Punkte)
 		geojson_points = generate_pv_reihen(rest_poly, ausrichtung, row_spacing, 
@@ -1090,16 +1090,16 @@ def main(
 		total_rows_length_m = sum(
 			f.get("properties", {}).get("length_m", 0.0) for f in features_list
 		)
-		print(f"  ✓ Generierte PV-Reihen: {n_points}")
-		print(f"  ✓ Berücksichtigter Ausbau-Status: {ausbau}%")
-		print(f"    - Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
-		print(f"    - Geometrie: LineString (durchgehende Reihen)\n")
+		#print(f"  ✓ Generierte PV-Reihen: {n_points}")
+		#print(f"  ✓ Berücksichtigter Ausbau-Status: {ausbau}%")
+		#print(f"    - Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
+		#print(f"    - Geometrie: LineString (durchgehende Reihen)\n")
 	except Exception as e:
 		print(f"  ✗ Fehler bei Reihengenerierung: {e}\n")
 		raise
 
 	# Schritt 6: Export der Reihen als GeoJSON
-	print("[6/6] Export der Reihen als GeoJSON...")
+	#print("[6/6] Export der Reihen als GeoJSON...")
 	try:
 		import os
 		if not os.path.exists(output_dir):
@@ -1122,7 +1122,7 @@ def main(
 		output_file = os.path.join(output_dir, output_filename)
 		
 		export_geojson(geojson_points, output_file)
-		print(f"  ✓ GeoJSON exportiert: {output_file}\n")
+		#print(f"  ✓ GeoJSON exportiert: {output_file}\n")
 
 		# Zusätzlicher Export: Mittelpunkt (Centroid) der ursprünglich eingelesenen Fläche
 		# Verwende explizit das Original-Polygon (geom_utm), nicht die Restfläche
@@ -1147,15 +1147,15 @@ def main(
 		centroid_filename = f"P_02_Agri_PV_Mittelpunkt.geojson"
 		centroid_file = os.path.join(output_dir, centroid_filename)
 		export_geojson(centroid_fc, centroid_file)
-		print(f"  ✓ Centroid-GeoJSON exportiert: {centroid_file}\n")
+		#print(f"  ✓ Centroid-GeoJSON exportiert: {centroid_file}\n")
 	except Exception as e:
 		print(f"  ✗ Fehler beim Export: {e}\n")
 		raise
 
 	# Zusammenfassung
-	print("="*70)
-	print("ZUSAMMENFASSUNG")
-	print("="*70)
+	#print("="*70)
+	#print("ZUSAMMENFASSUNG")
+	#print("="*70)
 	result = {
 		"success": True,
 		"ausrichtung": ausrichtung,
@@ -1181,17 +1181,17 @@ def main(
 		}
 	}
 
-	print(f"PV-Ausrichtung: {ausrichtung}")
-	print(f"Ausbau-Status: {ausbau}% (Erzeugung: {ausbau}%)")
-	print(f"Traktor - Breite: {tractor.width_m} m, Länge: {tractor.length_m} m, Radius: {tractor.turn_radius_m} m")
-	print(f"Wendestreifen: {wendestreifen:.2f} m | Fahrspur: {fahrspur:.2f} m")
-	print(f"Nutzbare Fläche: {usable_area:.2f} m²")
-	print(f"Reihenabstand (Zeile-zu-Zeile: Traktor Fahrspur plus Breite PV-Anlage (Horizontale Ausrichtung 8 Meter, Vertikale Ausrichtung 0.5 Meter)): {row_spacing:.2f} m")
-	print(f"Orientierung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})") 
-	print(f"Generierte PV-Reihen: {n_points}")
-	print(f"Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
-	print(f"Output: {output_file} & {centroid_file}")
-	print("="*70 + "\n")
+	#print(f"PV-Ausrichtung: {ausrichtung}")
+	#print(f"Ausbau-Status: {ausbau}% (Erzeugung: {ausbau}%)")
+	#print(f"Traktor - Breite: {tractor.width_m} m, Länge: {tractor.length_m} m, Radius: {tractor.turn_radius_m} m")
+	#print(f"Wendestreifen: {wendestreifen:.2f} m | Fahrspur: {fahrspur:.2f} m")
+	#print(f"Nutzbare Fläche: {usable_area:.2f} m²")
+	#print(f"Reihenabstand (Zeile-zu-Zeile: Traktor Fahrspur plus Breite PV-Anlage (Horizontale Ausrichtung 8 Meter, Vertikale Ausrichtung 0.5 Meter)): {row_spacing:.2f} m")
+	#print(f"Orientierung: {orientation} ({'Ost-West' if orientation == 'EW' else 'Nord-Süd'})")
+	#print(f"Generierte PV-Reihen: {n_points}")
+	#print(f"Gesamtlänge der Reihen: {total_rows_length_m:.2f} m")
+	#print(f"Output: {output_file} & {centroid_file}")
+	#print("="*70 + "\n")
 
 	return result
 
@@ -1200,7 +1200,7 @@ if __name__ == "__main__":
 	try:
 		result = main(interactive=True, output_dir="./outputs")
 		if result.get("success"):
-			print("✓ Verarbeitung erfolgreich abgeschlossen!")
+			print()#"✓ Verarbeitung erfolgreich abgeschlossen!")
 		else:
 			print(f"✗ Verarbeitung abgebrochen: {result.get('error')}")
 	except Exception as e:

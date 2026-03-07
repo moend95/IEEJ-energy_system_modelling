@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
         geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[5]],   # 0 = Windschutzwand
+        pvtypes=[PV_TYPEN[6]],   # 0 = Windschutzwand
         step_size=50,             # Punktabstand in m
         weather_df=weather_df,
         base_output_dir=output_dir,
@@ -73,12 +73,22 @@ if __name__ == "__main__":
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
         csv_path = os.path.join(output_dir, csv_name)
 
-        energy_kwh, total_ac = pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"  {pv_type.name}: {energy_kwh:.1f} kWh")
+        energy_kwh_pv_type, total_ac_w = pv_system.simulate_pv_type_energy(pv_type, csv_path)
+        print(f"  {pv_type.name}: {energy_kwh_pv_type:.1f} kWh")
+
+        # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
+        scaled_energy_kwh_pv_type = 0
+        if pv_system.step_size >= pv_type.row_width:
+            scaling_factor = pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
+            print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
+            scaled_energy_kwh_pv_type = energy_kwh_pv_type * scaling_factor
+            print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
+        else:
+            print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
         # Plot der AC-Leistung über das Jahr
         plt.figure(figsize=(15, 4))
-        plt.plot(total_ac.index, total_ac.values, linewidth=0.6)
+        plt.plot(total_ac_w.index, total_ac_w.values, linewidth=0.6)
         plt.title(f"Jahresverlauf AC-Leistung – {pv_type.name}")
         plt.xlabel("Datum")
         plt.ylabel("AC-Leistung [W]")
@@ -91,7 +101,7 @@ if __name__ == "__main__":
         # ------------------------------------------------------------
         summer_day_start = "2022-06-21"
         summer_day_end = "2022-06-24"
-        day_ac = total_ac.loc[summer_day_start:summer_day_end].copy()
+        day_ac = total_ac_w.loc[summer_day_start:summer_day_end].copy()
 
         # Aufräumen für Plot:
         day_ac = day_ac.dropna()
