@@ -112,3 +112,19 @@ class SimOutput:
         self.h_number_of_points = h_number_of_points
         self.el_pv_length = el_pv_length
 
+    def __repr__(self):
+        return (
+            f"SimOutput("
+            f"h_sum_energy_kwh={self.h_sum_energy_kwh}, "
+            f"el_sum_energy_kwh={self.el_sum_energy_kwh}, "
+            f"geh_sum_energy_kwh={self.geh_sum_energy_kwh}, "
+            f"i_sum_energy_kwh={self.i_sum_energy_kwh}, "
+            f"h_max_power_kw={self.h_max_power_kw}, "
+            f"el_max_power_kw={self.el_max_power_kw}, "
+            f"geh_max_power_kw={self.geh_max_power_kw}, "
+            f"i_max_power_kw={self.i_max_power_kw}, "
+            f"res_df_shape={None if self.res_df is None else self.res_df.shape}, "
+            f"h_number_of_points={self.h_number_of_points}, "
+            f"el_pv_length={self.el_pv_length}"
+            f")"
+        )
