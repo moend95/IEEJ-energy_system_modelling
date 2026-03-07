@@ -161,11 +161,11 @@ class DWDWeatherFetcher:
         # 3) auf ein sauberes 10-min Raster bringen
         df = df.resample("10T").interpolate("time")
 
-        # 4) Zeitzone
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC").tz_convert(self.cfg.tz)
-        else:
-            df.index = df.index.tz_convert(self.cfg.tz)
+        # 4) Zeitzone: lokale Europe/Berlin-Zeit annehmen und Info entfernen
+        if df.index.tz is not None:
+            df.index = df.index.tz_convert(None)
+
+        df = df.sort_index()
 
         # 5) Solarposition
         solpos = get_solarposition(df.index, latitude=self.cfg.coords[0], longitude=self.cfg.coords[1])
@@ -221,7 +221,16 @@ class DWDWeatherFetcher:
 
         df["dni"] = dni
 
+        # 11) Nach Zeitzonen-Konvertierung auf gewünschten lokalen Zeitraum begrenzen
+        start_local = pd.Timestamp(self.cfg.start)
+        end_local = pd.Timestamp(self.cfg.end)
+        df = df.loc[start_local:end_local]
+
         return df
+
+
+
+
 
     # --------- Save & Plot ----------
 
@@ -251,22 +260,9 @@ class DWDWeatherFetcher:
         plt.show()
 
     @staticmethod
-    def plot_range(df, start_plot: str, end_plot: str, tz: str = "Europe/Berlin"):
-        import pandas as pd
-
-        def _tz_localize_safe(ts, tz):
-            ts = pd.to_datetime(ts)
-            if getattr(ts, "tzinfo", None) is None:
-                # Neuer Versuch: neuere pandas (falls verfügbar)
-                try:
-                    return ts.tz_localize(tz, nonexistent="shift_forward", ambiguous="NaT")
-                except TypeError:
-                    # Rückfall: ältere pandas kennen die Argumente nicht
-                    return ts.tz_localize(tz)
-            return ts
-
-        start_ts = _tz_localize_safe(start_plot, tz)
-        end_ts = _tz_localize_safe(end_plot, tz)
+    def plot_range(df, start_plot: str, end_plot: str):
+        start_ts = pd.to_datetime(start_plot)
+        end_ts = pd.to_datetime(end_plot)
 
         df_range = df.loc[start_ts:end_ts]
 
@@ -293,60 +289,61 @@ def plot_single_series(df: pd.DataFrame, col: str, title: str = None):
     plt.show()
 
 
-#
-# # --------- Beispiel-Aufruf ----------
-#
-# if __name__ == "__main__":
-#     cfg = DWDWeatherConfig(
-#         start="2022-01-01",
-#         end="2022-12-31",
-#         auto_select=True,
-#         save_path="./Input/wetter_daten.csv",
-#         plot_date="2022-07-20",
-#         plot_range=("2022-01-01", "2022-12-31"),
-#         use_dirint= True,
-#     )
-#     df = DWDWeatherFetcher(cfg).run()
-#
-# # Aufrufbeispiele:
-# plot_single_series(df, "dni",  "Direktstrahlung (DNI)")
-# plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
-# plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")
-#
-#
-# # ------------------------test Monatssummen ---------------------------------
-#
-# import numpy as np
-# import matplotlib.pyplot as plt
-#
-# # ------------------------------
-# # Monats-Energie aus 10-min-Daten (W/m²) → kWh/m²
-# # ------------------------------
-#
-# df_rad = df[["ghi", "dhi", "dni"]].clip(lower=0)
-#
-# # 10 Minuten = 10/60 h; W → Wh → kWh ⇒ Faktor = 1/6000
-# factor = (10/60)/1000   # oder: 1/6000
-#
-#
-# # Monatssummen bilden
-# monthly = pd.DataFrame({
-#     "ghi": df_rad["ghi"].resample("M").sum() * factor,
-#     "dhi": df_rad["dhi"].resample("M").sum() * factor,
-#     "dni": df_rad["dni"].resample("M").sum() * factor,
-# })
-#
-# monthly.index = monthly.index.to_period("M")
-# print(monthly)
-#
-# # ------------------------------
-# # Plotten
-# # ------------------------------
-# monthly.plot(kind="bar", figsize=(12,5))
-# plt.ylabel("Monatssumme [kWh/m²]")
-# plt.title("Monatssummen der Strahlung (kWh/m²)")
-# plt.grid(axis="y", linestyle="--", alpha=0.5)
-# plt.tight_layout()
-# plt.show()
-#
+
+# --------- Beispiel-Aufruf ----------
+
+
+if __name__ == "__main__":
+    cfg = DWDWeatherConfig(
+        start="2018-01-01 00:00",
+        end="2018-12-31 23:50",
+        auto_select=True,
+        save_path="inputs/Wetterdaten_10min_DWD/wetter_daten_2018_10min.csv",
+        plot_date="2018-07-20",
+        plot_range=("2018-01-01", "2018-12-31"),
+        use_dirint= True,
+    )
+    df = DWDWeatherFetcher(cfg).run()
+
+# Aufrufbeispiele:
+plot_single_series(df, "dni",  "Direktstrahlung (DNI)")
+plot_single_series(df, "ghi",  "Globalstrahlung (GHI)")
+plot_single_series(df, "dhi",  "Diffusstrahlung (DHI)")
+
+
+# ------------------------test Monatssummen ---------------------------------
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ------------------------------
+# Monats-Energie aus 10-min-Daten (W/m²) → kWh/m²
+# ------------------------------
+
+df_rad = df[["ghi", "dhi", "dni"]].clip(lower=0)
+
+# 10 Minuten = 10/60 h; W → Wh → kWh ⇒ Faktor = 1/6000
+factor = (10/60)/1000   # oder: 1/6000
+
+
+# Monatssummen bilden
+monthly = pd.DataFrame({
+    "ghi": df_rad["ghi"].resample("M").sum() * factor,
+    "dhi": df_rad["dhi"].resample("M").sum() * factor,
+    "dni": df_rad["dni"].resample("M").sum() * factor,
+})
+
+monthly.index = monthly.index.to_period("M")
+print(monthly)
+
+# ------------------------------
+# Plotten
+# ------------------------------
+monthly.plot(kind="bar", figsize=(12,5))
+plt.ylabel("Monatssumme [kWh/m²]")
+plt.title("Monatssummen der Strahlung (kWh/m²)")
+plt.grid(axis="y", linestyle="--", alpha=0.5)
+plt.tight_layout()
+plt.show()
+
 
