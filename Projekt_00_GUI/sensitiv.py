@@ -20,7 +20,7 @@ H_CONFIGS = {
     0: {},
     1: {
         "highways": ["A46"],
-        "h_pv_types": [0]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
+        "h_pv_types": [0,2]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
     },
 
     2: {
@@ -37,13 +37,14 @@ H_CONFIGS = {
 EL_CONFIGS = {
     0: {},
     1: {
-        "el_build_state": 100,
+        "el_build_state": 50,
         "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal (MIT ODER OHNE TRACKING???)
         "tractor_width": 24.0,
         "tractor_length": 15.0,
         "tractor_turn_radius": 9.0
     },
     2: {
+        "el_build_state": 50,
         "tractor_width": 12.0,
         "el_pv_type": 6
     },
@@ -153,7 +154,7 @@ def main():
     for h_case in [1]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
-        for el_case in [2]:
+        for el_case in [1]:
             for i_case in [1]:
                 for geh_case in [1]:
                     for b_case in [1]:

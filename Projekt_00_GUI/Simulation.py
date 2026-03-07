@@ -105,7 +105,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
 
     # agri PV code für geojson und agri pv länge
-    if inp.el_pv_type:
+    if inp.el_pv_type is not None:
         agri_result = main(
             interactive=False,
             output_dir="./outputs",
@@ -126,7 +126,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         el_pv_system = PV_System(
             geojson_path=geojson_path_2,
-            pvtypes=el_selected_pv_type,  # [PV_TYPEN[0],PV_TYPEN[3]],
+            pvtypes=[el_selected_pv_type],  # [PV_TYPEN[0],PV_TYPEN[3]],
             step_size=step_size_default,  # Punktabstand in m
             weather_df=weather_df,
             base_output_dir=output_dir,
@@ -147,7 +147,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.el_max_power_kw = el_total_sys_ac_kw.max()
         el_total_sys_ac_kw.index_no_year = el_total_sys_ac_kw.index.strftime("%m-%d %H:%M")
         out.res_df["Erzeugung_Energielandschaft [kW]"] = el_total_sys_ac_kw.clip(lower=0).values
-        out.res_df["Erzeugung_Energielandschaft [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
+        out.res_df["Erzeugung_Energielandschaft [kW]"] = out.res_df["Erzeugung_Energielandschaft [kW]"].fillna(0)
         out.el_sum_energy_kwh = el_energy_sys_kWh
 
 
