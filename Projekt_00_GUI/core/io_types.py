@@ -84,6 +84,7 @@ class SimOutput:
                  geh_max_power_kw:float | None = None,
                  i_max_power_kw:float | None = None,
                  res_df:pd.DataFrame | None = None,
+                 bat_df: pd.DataFrame | None = None,
                  h_error_text:str | None = None,
                  el_error_text:str | None = None,
                  geh_error_text:str | None = None,
@@ -101,8 +102,9 @@ class SimOutput:
         self.el_max_power_kw = el_max_power_kw
         self.geh_max_power_kw = geh_max_power_kw
         self.i_max_power_kw = i_max_power_kw
-        # Result Data Frame mit Lastgängen
+        # Result Data Frame mit Lastgängen (und batterie DF)
         self.res_df = res_df if res_df is not None else pd.DataFrame()
+        self.bat_df = res_df if bat_df is not None else pd.DataFrame()
         # Error Texte für die einzelnen Module
         self.h_error_text = h_error_text
         self.el_error_text = el_error_text

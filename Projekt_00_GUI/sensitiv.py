@@ -1,6 +1,9 @@
 from core.io_types import GuiInput
 from Simulation import run_simulation
-
+import pandas as pd
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
 
 # ---------------------------------------------------
 # DEFAULT CONFIG
@@ -35,15 +38,18 @@ EL_CONFIGS = {
     0: {},
     1: {
         "el_build_state": 100,
-        "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal
+        "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal (MIT ODER OHNE TRACKING???)
         "tractor_width": 24.0,
         "tractor_length": 15.0,
         "tractor_turn_radius": 9.0
     },
-
     2: {
         "tractor_width": 12.0,
         "el_pv_type": 6
+    },
+    3: {
+        "tractor_width": 12.0,
+        "el_pv_type": 4
     }
 }
 
@@ -144,10 +150,10 @@ def main():
 
 
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [1,2,3]:
+    for h_case in [1]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
-        for el_case in [1]:
+        for el_case in [2]:
             for i_case in [1]:
                 for geh_case in [1]:
                     for b_case in [1]:
@@ -179,8 +185,12 @@ def main():
                             )
                             print('-'*50,'\nResults Data Frame:')
                             print("CSV saved:", filename)
-                            print(out.res_df.head())
-                            print(out.res_df.describe())
+                            print('\n',out.res_df.head())
+                            print('\n',out.res_df.describe())
+
+                            print('-'*50,'\nBatterie Data Frame:')
+                            print('\n',out.bat_df.head())
+                            print('\n',out.bat_df.describe())
 
                         else:
                             print("res_df empty")

@@ -206,7 +206,7 @@ PV_TYPEN = [
 
     PVType(
         7,
-        "Tilt_ohne_tracking",
+        "Haus_Dach",
         bifazial=0.0,
         azimut=180,  # Süddach
         tilt=30,

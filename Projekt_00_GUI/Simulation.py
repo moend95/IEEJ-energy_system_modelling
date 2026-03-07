@@ -7,12 +7,13 @@ from core.io_types import GuiInput, SimOutput
 from functions.Industriegebiet import IndustryLoadAggregator
 from functions.pv_baukasten import PV_System, PV_TYPEN
 from functions.Energielandschaft import main
+from functions.battery_storage_eff import BatteryStorageEff
 
 
 #TYPE MAPPING
 highway_geojson_mapping= {"A44": "a44_beide.geojson", "A46": "a46_beide.geojson"}
 industrie_heating_choice_mapping = {True: "2", False: "1"}
-el_pv_type_number_text_mapping = {4:"horizontal", 5:"vertical", 6:"horizontal_tracking"}
+el_pv_type_number_text_mapping = {4:"horizontal_tracking", 5:"vertical", 6:"horizontal"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
 weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2022_15min.csv")
@@ -205,9 +206,9 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     #out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
 
     #Sammeloutpus
-    out.res_df["Last Green Energy Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values + df_el_load["power_kW"].clip(lower=0).values
-    out.geh_max_power_kw = out.res_df["Last Green Energy Hub [kW]"].max()
-    df_geh_energy_kwh_profile = out.res_df["Last Green Energy Hub [kW]"] * 0.25
+    out.res_df["Last_Green_Energy_Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values + df_el_load["power_kW"].clip(lower=0).values
+    out.geh_max_power_kw = out.res_df["Last_Green_Energy_Hub [kW]"].max()
+    df_geh_energy_kwh_profile = out.res_df["Last_Green_Energy_Hub [kW]"] * 0.25
     out.geh_sum_energy_kwh = df_geh_energy_kwh_profile.sum()
 
 
@@ -225,6 +226,21 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # 6) Bilanz
     # ------------------------------------------------------------
 
+    sign_map = {
+        "Erzeugung_Solarautobahn [kW]": 1,
+        "Erzeugung_Energielandschaft [kW]": 1,
+        "Last_Industrie [kW]": -1,
+        "Last_Green_Energy_Hub [kW]": -1,
+    }
+
+    balance = 0
+
+    for col, sign in sign_map.items():
+        if col in out.res_df.columns:
+            balance = balance + out.res_df[col] * sign
+
+    out.res_df["Bilanz [kW]"] = balance
+
 
     print('Bilanzierung \t\t- abgeschlossen')
 
@@ -233,6 +249,18 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
     # 7) Battery
     # ------------------------------------------------------------
+
+    # Mit Effizienz von 95% beim Laden und Entladen
+    storage = BatteryStorageEff(
+        max_capacity_kwh=235000,
+        initial_charge_kwh=0,
+        charge_efficiency=1,
+        discharge_efficiency=1
+    )
+
+    out.bat_df = storage.process_balance(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
+
+
 
 
     print('Batterie \t\t\t- abgeschlossen')
