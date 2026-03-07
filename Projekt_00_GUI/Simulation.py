@@ -90,9 +90,10 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             total_sys_ac_kw = ac_kw
         else:
             total_sys_ac_kw = total_sys_ac_kw.add(ac_kw, fill_value=0)
-        total_sys_ac_kw.index_no_year = total_sys_ac_kw.index.strftime("%m-%d %H:%M")
-        out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
-        out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
+    out.h_max_power_kw = total_sys_ac_kw.max()
+    total_sys_ac_kw.index_no_year = total_sys_ac_kw.index.strftime("%m-%d %H:%M")
+    out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
+    out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
 
     print('Solarautobahn \t\t- abgeschlossen')
 
@@ -158,7 +159,12 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         if df_industrie is None or df_industrie.empty:
             out.res_df['Last_Industrie [kW]'] = 0
         else:
-            out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
+            out.res_df['Last_Industrie [kW]'] = df_industrie['Gesamtlast [kW]'] #Alle Lastgänge positiv
+
+        out.i_max_power_kw = out.res_df['Last_Industrie [kW]'].max()
+        df_i_energy_kwh_profile = out.res_df['Last_Industrie [kW]'] * 0.25
+        out.i_sum_energy_kwh = df_i_energy_kwh_profile.sum()
+
 
     print('Industriegebiet \t- abgeschlossen')
 
