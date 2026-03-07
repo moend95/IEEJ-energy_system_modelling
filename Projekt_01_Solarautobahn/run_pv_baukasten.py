@@ -103,7 +103,7 @@ if __name__ == "__main__":
         energy_kwh_pv_type, total_ac_pv_type = pv_system.simulate_pv_type_energy(pv_type, csv_path)
         print(f"Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh" , " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
-        # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
+        #Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
         scaled_energy_kwh_pv_type = 0
         if pv_system.step_size >= pv_type.row_width:
             scaling_factor = pv_system.step_size // pv_type.row_width # Ganzzahldivision -> keine halben Elemente
