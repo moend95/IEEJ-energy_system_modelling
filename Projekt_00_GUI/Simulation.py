@@ -241,7 +241,6 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     out.res_df["Bilanz [kW]"] = balance
 
-
     print('Bilanzierung \t\t- abgeschlossen')
 
 

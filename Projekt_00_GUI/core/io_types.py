@@ -126,6 +126,7 @@ class SimOutput:
             f"geh_max_power_kw={self.geh_max_power_kw}, "
             f"i_max_power_kw={self.i_max_power_kw}, "
             f"res_df_shape={None if self.res_df is None else self.res_df.shape}, "
+            f"bat_df_shape={None if self.bat_df is None else self.bat_df.shape}, "
             f"h_number_of_points={self.h_number_of_points}, "
             f"el_pv_length={self.el_pv_length}"
             f")"
