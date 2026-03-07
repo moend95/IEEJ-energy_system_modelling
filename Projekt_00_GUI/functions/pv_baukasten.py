@@ -174,8 +174,8 @@ PV_TYPEN = [
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=10,
-        strings_per_inverter=5,
+        modules_per_string=2,
+        strings_per_inverter=1,
         # NEU:
         is_bifacial_detailed=False,
         bifaciality=0.75,
@@ -199,8 +199,8 @@ PV_TYPEN = [
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=10,
-        strings_per_inverter=5,
+        modules_per_string=1,
+        strings_per_inverter=1,
     ),
 
     PVType(
@@ -212,8 +212,8 @@ PV_TYPEN = [
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
-        modules_per_string=10,
-        strings_per_inverter=5,
+        modules_per_string=2,
+        strings_per_inverter=1,
     ),
 
 # Test
@@ -551,8 +551,6 @@ class PV_System:
                 total_type_ac_w = ac
             else:
                 total_type_ac_w = total_type_ac_w + ac
-        print("This is the System Lastgang")
-        print(total_type_ac_w.to_string())
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
         energy_type_Wh = (total_type_ac_w * dt_hours).sum()
 

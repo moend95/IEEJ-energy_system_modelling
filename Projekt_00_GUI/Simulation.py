@@ -55,6 +55,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         )
         results = h_pv_system.generate_pv_points()
         out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
+        print(f'Anzahl Punkte {highway}:',out.h_number_of_points)
 
     #Berechnung
     out.h_sum_energy_kwh = 0
@@ -73,16 +74,18 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
         scaled_energy_kwh_pv_type = 0
+        scaled_total_type_ac_w = 0
         if h_pv_system.step_size >= pv_type.row_width:
             scaling_factor = h_pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
             print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
             scaled_energy_kwh_pv_type = energy_type_kWh * scaling_factor
+            scaled_total_type_ac_w = total_type_ac_w * scaling_factor
             print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
         else:
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
         out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
-        ac_kw = total_type_ac_w / 1000
+        ac_kw = scaled_total_type_ac_w / 1000
 
         if total_sys_ac_kw is None:
             total_sys_ac_kw = ac_kw
@@ -91,6 +94,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         total_sys_ac_kw.index_no_year = total_sys_ac_kw.index.strftime("%m-%d %H:%M")
         out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
         out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
+
+    print('Solarautobahn \t\t- abgeschlossen')
 
 
     # ------------------------------------------------------------
@@ -124,11 +129,15 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             weather_df=weather_df,
             base_output_dir=output_dir,
         )
+
+
+
+
+
     else:
         out.el_pv_length = 0
 
-
-
+    print('Energielandschaft \t- abgeschlossen')
 
 
     # ------------------------------------------------------------
@@ -152,26 +161,23 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         else:
             out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
 
+    print('Industriegebiet \t- abgeschlossen')
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------
 
-
-
-
+    print('Green Energy Hub \t- abgeschlossen')
     # ------------------------------------------------------------
     # 5) Bilanz
     # ------------------------------------------------------------
 
-
-
-
+    print('Bilanzierung \t\t- abgeschlossen')
     # ------------------------------------------------------------
     # 6) Battery
     # ------------------------------------------------------------
 
+    print('Batterie \t\t\t- abgeschlossen')
 
-
-    print(inp)
+    print('\nInput Daten:\n',inp)
     #print(out.res_df)
     return out

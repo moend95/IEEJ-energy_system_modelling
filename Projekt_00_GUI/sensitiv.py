@@ -21,7 +21,7 @@ H_CONFIGS = {
     },
 
     2: {
-        "highways": ["A44", "A46"],
+        "highways": [ "A44"],
         "h_pv_types": [1,2,3]
     }
 }
@@ -140,7 +140,7 @@ def main():
 
 
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [1]:
+    for h_case in [2]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
         for el_case in [1]:
@@ -173,7 +173,8 @@ def main():
                                 sep=",",
                                 decimal="."
                             )
-                            print("Saved:", filename)
+                            print('-'*50,'\nResults Data Frame:')
+                            print("CSV saved:", filename)
                             print(out.res_df.head())
                             print(out.res_df.describe())
 
