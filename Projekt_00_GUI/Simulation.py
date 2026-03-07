@@ -68,8 +68,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         df_one.to_csv(test_csv, index=False)
 
         energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"Energie {pv_type.name}: {energy_type_kWh:.1f} kWh",
-              " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
+        print(f"Energie {pv_type.name}: {energy_type_kWh:.1f} kWh"," (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
         scaled_energy_kwh_pv_type = 0
@@ -149,8 +148,19 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------
+    hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
 
+    h2_load_path = os.path.join(hub_dir, inp.h2_load_scenario, "BEV_load_el_15min.csv")
+    el_load_path = os.path.join(hub_dir, inp.e_load_scenario, "Electrolyzer_output.csv")
 
+    df_h2_load = pd.read_csv(h2_load_path, parse_dates=["timestamp"])
+    df_el_load = pd.read_csv(el_load_path, parse_dates=["timestamp"])
+
+    df_h2_load.set_index("timestamp", inplace=True)
+    df_el_load.set_index("timestamp", inplace=True)
+
+    #out.res_df["Last Elektrolyeur Green Energy Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values
+    #out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
 
 
     # ------------------------------------------------------------
