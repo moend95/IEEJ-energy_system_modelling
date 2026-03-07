@@ -14,7 +14,7 @@ industrie_heating_choice_mapping = {True: "2", False: "1"}
 el_pv_type_number_text_mapping = {4:"horizontal", 5:"vertical", 6:"horizontal_tracking"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
-weather_csv = os.path.join(script_dir,"data","test_solarautobahn.csv")
+weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2022_15min.csv")
 base_input = "./functions/inputs"
 output_dir = os.path.join(base_input, "punkte")
 os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
@@ -159,14 +159,17 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     h2_load_path = os.path.join(hub_dir, inp.h2_load_scenario, "BEV_load_el_15min.csv")
     el_load_path = os.path.join(hub_dir, inp.e_load_scenario, "Electrolyzer_output.csv")
 
-    df_h2_load = pd.read_csv(h2_load_path, parse_dates=["timestamp"])
-    df_el_load = pd.read_csv(el_load_path, parse_dates=["timestamp"])
+    df_h2_load = pd.read_csv(h2_load_path)
+    df_el_load = pd.read_csv(el_load_path)
+
+    df_h2_load["timestamp"] = pd.to_datetime(df_h2_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
+    df_el_load["timestamp"] = pd.to_datetime(df_el_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
 
     df_h2_load.set_index("timestamp", inplace=True)
     df_el_load.set_index("timestamp", inplace=True)
 
-    #out.res_df["Last Elektrolyeur Green Energy Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values
-    #out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
+    out.res_df["Last Elektrolyeur Green Energy Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values
+    out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
 
 
     # ------------------------------------------------------------
