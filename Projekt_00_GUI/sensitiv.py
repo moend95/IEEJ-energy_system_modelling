@@ -140,15 +140,15 @@ def main():
 
 
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [0]:
+    for h_case in [1]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
-        for el_case in [0]:
-            for i_case in [0]:
-                for geh_case in [0]:
+        for el_case in [1]:
+            for i_case in [1]:
+                for geh_case in [1]:
                     for b_case in [1]:
 
-                        print(f"\nRunning case: \nh: {h_case} \nel: {el_case} \ni: {i_case} \ngeh: {geh_case} \nb: {b_case}")
+                        print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case} \nb \t\t-  {b_case}")
 
                         inp = build_test_input(
                             h_case=h_case,
@@ -160,7 +160,7 @@ def main():
 
 
                         out = run_simulation(inp)
-                        print('PV Reihen Länge: ', round(out.el_pv_length,2))
+                        #print('PV Reihen Länge: ', round(out.el_pv_length,2))
 
                         #test_result = x * sum(y)
                         #test_matrix_row.append(test_result)

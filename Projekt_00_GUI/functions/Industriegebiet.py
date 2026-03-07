@@ -115,11 +115,11 @@ class IndustryLoadAggregator:
         if choice == "2":
             self.active_path = self.path_waerme_kaelte
             self.mode_name = "Mit_Waerme_Kaelte"
-            print("Modus: Mit Wärme/Kälte ausgewählt.\n")
+            #print("Modus: Mit Wärme/Kälte ausgewählt.\n")
         else:
             self.active_path = self.path_standard
             self.mode_name = "Ohne_Waerme_Kaelte"
-            print("Modus: Ohne Wärme/Kälte ausgewählt.\n")
+            #print("Modus: Ohne Wärme/Kälte ausgewählt.\n")
 
     def load_data(self) -> None:
         """Lädt die CSV-Daten für 2017 aus dem aktiven Pfad."""
@@ -184,8 +184,8 @@ class IndustryLoadAggregator:
 
         # Summe der Lastgänge berechnen
         combined_df["Gesamtlast [kW]"] = combined_df.drop("Time stamp", axis=1).sum(axis=1)
-        print("\nSumme der Lastgänge (kW je 15 Minuten):")
-        print(combined_df[["Time stamp", "Gesamtlast [kW]"]].head(96))
+        #print("\nSumme der Lastgänge (kW je 15 Minuten):")
+        #print(combined_df[["Time stamp", "Gesamtlast [kW]"]].head(96))
 
         # Zeitstempel konvertieren für Plot
         combined_df["Time stamp"] = pd.to_datetime(combined_df["Time stamp"], errors="coerce")
