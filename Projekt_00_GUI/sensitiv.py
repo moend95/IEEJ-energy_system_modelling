@@ -143,12 +143,12 @@ def main():
     for h_case in [0]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
-        for el_case in [0]:
-            for i_case in [0]:
+        for el_case in [1]:
+            for i_case in [1]:
                 for geh_case in [0]:
                     for b_case in [1]:
 
-                        print(f"\nRunning case: \nh: {h_case} \nel: {el_case} \ni: {i_case} \ngeh: {geh_case} \nb: {b_case}")
+                        print(f"\nRunning case: \nh:\t{h_case} \nel: \t{el_case} \ni: \t{i_case} \ngeh: \t{geh_case} \nb: \t{b_case}")
 
                         inp = build_test_input(
                             h_case=h_case,

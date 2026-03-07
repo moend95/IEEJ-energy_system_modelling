@@ -36,10 +36,10 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
     # 1) Solarautobahn
     # ------------------------------------------------------------
-    #if not inp.highways:
-    #    out.h_error_text = "Keine Autobahnen ausgewählt!"
-    #elif not inp.h_pv_types:
-    #    out.h_error_text= "Keine PV Typen ausgewählt!"
+    if not inp.highways:
+        out.h_error_text = "SOLARAUTOBAHN --- Keine Autobahnen/PV ausgewählt."
+    elif not inp.h_pv_types:
+        out.h_error_text= "SOLARAUTOBAHN --- Keine Autobahn/PV ausgewählt."
     #else:   #Fall Autobahn und PV Typ ausgewählt
 
     for highway in inp.highways if inp.h_pv_types and inp.highways else []:
@@ -86,29 +86,9 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.res_df["Erzeugung_Solarautobahn [kW]"] = out.total_ac_kw.clip(lower=0).values
         out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
 
-    # ------------------------------------------------------------
-    # 2) Industriegebiet
-    # ------------------------------------------------------------
-    df_industrie = pd.DataFrame()
-    industry_aggregator = IndustryLoadAggregator()
-
-    if inp.companies is None:
-        out.i_error_text = "Ungültige Auswahl für Industriegebiet. Skript wird beendet."
-    elif inp.companies:
-        out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
-
-        df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
-            mode_choice=industrie_heating_choice_mapping[inp.is_heat_cooling_electric],
-            selection_indices=inp.companies,
-
-        )
-        if df_industrie is None or df_industrie.empty:
-            out.res_df['Last_Industrie [kW]'] = 0
-        else:
-            out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
 
     # ------------------------------------------------------------
-    # 3) Energielandschaft
+    # 2) Energielandschaft
     # ------------------------------------------------------------
 
     # agri PV code für geojson und agri pv länge
@@ -140,6 +120,32 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         )
     else:
         out.el_pv_length = 0
+
+
+
+
+
+    # ------------------------------------------------------------
+    # 3) Industriegebiet
+    # ------------------------------------------------------------
+    #df_industrie = pd.DataFrame()
+    industry_aggregator = IndustryLoadAggregator()
+
+    if inp.companies is []:
+        out.i_error_text = "INDUSTRIEGEBIET --- Kein Unternehmen ausgewählt."
+    elif inp.companies:
+        out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
+
+        df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
+            mode_choice=industrie_heating_choice_mapping[inp.is_heat_cooling_electric],
+            selection_indices=inp.companies,
+
+        )
+        if df_industrie is None or df_industrie.empty:
+            out.res_df['Last_Industrie [kW]'] = 0
+        else:
+            out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
+
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------
