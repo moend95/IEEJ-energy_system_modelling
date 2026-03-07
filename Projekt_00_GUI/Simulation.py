@@ -58,7 +58,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     #Berechnung
     out.h_sum_energy_kwh = 0
-    out.total_ac_kw = None
+    total_sys_ac_kw = None
     for pv_type in h_pv_system.pvtypes if inp.h_pv_types and inp.highways else []:
         # CSV-Name so, wie ihn generate_pv_points gespeichert hat
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
@@ -67,8 +67,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         test_csv = os.path.join(output_dir, "test_single_point.csv")
         df_one.to_csv(test_csv, index=False)
 
-        energy_kwh_pv_type, total_ac_pv_type = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"Energie {pv_type.name}: {energy_kwh_pv_type:.1f} kWh",
+        energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
+        print(f"Energie {pv_type.name}: {energy_type_kWh:.1f} kWh",
               " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
@@ -76,14 +76,20 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         if h_pv_system.step_size >= pv_type.row_width:
             scaling_factor = h_pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
             print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
-            scaled_energy_kwh_pv_type = energy_kwh_pv_type * scaling_factor
+            scaled_energy_kwh_pv_type = energy_type_kWh * scaling_factor
             print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
         else:
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
         out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
-        out.total_ac_kw = total_ac_pv_type / 1000 if out.total_ac_kw is None else out.total_ac_kw + (total_ac_pv_type / 1000)
-        out.res_df["Erzeugung_Solarautobahn [kW]"] = out.total_ac_kw.clip(lower=0).values
+        ac_kw = total_type_ac_w / 1000
+
+        if total_sys_ac_kw is None:
+            total_sys_ac_kw = ac_kw
+        else:
+            total_sys_ac_kw = total_sys_ac_kw.add(ac_kw, fill_value=0)
+        total_sys_ac_kw.index_no_year = total_sys_ac_kw.index.strftime("%m-%d %H:%M")
+        out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
         out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
 
 

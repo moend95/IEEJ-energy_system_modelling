@@ -116,7 +116,14 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
+        # Bifazial berechnung True setzen:
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
+        gcr=0.35,
+        row_height=3.0,
         row_width=4.0,
+        albedo=0.2,
+
     ),
     PVType(
         3,
@@ -128,8 +135,15 @@ PV_TYPEN = [
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
-        strings_per_inverter=2,
+        strings_per_inverter=1,
+        # Bifazial berechnung True setzen:
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
+        gcr=0.35,
+        row_height=3.0,
         row_width=4.0,
+        albedo=0.2,
+
     ),
     PVType(
         4,
@@ -140,9 +154,16 @@ PV_TYPEN = [
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="close_mount_glass_glass",
-        modules_per_string=5,
-        strings_per_inverter=3,
+        modules_per_string=4,
+        strings_per_inverter=1,
+        # Bifazial berechnung True setzen :
+        is_bifacial_detailed=False,
+        bifaciality=0.80,
+        gcr=0.35,
+        row_height=3.0,
         row_width=4.0,
+        albedo=0.2,
+
     ),
     PVType(
         5,
@@ -184,7 +205,7 @@ PV_TYPEN = [
 
     PVType(
         7,
-        "Haus_Dach",
+        "Tilt_ohne_tracking",
         bifazial=0.0,
         azimut=180,  # Süddach
         tilt=30,
@@ -518,28 +539,29 @@ class PV_System:
         """
         df_points = pd.read_csv(points_csv_path)
 
-        total_ac = None
+        total_type_ac_w = None
 
         for _, row in df_points.iterrows():
             if getattr(pv_type, "is_bifacial_detailed", False):
-                ac = self._simulate_bifacial_point(pv_type, row)
+                ac = self._simulate_bifacial_point(pv_type,row) * pv_type.modules_per_string * pv_type.strings_per_inverter
             else:
-                ac = self._simulate_monofacial_point(pv_type, row)
+                ac = self._simulate_monofacial_point(pv_type,row) * pv_type.modules_per_string * pv_type.strings_per_inverter
 
-            if total_ac is None:
-                total_ac = ac
+            if total_type_ac_w is None:
+                total_type_ac_w = ac
             else:
-                total_ac = total_ac + ac
-
+                total_type_ac_w = total_type_ac_w + ac
+        print("This is the System Lastgang")
+        print(total_type_ac_w.to_string())
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
-        energy_Wh = (total_ac * dt_hours).sum()
+        energy_type_Wh = (total_type_ac_w * dt_hours).sum()
 
         # einfacher Mehrertragsfaktor nur für "nicht-detaillierte" Bifazialität
         if (not getattr(pv_type, "is_bifacial_detailed", False)) and getattr(pv_type, "bifazial", 0) > 0:
-            energy_Wh *= (1 + pv_type.bifazial)
+            energy_type_Wh *= (1 + pv_type.bifazial)
 
-        energy_kWh = energy_Wh / 1000.0
+        energy_type_kWh = energy_type_Wh / 1000.0
 
-        return energy_kWh, total_ac
+        return energy_type_kWh, total_type_ac_w
 
 
