@@ -173,5 +173,5 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     print(inp)
-    print(out.res_df)
+    #print(out.res_df)
     return out
