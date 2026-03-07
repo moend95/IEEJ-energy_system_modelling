@@ -55,6 +55,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         )
         results = h_pv_system.generate_pv_points()
         out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
+        print(f'Anzahl Punkte ({highway}): ',out.h_number_of_points )
 
     #Berechnung
     out.h_sum_energy_kwh = 0
@@ -160,6 +161,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             out.res_df['Last_Industrie [kW]'] = 0 - df_industrie['Gesamtlast [kW]']
 
     print('Industriegebiet \t- abgeschlossen')
+
+
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------
@@ -187,8 +190,6 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     print('Green Energy Hub \t- abgeschlossen')
-
-
 
 
     # ------------------------------------------------------------
