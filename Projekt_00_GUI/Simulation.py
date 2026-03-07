@@ -94,7 +94,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     if inp.companies is None:
         out.i_error_text = "Ungültige Auswahl für Industriegebiet. Skript wird beendet."
-    else:
+    elif inp.companies:
         out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
 
         df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
@@ -112,32 +112,34 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
 
     # agri PV code für geojson und agri pv länge
-    agri_result = main(
-        interactive=False,
-        output_dir="./outputs",
-        pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
-        tractor_width_m=inp.tractor_width,
-        tractor_length_m=inp.tractor_length,
-        tractor_turn_radius_m=inp.tractor_turn_radius,
-    )
-    out.el_pv_length = agri_result.get("metadata").get('total_rows_length_m')
+    if inp.el_pv_type:
+        agri_result = main(
+            interactive=False,
+            output_dir="./outputs",
+            pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
+            tractor_width_m=inp.tractor_width,
+            tractor_length_m=inp.tractor_length,
+            tractor_turn_radius_m=inp.tractor_turn_radius,
+        )
+        out.el_pv_length = agri_result.get("metadata").get('total_rows_length_m')
 
 
-    el_selected_pv_type = [PV_TYPEN[inp.el_pv_type]]
+        el_selected_pv_type = [PV_TYPEN[inp.el_pv_type]]
 
-    # INPUT für PV Baukasten - ENERGIELANDSCHAFT
-    geojson_file_2 = "Agri_PV_Centroid.geojson"
-    geojson_path_2 = os.path.join(base_input, "geometrien", geojson_file_2)
-    step_size_default = 1000
+        # INPUT für PV Baukasten - ENERGIELANDSCHAFT
+        geojson_file_2 = "Agri_PV_Centroid.geojson"
+        geojson_path_2 = os.path.join(base_input, "geometrien", geojson_file_2)
+        step_size_default = 1000
 
-    el_pv_system = PV_System(
-        geojson_path=geojson_path_2,
-        pvtypes=el_selected_pv_type,  # [PV_TYPEN[0],PV_TYPEN[3]],
-        step_size=step_size_default,  # Punktabstand in m
-        weather_df=weather_df,
-        base_output_dir=output_dir,
-    )
-
+        el_pv_system = PV_System(
+            geojson_path=geojson_path_2,
+            pvtypes=el_selected_pv_type,  # [PV_TYPEN[0],PV_TYPEN[3]],
+            step_size=step_size_default,  # Punktabstand in m
+            weather_df=weather_df,
+            base_output_dir=output_dir,
+        )
+    else:
+        out.el_pv_length = 0
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------

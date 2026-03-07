@@ -6,77 +6,84 @@ from Simulation import run_simulation
 # DEFAULT CONFIG
 # ---------------------------------------------------
 
-DEFAULT_CONFIG = {
-
-    # Solarautobahn
-    "highways": ["A46"],
-    "h_pv_types": [0],   #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung
-
-    # Energielandschaft
-    "el_build_state": 100,
-    "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal
-    "tractor_width": 24.0,
-    "tractor_length": 15.0,
-    "tractor_turn_radius": 9.0,
-
-    # Industrie
-    "is_heat_cooling_electric": False,
-    "companies": [1, 2, 4],
-
-    # Green Energy Hub
-    "h2_load_scenario": "2022",
-    "e_load_scenario": "2022",
-
-    # Battery
-    "bs_efficiency": 0.95,
-    "bs_energy_kwh": 1000.0,
-    "bs_power_kw": 500.0,
-}
-
+DEFAULT_CONFIG = {}
 
 # ---------------------------------------------------
-# CASE DEFINITIONS
+# CASE DEFINITIONS      1: Small, 2: Medium, 3: Large
 # ---------------------------------------------------
 
 # Solarautobahn
 H_CONFIGS = {
+    0: {},
     1: {
-    "highways": ["A46"],            "h_pv_types": [0]}, #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
+        "highways": ["A46"],
+        "h_pv_types": [0]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
+    },
+
     2: {
-    "highways": ["A44", "A46"],     "h_pv_types": [1,2,3]}
+        "highways": ["A44", "A46"],
+        "h_pv_types": [1,2,3]
+    }
 }
 
 # Energielandschaft
 EL_CONFIGS = {
+    0: {},
     1: {
-    "el_build_state": 100,
-    "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal
-    "tractor_width": 24.0,
-    "tractor_length": 15.0,
-    "tractor_turn_radius": 9.0},
+        "el_build_state": 100,
+        "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal
+        "tractor_width": 24.0,
+        "tractor_length": 15.0,
+        "tractor_turn_radius": 9.0
+    },
 
-    2: {"tractor_width": 12.0, "el_pv_type": 6}
+    2: {
+        "tractor_width": 12.0,
+        "el_pv_type": 6
+    }
 }
 
 # Industrie
 I_CONFIGS = {
-    1: {"is_heat_cooling_electric": False,
-    "companies": [1, 2, 4]},
-    2: {"companies": [5, 5, 6, 6, 7], "is_heat_cooling_electric": True}
+    0: {},
+    1: {
+        "is_heat_cooling_electric": False,
+        "companies": [1, 2, 4]
+    },
+
+    2: {
+        "companies": [5, 5, 6, 6, 7],
+        "is_heat_cooling_electric": True
+    }
 }
 
 # Green Energy Hub
 GEH_CONFIGS = {
-    1: {},
-    2: {"h2_load_scenario": "2030", "e_load_scenario": "2030"},
-    3: {"h2_load_scenario": "2030", "e_load_scenario": "2030"}
+    0: {},
+    1: {
+        "h2_load_scenario": "2022",
+        "e_load_scenario": "2022"
+    },
 
+    2: {
+        "h2_load_scenario": "2030",
+        "e_load_scenario": "2030"
+    },
 }
 
 # Battery
 B_CONFIGS = {
-    1: {},
-    2: {"bs_energy_kwh": 235000.0, "bs_power_kw": 1000.0}
+    0: {},
+    1: {
+        "bs_efficiency": 0.95,
+        "bs_energy_kwh": 1000.0,
+        "bs_power_kw": 500.0
+    },
+
+    2: {
+        "bs_energy_kwh": 235000.0,
+        "bs_power_kw": 1000.0
+    }
 }
 
 
@@ -96,25 +103,25 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
 
     inp = GuiInput()
 
-    inp.highways = cfg["highways"]
-    inp.h_pv_types = cfg["h_pv_types"]
+    inp.highways = cfg.get("highways", [])
+    inp.h_pv_types = cfg.get("h_pv_types", [])
 
-    inp.el_build_state = cfg["el_build_state"]
-    inp.el_pv_type = cfg["el_pv_type"]
+    inp.el_build_state = cfg.get("el_build_state", None)
+    inp.el_pv_type = cfg.get("el_pv_type", None)
 
-    inp.tractor_width = cfg["tractor_width"]
-    inp.tractor_length = cfg["tractor_length"]
-    inp.tractor_turn_radius = cfg["tractor_turn_radius"]
+    inp.tractor_width = cfg.get("tractor_width", None)
+    inp.tractor_length = cfg.get("tractor_length", None)
+    inp.tractor_turn_radius = cfg.get("tractor_turn_radius", None)
 
-    inp.is_heat_cooling_electric = cfg["is_heat_cooling_electric"]
-    inp.companies = cfg["companies"]
+    inp.is_heat_cooling_electric = cfg.get("is_heat_cooling_electric", False)
+    inp.companies = cfg.get("companies", [])
 
-    inp.h2_load_scenario = cfg["h2_load_scenario"]
-    inp.e_load_scenario = cfg["e_load_scenario"]
+    inp.h2_load_scenario = cfg.get("h2_load_scenario", None)
+    inp.e_load_scenario = cfg.get("e_load_scenario", None)
 
-    inp.bs_efficiency = cfg["bs_efficiency"]
-    inp.bs_energy_kwh = cfg["bs_energy_kwh"]
-    inp.bs_power_kw = cfg["bs_power_kw"]
+    inp.bs_efficiency = cfg.get("bs_efficiency", None)
+    inp.bs_energy_kwh = cfg.get("bs_energy_kwh", None)
+    inp.bs_power_kw = cfg.get("bs_power_kw", None)
 
     return inp
 
@@ -133,12 +140,12 @@ def main():
 
 
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [1]:
+    for h_case in [0]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
-        for el_case in [1]:
-            for i_case in [1]:
-                for geh_case in [1]:
+        for el_case in [0]:
+            for i_case in [0]:
+                for geh_case in [0]:
                     for b_case in [1]:
 
                         print(f"\nRunning case: \nh: {h_case} \nel: {el_case} \ni: {i_case} \ngeh: {geh_case} \nb: {b_case}")
