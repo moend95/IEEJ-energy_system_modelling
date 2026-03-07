@@ -551,8 +551,6 @@ class PV_System:
                 total_type_ac_w = ac
             else:
                 total_type_ac_w = total_type_ac_w + ac
-        print("This is the System Lastgang")
-        print(total_type_ac_w.to_string())
         dt_hours = (self.weather_df.index[1] - self.weather_df.index[0]).total_seconds() / 3600.0
         energy_type_Wh = (total_type_ac_w * dt_hours).sum()
 
