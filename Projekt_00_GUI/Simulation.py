@@ -14,7 +14,7 @@ industrie_heating_choice_mapping = {True: "2", False: "1"}
 el_pv_type_number_text_mapping = {4:"horizontal", 5:"vertical", 6:"horizontal_tracking"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
-weather_csv = os.path.join(script_dir,"data","test_solarautobahn.csv")
+weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2022_15min.csv")
 base_input = "./functions/inputs"
 output_dir = os.path.join(base_input, "punkte")
 os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
@@ -55,7 +55,6 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         )
         results = h_pv_system.generate_pv_points()
         out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
-        print(f'Anzahl Punkte {highway}:',out.h_number_of_points)
 
     #Berechnung
     out.h_sum_energy_kwh = 0
@@ -69,8 +68,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         df_one.to_csv(test_csv, index=False)
 
         energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"Energie {pv_type.name}: {energy_type_kWh:.1f} kWh",
-              " (Nur berechneten Punkte vor Skalierung über Schrittweite)")
+        print(f"Energie {pv_type.name}: {energy_type_kWh:.1f} kWh"," (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
         scaled_energy_kwh_pv_type = 0
@@ -165,15 +163,44 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------
+    hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
+
+    h2_load_path = os.path.join(hub_dir, inp.h2_load_scenario, "BEV_load_el_15min.csv")
+    el_load_path = os.path.join(hub_dir, inp.e_load_scenario, "Electrolyzer_output.csv")
+
+    df_h2_load = pd.read_csv(h2_load_path)
+    df_el_load = pd.read_csv(el_load_path)
+
+    df_h2_load["timestamp"] = pd.to_datetime(df_h2_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
+    df_el_load["timestamp"] = pd.to_datetime(df_el_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
+
+    df_h2_load.set_index("timestamp", inplace=True)
+    df_el_load.set_index("timestamp", inplace=True)
+
+    out.res_df["Last Elektrolyeur Green Energy Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values
+    out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
+
+
+    # ------------------------------------------------------------
+    # 5) Stadtentwicklung Jüchen Süd
 
     print('Green Energy Hub \t- abgeschlossen')
     # ------------------------------------------------------------
-    # 5) Bilanz
+
+
+
+
     # ------------------------------------------------------------
 
     print('Bilanzierung \t\t- abgeschlossen')
+    # 6) Bilanz
     # ------------------------------------------------------------
-    # 6) Battery
+
+
+
+
+    # ------------------------------------------------------------
+    # 7) Battery
     # ------------------------------------------------------------
 
     print('Batterie \t\t\t- abgeschlossen')

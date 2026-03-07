@@ -702,33 +702,35 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         expander = st.expander("Erklärung")
         with expander:
             st.write("""
+    **Allgemeine Daten**
+    - Elektrolyseur Wirkungsgrad 70%
+    - Wasserstoffspeicher (Gas) 10 MWh Kapazität
+    - keine PV- oder Windanlagen
+    - Ladepunkt Berechnung ohne Wartezeiten
+    - BEV Ladesäulen mit 200 kW Leistung
+    - Darstellung des Strombedarfs des Elektrolyseurs und der BEV-Ladesäulen
+    - Anteil der Anzahl an FCEVs für jedes Jahr: PKW 92.77% , LKW 7.07% , Busse 0.16%
+    
     **Szenario 2022**
-    - Referenzjahr 2022
-    - Keine PV- oder Windanlagen berücksichtigt
-    - Wasserstoffspeicher mit 10 MWh Kapazität
-    - Anzahl der Ladepunkte wurde so gewählt, dass auf Basis der zugrunde gelegten Fahr- bzw. Betankungsdaten keine Wartezeiten entstehen
     - 5 BEV-Ladesäulen
     - 3 Wasserstoff-Ladesäulen
-    - Elektrolyseur mit einer Leistung von ca. 8 MW
-    - Betrachtung des jährlichen Strombedarfs des Elektrolyseurs sowie der erzeugten Wasserstoffmenge
+    - Elektrolyseur mit einer Leistung von ca. 8 MW um H2 Bedarf zu decken
+    - Anzahl an FCEVs: 
+    - Anzahl BEV-Ladevorgänge: 10.381
 
     **Szenario 2030**
-    - Zukunftsszenario für das Jahr 2030
-    - Keine PV- oder Windanlagen berücksichtigt
-    - Wasserstoffspeicher mit 10 MWh Kapazität
-    - Anzahl der Ladepunkte wurde so gewählt, dass auf Basis der zugrunde gelegten Fahr- bzw. Betankungsdaten keine Wartezeiten entstehen
     - 6 BEV-Ladesäulen
-    - 8 Wasserstoff-Ladesäulen (FCEV)
+    - 8 Wasserstoff-Ladesäulen
     - Elektrolyseur mit einer Leistung von ca. 30 MW
+    - Anzahl an FCEVs: 1.800.000 
+    - Anzahl BEV-Ladevorgänge: 12.154
 
     **Szenario 2050**
-    - Zukunftsszenario für das Jahr 2050
-    - Keine PV- oder Windanlagen berücksichtigt
-    - Wasserstoffspeicher mit 10 MWh Kapazität
-    - Anzahl der Ladepunkte wurde so gewählt, dass auf Basis der zugrunde gelegten Fahr- bzw. Betankungsdaten keine Wartezeiten entstehen
     - 6 BEV-Ladesäulen
-    - 8 Wasserstoff-Ladesäulen (FCEV)
-    - Elektrolyseur mit einer Leistung von ca. 17–18 MW
+    - 8 Wasserstoff-Ladesäulen
+    - Elektrolyseur mit einer Leistung von ca. 18 MW
+    - Anzahl an FCEVs: 4.560.000 
+    - Anzahl BEV-Ladevorgänge: 16.587
 
     **Einordnung der geringeren Elektrolyseurleistung im Jahr 2050**
     Die geringere Elektrolyseurleistung im Vergleich zum Szenario 2030 ist modellseitig dadurch begründet, dass nicht allein die Anzahl der Ladepunkte entscheidend ist, sondern vor allem die angenommene Wasserstoffnachfrage und deren zeitliche Spitzenlast am betrachteten Standort. Im 2050-Szenario verteilt sich die Nachfrage auf eine stärker ausgebaute Infrastruktur, sodass an diesem Standort trotz ausgebauter Tankstellenstruktur eine geringere Elektrolyseurleistung ausreicht.

@@ -31,9 +31,9 @@ import seaborn as sns
 #%% User Input
 
 path = './Input/' # Pfad für den Datenimport
-output_path = './Output_2050/' # Pfad für Export von Ergebnissen
+output_path = 'Output_test2030/'  # Pfad für Export von Ergebnissen
 
-year = 2050 # Für welches Jahr soll die Simulation durchgeführt werden? Eingabe von 2020 bis 2050 möglich.
+year = 2030 # Für welches Jahr soll die Simulation durchgeführt werden? Eingabe von 2020 bis 2050 möglich.
 
 length = 365 # Tage, Option zur Verkürzung der Rechendauer durch Verkürzung des Betrachtungszeitraums
 
@@ -648,9 +648,10 @@ df_load_H2_15min_mw['Energy FCET (MWh)'] = df_load_H2_15min_mw['P FCET (MW)'] * 
 df_load_H2_15min_mw['Energy new (MWh)'] = df_load_H2_15min_mw['Energy FCEV (MWh)'] + df_load_H2_15min_mw['Energy FCET (MWh)']
 df_load_H2_15min_mw['P new (MW)'] = df_load_H2_15min_mw['P FCEV (MW)'] + df_load_H2_15min_mw['P FCET (MW)']
 
-filename = 'load_h2_15min_mw.csv' # Export als csv
-full_path = path + filename # Vollständigen Pfad zur Speicherung der csv-Datei erstellen
-df_load_H2_15min_mw.to_csv(full_path, index=True) # DataFrame als csv-Datei speichern
+filename = 'load_h2_15min_mw.csv'
+os.makedirs(output_path, exist_ok=True)
+full_path = output_path + filename
+df_load_H2_15min_mw.to_csv(full_path, index=True)
 
 #%% Maximale Anzahl an Ladesäulen und Ladeleistung einstellen (BEV)
 
@@ -697,18 +698,17 @@ P_max_el_load_BEV = n_charging_points * P_max_charging_point # [MW] max el Last 
 df_load_el_15min_mw['P new (MW)'] = df_load_el_15min_mw['P new (MW)'].clip(upper=P_max_el_load_BEV) # Begrenzen der Nachfrage auf P_max_el_load_BEV
 df_load_el_15min_mw['Energy new (MWh)'] = df_load_el_15min_mw['P new (MW)'] * 0.25
 
-filename = 'BEV_load_el_15min_mw.csv' # Export als csv
-full_path = path + filename # Vollständigen Pfad zur Speicherung der csv-Datei erstellen
-os.makedirs('./Output_2050', exist_ok=True)
-df_load_el_15min_mw.to_csv('./Output_2050/BEV_load_el_15min_mw.csv', index=True)
-
+filename = 'BEV_load_el_15min_mw.csv'
+os.makedirs(output_path, exist_ok=True)
+full_path = output_path + filename
+df_load_el_15min_mw.to_csv(full_path, index=True)
 
 #%% Daten H2 - und elctric load wieder einlesen --> Nachfragemodellierung für FCEV, FCET und BEV kann für mehrere Simulationen des gleichen Jahres ausgelassen werden
-df_load_H2_15min_mw = pd.read_csv(f'{path}load_h2_15min_mw.csv', sep=',', decimal='.') # Einlesen der H2-Lastkurve aus csv Datei
+df_load_H2_15min_mw = pd.read_csv(f'{output_path}load_h2_15min_mw.csv', sep=',', decimal='.')
 df_load_H2_15min_mw.set_index('time_input_year', inplace=True)
 df_load_H2_15min_mw.index = pd.to_datetime(df_load_H2_15min_mw.index)
 
-df_load_el_15min_mw = pd.read_csv(f'{output_path}BEV_load_el_15min_mw.csv', sep=',', decimal='.') # Einlesen der elekrischen BEV Lastkurve aus csv Datei
+df_load_el_15min_mw = pd.read_csv(f'{output_path}BEV_load_el_15min_mw.csv', sep=',', decimal='.')
 df_load_el_15min_mw.set_index('time_input_year', inplace=True)
 df_load_el_15min_mw.index = pd.to_datetime(df_load_el_15min_mw.index)
 
@@ -1291,916 +1291,921 @@ h2_load = n.loads_t.p["H2_load"] # MW
 avg_h2_load = h2_load.sum()/(4*24*365) # MW
 supply_time_H2store = H2_store_cap / avg_h2_load # h
 
-#%% Plots
-# Doppeltes Diagramm Leistung von PV- und Windkraft & Kapazitätsfaktor PV und Wind
-# Diagramm 1: Leistung von PV- und Windkraft
-
-df_pv_15min_mw = df_pv_15min_mw.reset_index()  # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-df_wind_15min_mw = df_wind_15min_mw.reset_index()  # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-
-avg_pv = df_pv_15min_mw['electricity'].mean()
-avg_wind = df_wind_15min_mw['electricity'].mean()
-
-fig1 = go.Figure()
-
-fig1.add_trace(
-    go.Scatter(
-        x=df_wind_15min_mw['index'],
-        y=df_wind_15min_mw['electricity'],
-        mode='lines',
-        fill='tozeroy',
-        line=dict(color="#d7471f"),
-        name='Wind'))
-
-fig1.add_trace(
-    go.Scatter(
-        x=df_pv_15min_mw['index'],
-        y=df_pv_15min_mw['electricity'],
-        mode='lines',
-        fill='tozeroy',
-        line=dict(color="#901b6e"),
-        name='Photovoltaik'))
-
-fig1.add_trace(
-    go.Scatter(
-        x=[df_pv_15min_mw['index'].min(), df_pv_15min_mw['index'].max()],
-        y=[avg_pv, avg_pv],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dot"),
-        name="Durchschnittliche PV-Leistung"))
-
-fig1.add_trace(
-    go.Scatter(
-        x=[df_wind_15min_mw['index'].min(), df_wind_15min_mw['index'].max()],
-        y=[avg_wind, avg_wind],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dash"),
-        name="Durchschnittliche WKA-Leistung"))
-
-# Diagramm 2: Kapazitätsfaktor PV und Wind
-months = ['Jan', 'Feb', 'Mrz', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
-pv_capacity_factor = [4.4, 11.89, 13.14, 20.04, 20.57, 23.37, 22.5, 20.09, 17.56, 10.68, 5.87, 4.09]
-wind_capacity_factor = [40.46, 40.28, 48.02, 27.73, 21.97, 24.66, 17.56, 23.71, 29.63, 39.69, 37.82, 47.46]
-
-df2 = pd.DataFrame({
-    'Monat': months * 2,
-    'Kapazitätsfaktor (%)': pv_capacity_factor + wind_capacity_factor,
-    'Energiequelle': ['Photovoltaik'] * 12 + ['Wind'] * 12})
-
-fig2 = go.Figure()
-
-fig2.add_trace(
-    go.Scatter(
-        x=months,
-        y=wind_capacity_factor,
-        mode='lines',
-        line=dict(color="#d7471f"),
-        name='Wind'))
-
-fig2.add_trace(
-    go.Scatter(
-        x=months,
-        y=pv_capacity_factor,
-        mode='lines',
-        line=dict(color="#901b6e"),
-        name='PV'))
-
-fig = make_subplots(
-    rows=2, cols=1,
-    subplot_titles=[""],
-    shared_xaxes=True,
-    vertical_spacing=0.1)
-
-for trace in fig1.data:
-    fig.add_trace(trace, row=1, col=1)
-
-for trace in fig2.data:
-    fig.add_trace(trace, row=2, col=1)
-
-fig.update_layout(
-    title='',
-    width=1000,
-    height=800,
-    template="simple_white",
-    showlegend=True,
-    legend=dict(
-        orientation="h",
-        yanchor="bottom",
-        y=1.1,
-        xanchor="center",
-        x=0.5))
-
-fig.update_xaxes(title_text="", row=1, col=1)
-fig.update_yaxes(title_text="P in MW", row=1, col=1)
-fig.update_yaxes(title_text="Kapazitätsfaktor in %", row=2, col=1)
-
-fig.show()
-
-filename = 'EE_WIND_P_Kap.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Wasserstoff-Lastkurve
-
-df_load_H2_15min_mw = df_load_H2_15min_mw.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-
-df_filtered = df_load_H2_15min_mw[(df_load_H2_15min_mw['time_input_year'] >= start_date_plots) & (df_load_H2_15min_mw['time_input_year'] <= end_date_plots)]
-
-fig = go.Figure()
-
-fig.add_trace(go.Scatter(
-    x=df_filtered['time_input_year'],
-    y=df_filtered['P (MW)'],
-    mode='lines',
-    name='Leistung H<sub>2</sub>',
-    line=dict(color='#00008b')))  # Dunkelblau
-
-fig.update_layout(
-    title='',
-    xaxis_title='Datum / Uhrzeit',
-    yaxis_title='P H<sub>2</sub> in MW',
-    width=1000,
-    height=600,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=5,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]),
-    yaxis=dict(
-        showgrid=True,
-        range=[0, None]))
-
-pio.show(fig)
-
-filename = 'Wasserstoff_Lastkurve.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Masse Tankvorgänge FCEV - Normalverteilung
-
-data = np.array(individual_tank_masses_FCEV)
-
-# Erstelle einen Plot mit der Dichtefunktion
-plt.figure(figsize=(10, 6))
-sns.histplot(data, kde=True, bins=30, stat="density", label="Datenverteilung", color="blue")
-
-# Plot-Anpassungen
-plt.title("", fontsize=14)
-plt.xlabel("Wasserstoffmasse in kg pro Tankvorgang für FCEV", fontsize=12)
-plt.ylabel("Wahrscheinlichkeitsdichte", fontsize=12)
-#plt.legend()
-plt.grid()
-plt.tight_layout()
-
-filename = 'Normalverteilung_Tankmassen_FCEV.png'
-full_path = os.path.join(output_path, filename)
-plt.savefig(full_path, format='png', dpi=300)
-plt.show()
-plt.close()
-
-# Masse Tankvorgänge FCET - Normalverteilung
-
-data = np.array(individual_tank_masses_FCET)
-
-# Erstelle einen Plot mit der Dichtefunktion
-plt.figure(figsize=(10, 6))
-sns.histplot(data, kde=True, bins=30, stat="density", label="Datenverteilung", color="blue")
-
-# Plot-Anpassungen
-plt.title("", fontsize=14)
-plt.xlabel("Wasserstoffmasse in kg pro Tankvorgang für FCET", fontsize=12)
-plt.ylabel("Wahrscheinlichkeitsdichte", fontsize=12)
-#plt.legend()
-plt.grid()
-plt.tight_layout()
-
-filename = 'Normalverteilung_Tankmassen_FCET.png'
-full_path = os.path.join(output_path, filename)
-plt.savefig(full_path, format='png', dpi=300)
-plt.show()
-plt.close()
-
-# Energie Ladevorgänge BEV - Normalverteilung
-
-data = np.array(individual_tank_energies_BEV)
-
-# Erstelle einen Plot mit der Dichtefunktion
-plt.figure(figsize=(10, 6))
-sns.histplot(data, kde=True, bins=30, stat="density", label="Datenverteilung", color="blue")
-
-# Plot-Anpassungen
-plt.title("", fontsize=14)
-plt.xlabel("Energie in kWh pro Ladevorgang", fontsize=12)
-plt.ylabel("Wahrscheinlichkeitsdichte", fontsize=12)
-#plt.legend()
-plt.grid()
-plt.tight_layout()
-
-filename = 'Normalverteilung_Ladeenergie_BEV.png'
-full_path = os.path.join(output_path, filename)
-plt.savefig(full_path, format='png', dpi=300)
-plt.show()
-plt.close()
-
-# Balkendiagramm Saisonale Tankwahrscheinlichkeit FCEV
-
-fig = px.bar(df_monthly_refuel_prob_BEV,
-              x=['Jan','Feb','Mrz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez',],
-              y=[7.233, 8.231, 8.182, 8.141, 8.176, 9.386, 8.681, 8.950, 8.239, 8.404, 8.349, 8.029], #Daten aus Excel H2-Nachfrage
-              labels={'seasonal_refuel_prob': 'Seasonal Refuel Probability (%)'},
-              title='Seasonal Refuel Probability by Month',
-              color_discrete_sequence=['#00008b'])
-
-fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
-
-fig.update_traces(
-    marker_line_color='black',  # Farbe der Umrandung
-    marker_line_width=1.5)       # Breite der Umrandung
-
-fig.update_layout(
-    title='',
-    xaxis_title='',
-    yaxis_title='Saisonale Tankwahrscheinlichkeit in %',
-    width=550,
-    height=400,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=20,
-        showgrid=True,),
-    yaxis=dict(showgrid=True))
-
-fig.show()
-
-filename = 'Saisonale_Tankwahrscheinlichkeit_FCEV.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Balkendiagramm Saisonale Tankwahrscheinlichkeit BEV
-fig = px.bar(df_monthly_refuel_prob_BEV,
-              x=['Jan','Feb','Mrz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez',],
-              y=df_monthly_refuel_prob_BEV['seasonal_refuel_prob']*100,
-              labels={'seasonal_refuel_prob': 'Seasonal Refuel Probability (%)'},
-              title='Seasonal Refuel Probability by Month',
-              color_discrete_sequence=['#00008b'])
-
-fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
-
-fig.update_traces(
-    marker_line_color='black',  # Farbe der Umrandung
-    marker_line_width=1.5)       # Breite der Umrandung
-
-fig.update_layout(
-    title='',
-    xaxis_title='',
-    yaxis_title='Saisonale Tankwahrscheinlichkeit in %',
-    width=550,
-    height=400,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=20,
-        showgrid=True,),
-    yaxis=dict(showgrid=True))
-
-fig.show()
-
-filename = 'Saisonale_Tankwahrscheinlichkeit_BEV.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Diagramm der relativen Tankwahrscheinlichkeiten für BEV
-
-df_rel_refuel_prob_BEV_combined_plt = df_rel_refuel_prob_BEV_combined.copy()
-row_00 = df_rel_refuel_prob_BEV_combined_plt[df_rel_refuel_prob_BEV_combined_plt['Time'] == '00:00']
-row_24 = row_00.copy()
-row_24['Time'] = '24:00'
-df_rel_refuel_prob_BEV_combined_plt = pd.concat([df_rel_refuel_prob_BEV_combined_plt, row_24], ignore_index=True)
-
-mon_thu_sum=df_rel_refuel_prob_BEV_combined_plt['Mon-Thu'].sum()*4
-fri_sum=df_rel_refuel_prob_BEV_combined_plt['Fri'].sum()
-sat_sum=df_rel_refuel_prob_BEV_combined_plt['Sat'].sum()
-sun_sum=df_rel_refuel_prob_BEV_combined_plt['Sun'].sum()
-sum_sum=mon_thu_sum+fri_sum+sat_sum+sun_sum
-
-fig = px.line(
-    df_rel_refuel_prob_BEV_combined_plt,
-    x='Time',
-    y=['Mon-Thu', 'Fri', 'Sat', 'Sun'],
-    title='Tankwahrscheinlichkeit nach Wochentagen',
-    labels={'Time': 'Viertelstunde', 'rel_refuel_prob': 'Tankwahrscheinlichkeit'})
-
-fig.update_layout(
-    title='',
-    xaxis_title='',
-    yaxis_title='Anteil der Ladevorgänge in %',
-    width=1000,
-    height=600,
-    template="simple_white",
-    legend_title="",
-    xaxis=dict(
-        tickformat='%H:%M',
-        tickmode='auto',
-        dtick="3600000",
-        nticks=13,
-        showgrid=True,
-        range=["00:00", "24:00"]),
-    yaxis=dict(showgrid=True),
-    legend=dict(
-        orientation="h",  # Horizontale Ausrichtung
-        x=0.5,  # Horizontale Position (Mitte)
-        y=-0.15,  # Vertikale Position (oberhalb des Plots)
-        xanchor="center",  # Legende zentrieren
-        yanchor="bottom"   # Legende knapp oberhalb des Plots positionieren
-    ))
-
-fig['data'][0]['line']['color']="#901b6e"  # lila
-fig['data'][1]['line']['color']="#d7471f"  # orange
-fig['data'][2]['line']['color']="#1c1c1c"  # graphitschwarz
-fig['data'][3]['line']['color']="#00008b"  # dunkelblau
-
-fig['data'][0]['name'] = "Mo-Do"
-fig['data'][1]['name'] = "Fr"
-fig['data'][2]['name'] = "Sa"
-fig['data'][3]['name'] = "So"
-
-fig.show()
-
-filename = 'Relative_Ladewahrscheinlichkeit_BEV.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Diagramm der BEV-Lastkurve
-
-df_load_el_15min_mw = df_load_el_15min_mw.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-
-df_filtered = df_load_el_15min_mw[(df_load_el_15min_mw['time_input_year'] >= start_date_plots) & (df_load_el_15min_mw['time_input_year'] <= end_date_plots)]
-
-fig = go.Figure()
-
-fig.add_trace(go.Scatter(
-    x=df_filtered['time_input_year'],
-    y=df_filtered['P (MW)'],
-    mode='lines',
-    name='el. Leistung',
-    line=dict(color='#00008b')))  # Dunkelblau
-
-fig.update_layout(
-    title='',
-    xaxis_title='Datum / Uhrzeit',
-    yaxis_title='P<sub>el</sub> in MW',
-    width=1000,
-    height=600,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=5,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]),
-    yaxis=dict(
-        showgrid=True,
-        range=[0, None]))
-
-pio.show(fig)
-
-filename = 'BEV_Lastkurve.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Elektrolyseur - Lastkurve
-
-df_electrolyzer_15min = df_electrolyzer_15min.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-
-df_filtered = df_electrolyzer_15min[(df_electrolyzer_15min['time'] >= start_date_plots) & (df_electrolyzer_15min['time'] <= end_date_plots)]
-y_max = df_filtered['P_ac [MW]'].max() * 1.1  # 10% Puffer hinzufügen
-
-fig = go.Figure()
-fig.add_trace(go.Scatter(
-    x=df_electrolyzer_15min['time'],
-    y=df_electrolyzer_15min['P_ac [MW]'],
-    mode='lines',
-    name='P elektrisch [MW]',
-    line=dict(color='#00008b')))
-
-fig.update_layout(
-    title='',
-    template="simple_white",
-    xaxis_title='Datum / Uhrzeit',
-    yaxis_title='Leistung in MW',
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=5,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]),
-    yaxis=dict(
-        title='Leistung in MW',
-        showgrid=True,
-        range=[0, y_max]),
-    )
-
-pio.show(fig)
-
-filename = 'Lastkurve_Elektrolyseur.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Elektrolyseur - H2-Produktion
-df_filtered = df_electrolyzer_15min[(df_electrolyzer_15min['time'] >= start_date_plots) & (df_electrolyzer_15min['time'] <= end_date_plots)]
-
-fig = go.Figure()
-
-fig.add_trace(go.Scatter(
-    x=df_electrolyzer_15min['time'],
-    y=df_electrolyzer_15min['hydrogen production [Kg/dt]'],
-    mode='lines',
-    name='H<sub>2</sub> production',
-    line=dict(color='#00008b')))
-
-fig.update_layout(
-    title='Wasserstoffproduktion Elektrolyseur',
-    xaxis_title='Datum / Uhrzeit',
-    yaxis_title='H<sub>2</sub> [kg/15min]',
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=7,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]),
-        width=1000,
-        height=600,
-        template="simple_white",
-        legend_title="Legende",)
-
-pio.show(fig)
-
-filename = 'Wasserstoffproduktion_Elektrolyseur.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Balkendiagramm Energiemengen Herkunft
-# Summen der Energiemengen berechnen
-E_pv = df_res_links_2["pv_to_el"] * dt_h
-pv_sum = E_pv.sum()
-E_pv_infeed = df_res_generators_2["pv_infeed"] * dt_h
-pv_infeed_sum = E_pv_infeed.sum()
-E_wind = df_res_links_2["wind_to_el"] * dt_h
-wind_sum = E_wind.sum()
-E_wind_infeed = df_res_generators_2["wind_infeed"] * dt_h
-wind_infeed_sum = E_wind_infeed.sum()
-E_grid = df_res_generators_2["grid"] * dt_h
-grid_sum = E_grid.sum()
-df_bar_energy = pd.DataFrame({'Energiequelle': ['Eigenverbrauch', 'Einspeisung', 'Eigenverbrauch', 'Einspeisung', 'Eigenverbrauch'],
-                              'Energie [MWh]': [pv_sum, pv_infeed_sum, wind_sum, wind_infeed_sum, grid_sum],
-                              'Quelle': ['PV', 'PV', 'Wind', 'Wind', 'Netz']})
-
-fig = px.bar(df_bar_energy,
-              x='Quelle',
-              y='Energie [MWh]',
-              color='Energiequelle',
-              template='simple_white',
-              title='<b>Energieverbrauch und -herkunft für die Tankstelle</b><br><sup>Energie in MWh<sup>',
-              text=df_bar_energy['Energie [MWh]'].round(1),
-              width=1000,
-              height=600,
-              color_discrete_map={'Eigenverbrauch': "#c60c0f", 'Einspeisung': "#901b6e"}
-              )
-
-fig.update_xaxes(tickfont=dict(size=12), title_text='')
-fig.update_yaxes(tickfont=dict(size=12), title_text='')
-fig.update_traces(width=0.5)
-fig.update_layout(
-    yaxis_tickformat = '.',
-    legend_title="Legende")
-
-fig.show()
-
-filename = 'Balkendiagramm_Energiemengen_Herkunft.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Diagramm zur Leistung der einzelnen Generatoren
-
-df_res_generators_2 = df_res_generators_2.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-
-df_filtered = df_res_generators_2[(df_res_generators_2['snapshot'] >= start_date_plots) & (df_res_generators_2['snapshot'] <= end_date_plots)]
-
-x_values = df_res_generators_2['snapshot']
-y_values = ['pv',
-            'pv_infeed',
-            'wind',
-            'wind_infeed',
-            'grid']
-
-custom_labels = {
-    'pv':'PV (Eigenverbrauch)',
-    'pv_infeed':'PV (Einspeisung)',
-    'wind': 'Wind (Eigenverbrauch)',
-    'wind_infeed': 'Wind (Einspeisung)',
-    'grid': 'Netzbezug'}
-
-avg_pv = df_res_generators_2['pv'].mean()
-avg_wind = df_res_generators_2['wind'].mean()
-time = df_res_generators_2['snapshot'].min()
-
-fig = px.line(df_res_generators_2, x = x_values, y = y_values)
-
-fig['data'][0]['line']['color'] = "#c60c0f"  # rot
-fig['data'][1]['line']['color'] = "#d7471f"  # orange
-fig['data'][2]['line']['color'] = "#901b6e"  # lila
-fig['data'][3]['line']['color'] = "#00008b"  # dunkelblau
-fig['data'][4]['line']['color'] = "#696969"  # grau
-
-fig['data'][0]['name'] = custom_labels['pv']
-fig['data'][1]['name'] = custom_labels['pv_infeed']
-fig['data'][2]['name'] = custom_labels['wind']
-fig['data'][3]['name'] = custom_labels['wind_infeed']
-fig['data'][4]['name'] = custom_labels['grid']
-
-fig.update_layout(
-    title = 'Leistung Generatoren',
-    width = 1000,
-    height = 600,
-    xaxis_title = 'Datum / Uhrzeit',
-    yaxis_title = 'P [MW]',
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=7,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]))
-
-fig.add_trace(
-    go.Scatter(
-        x=[df_res_generators_2['snapshot'].min(), df_res_generators_2['snapshot'].max()],
-        y=[avg_pv, avg_pv],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dot"),
-        name="Durchschnittliche PV-Leistung"))
-
-fig.add_trace(
-    go.Scatter(
-        x=[df_res_generators_2['snapshot'].min(), df_res_generators_2['snapshot'].max()],
-        y=[avg_wind, avg_wind],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dash"),
-        name="Durchschnittliche WKA-Leistung"))
-
-fig.show()
-
-filename = 'Liniendiagramm_Leistung_Generatoren.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Diagramm zur Leistung der einzelnen Links
-
-df_res_links_2 = df_res_links_2.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
-
-df_filtered = df_res_links_2[(df_res_links_2['snapshot'] >= start_date_plots) & (df_res_links_2['snapshot'] <= end_date_plots)]
-
-x_values = df_res_links_2['snapshot']
-y_values = ['pv_to_el',
-            'wind_to_el',
-            'electrolyzer',
-            'compressor_h2_flow']
-
-custom_labels = {
-    'pv_to_el': 'PV',
-    'wind_to_el': 'Wind',
-    'electrolyzer': 'Elektrolyseur',
-    'compressor_h2_flow': 'Kompressor'}
-
-avg_electrolyzer = df_res_links_2['electrolyzer'].mean()
-time = df_res_links_2.index.min()
-
-fig = px.line(df_res_links_2, x=x_values, y=y_values)
-
-fig['data'][0]['line']['color'] = "#c60c0f"  # rot
-fig['data'][1]['line']['color'] = "#d7471f"  # orange
-fig['data'][2]['line']['color'] = "#901b6e"  # lila
-fig['data'][3]['line']['color'] = "#00008b"  # dunkelblau
-
-fig['data'][0]['name'] = custom_labels['pv_to_el']
-fig['data'][1]['name'] = custom_labels['wind_to_el']
-fig['data'][2]['name'] = custom_labels['electrolyzer']
-fig['data'][3]['name'] = custom_labels['compressor_h2_flow']
-
-fig.update_layout(
-    title='Leistung Links',
-    width=1000,
-    height=600,
-    xaxis_title='Datum / Uhrzeit',
-    yaxis_title='P [MW]',
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=7,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]))
-
-fig.add_trace(
-    go.Scatter(
-        x=[df_res_links_2['snapshot'].min(), df_res_links_2['snapshot'].max()],
-        y=[avg_electrolyzer, avg_electrolyzer],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dot"),
-        name="Durchschnittliche Elektrolyseur-Leistung"))
-
-fig.show()
-
-filename = 'Liniendiagramm_Leistung_Links.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Diagramm zu Speicherfüllständen
-
-df_res_stores_2_E = n.stores_t.e
-df_res_stores_2_E = df_res_stores_2_E.reset_index() # Index zurücksetzen, um auf Spalte "snapshot" zurückgreifen zu können
-
-x_values = df_res_stores_2_E['snapshot']
-fig = px.line(df_res_stores_2_E, x = x_values, y = 'el_storage')
-
-custom_labels = {
-    'el_storage': 'Batteriespeicher',
-    'H2_storage': 'Wasserstoffspeicher'}
-
-avg_el = df_res_stores_2_E['el_storage'].mean()
-avg_h2 = df_res_stores_2_E['H2_storage'].mean()
-time = df_res_stores_2_E['snapshot'].min()
-
-fig = px.line(df_res_stores_2_E, x=df_res_stores_2_E['snapshot'], y=['el_storage', 'H2_storage'])
-
-fig['data'][0]['line']['color']="#901b6e"  # lila
-fig['data'][1]['line']['color']="#d7471f"  #orange
-
-fig['data'][0]['name'] = custom_labels['el_storage']
-fig['data'][1]['name'] = custom_labels['H2_storage']
-
-fig.update_layout(
-    title = '',
-    width = 1000,
-    height = 600,
-    xaxis_title = 'Datum / Uhrzeit',
-    yaxis_title = 'Energie in MWh',
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=7,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]))
-
-fig.add_trace(
-    go.Scatter(
-        x=[df_res_stores_2_E['snapshot'].min(), df_res_stores_2_E['snapshot'].max()],
-        y=[avg_el, avg_el],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dot"),
-        name="Durchschnitt Batteriespeicher"))
-
-fig.add_trace(
-    go.Scatter(
-        x=[df_res_stores_2_E['snapshot'].min(), df_res_stores_2_E['snapshot'].max()],
-        y=[avg_h2, avg_h2],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dash"),
-        name="Durchschnitt Wasserstoffspeicher"))
-
-fig.show()
-
-filename = 'Liniendiagramm_Speicherfüllstände.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Diagramm Last
-
-df_res_loads_2 = df_res_loads_2.reset_index() # Index zurücksetzen, um auf Spalte "snapshot" zurückgreifen zu können
-
-x_values = df_res_loads_2['snapshot']
-fig = px.line(df_res_loads_2, x = x_values, y = 'H2_load')
-
-custom_labels = {
-    'H2_load': 'H<sub>2</sub>-Last',
-    'el_charging_station_load': 'el. Last Ladesäulen',
-    'compressor_el_load': 'el. Last Kompressor',
-    'electrolyzer_el_load': 'el. Last Elektrolyseur'}
-
-avg_elektrolyzer = df_res_loads_2['electrolyzer_el_load'].mean()
-time = df_res_loads_2['snapshot'].min()
-
-fig = px.line(df_res_loads_2, x=df_res_loads_2['snapshot'], y=['H2_load', 'el_charging_station_load', 'compressor_el_load', 'electrolyzer_el_load'])
-
-fig['data'][0]['line']['color']="#901b6e"  # lila
-fig['data'][1]['line']['color']="#d7471f"  #orange
-fig['data'][2]['line']['color']="#c60c0f"  # rot
-fig['data'][3]['line']['color']="#00008b"  # dunkelblau
-
-fig['data'][0]['name'] = custom_labels['H2_load']
-fig['data'][1]['name'] = custom_labels['el_charging_station_load']
-fig['data'][2]['name'] = custom_labels['compressor_el_load']
-fig['data'][3]['name'] = custom_labels['electrolyzer_el_load']
-
-fig.update_layout(
-    title = 'Lasten',
-    width = 1000,
-    height = 600,
-    xaxis_title = 'Datum / Uhrzeit',
-    yaxis_title = 'P [MW]',
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=7,
-        showgrid=True,
-        range=[start_date_plots, end_date_plots]),
-    yaxis=dict(showgrid=True))
-
-fig.add_trace(
-    go.Scatter(
-        x=[df_res_loads_2['snapshot'].min(), df_res_loads_2['snapshot'].max()],
-        y=[avg_elektrolyzer, avg_elektrolyzer],
-        mode="lines",
-        line=dict(color="black", width=3, dash="dot"),
-        name="Durchschnitt Elektrolyseur"))
-
-fig.show()
-
-filename = 'Liniendiagramm_Lasten.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Balkendiagramm Kompressorstufen Energie
-x_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-y_values1 = [1, 3.12, 6.97, 15.55, 34.72, 77.51, 173.04, 386.29, 862.36, 1000]  # Werte für Gruppe 1
-y_values2 = [30, 93.63, 209.02, 466.61, 1000, "", "", "", "", ""]   # Werte für Gruppe 2
-
-# Erstellen der Balken
-fig = go.Figure(data=[
-    go.Bar(
-        name='Eingangsdruck 1 bar',  # Name für die Legende
-        x=x_labels,
-        y=y_values1,
-        marker=dict(color='blue', line=dict(color='black', width=1.5)),
-        width=0.4  # Balkenbreite
-    ),
-    go.Bar(
-        name='Eingangsdruck 30 bar',  # Name für die Legende
-        x=x_labels,
-        y=y_values2,
-        marker=dict(color='red', line=dict(color='black', width=1.5)),
-        width=0.4  # Balkenbreite
-    )
-])
-
-# Layout-Einstellungen
-fig.update_layout(
-    barmode='group',  # Gruppierte Balken
-    title='',
-    xaxis_title='Verdichterstufe',
-    yaxis_title='Enddruck pro Stufe in bar',
-    template="simple_white",
-    width=800,
-    height=500,
-    legend_title="",
-    legend=dict(
-        x=0,
-        y=1,
-        xanchor='left',
-        yanchor='top'),
-    xaxis=dict(
-        nticks=11,
-        ))
-
-# Diagramm anzeigen
-fig.show()
-
-filename = 'Kompressorstufen_Balkendiagramm.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Balkendiagramm Verteilung Energiemengen an Zapfsäule FCEV
-df_charging_points_FCEV_sum['Nr'] = range(1, len(df_charging_points_FCEV_sum) + 1)
-
-fig = px.bar(df_charging_points_FCEV_sum,
-              x=df_charging_points_FCEV_sum['Nr'],
-              y=df_charging_points_FCEV_sum['Share [%]'],
-              labels={'Share [%]': 'Anteil Zapfsäule an abgegebenem H<sub>2'},
-              title='Nutzungsanteil der Zapfsäulen',
-              color_discrete_sequence=['#00008b'])
-
-fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
-
-fig.update_traces(
-    marker_line_color='black',  # Farbe der Umrandung
-    marker_line_width=1.5)       # Breite der Umrandung
-
-fig.update_layout(
-    title='',
-    xaxis_title='FCEV Zapfsäule Nr',
-    yaxis_title='Anteil an H<sub>2</sub> pro Zapfsäule in %',
-    width=550,
-    height=400,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=25,
-        showgrid=True,),
-    yaxis=dict(showgrid=True))
-
-fig.show()
-
-filename = 'Anteil_H2_pro_Zapfsäule_FCEV.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Balkendiagramm Verteilung Energiemengen an Zapfsäule FCET
-df_charging_points_FCET_sum['Nr'] = range(1, len(df_charging_points_FCET_sum) + 1)
-
-fig = px.bar(df_charging_points_FCET_sum,
-              x=df_charging_points_FCET_sum['Nr'],
-              y=df_charging_points_FCET_sum['Share [%]'],
-              labels={'Share [%]': 'Anteil Zapfsäule an abgegebenem H<sub>2'},
-              title='Nutzungsanteil der Zapfsäulen',
-              color_discrete_sequence=['#00008b'])
-
-fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
-
-fig.update_traces(
-    marker_line_color='black',  # Farbe der Umrandung
-    marker_line_width=1.5)       # Breite der Umrandung
-
-fig.update_layout(
-    title='',
-    xaxis_title='FCET Zapfsäule Nr',
-    yaxis_title='Anteil an H<sub>2</sub> pro Zapfsäule in %',
-    width=550,
-    height=400,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=20,
-        showgrid=True,),
-    yaxis=dict(showgrid=True))
-
-fig.show()
-
-filename = 'Anteil_H2_pro_Zapfsäule_FCET.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
-# Balkendiagramm Verteilung Energiemengen an Zapfsäule BEV
-df_charging_points_sum['Nr'] = range(1, len(df_charging_points_sum) + 1)
-
-fig = px.bar(df_charging_points_sum,
-              x=df_charging_points_sum['Nr'],
-              y=df_charging_points_sum['Share [%]'],
-              labels={'Share [%]': 'Anteil Ladesäule an abgegebener Energie'},
-              title='Nutzungsanteil der Ladesäulen',
-              color_discrete_sequence=['#00008b'])
-
-fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
-
-fig.update_traces(
-    marker_line_color='black',  # Farbe der Umrandung
-    marker_line_width=1.5)       # Breite der Umrandung
-
-fig.update_layout(
-    title='',
-    xaxis_title='Ladesäule Nr',
-    yaxis_title='Anteil an Energie pro Ladesäule in %',
-    width=550,
-    height=400,
-    template="simple_white",
-    legend_title="Legende",
-    xaxis=dict(
-        tickformat='%Y-%m-%d %H:%M',
-        tickmode='auto',
-        nticks=10,
-        showgrid=True,),
-    yaxis=dict(showgrid=True))
-
-fig.show()
-
-filename = 'Anteil_Energie_pro_Ladesäule.png'
-full_path = os.path.join(output_path, filename)
-fig.write_image(full_path, format='png', scale=3)
-
+# #%% Plots
+# # Doppeltes Diagramm Leistung von PV- und Windkraft & Kapazitätsfaktor PV und Wind
+# # Diagramm 1: Leistung von PV- und Windkraft
+#
+# df_pv_15min_mw = df_pv_15min_mw.reset_index()  # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+# df_wind_15min_mw = df_wind_15min_mw.reset_index()  # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+#
+# avg_pv = df_pv_15min_mw['electricity'].mean()
+# avg_wind = df_wind_15min_mw['electricity'].mean()
+#
+# fig1 = go.Figure()
+#
+# fig1.add_trace(
+#     go.Scatter(
+#         x=df_wind_15min_mw['index'],
+#         y=df_wind_15min_mw['electricity'],
+#         mode='lines',
+#         fill='tozeroy',
+#         line=dict(color="#d7471f"),
+#         name='Wind'))
+#
+# fig1.add_trace(
+#     go.Scatter(
+#         x=df_pv_15min_mw['index'],
+#         y=df_pv_15min_mw['electricity'],
+#         mode='lines',
+#         fill='tozeroy',
+#         line=dict(color="#901b6e"),
+#         name='Photovoltaik'))
+#
+# fig1.add_trace(
+#     go.Scatter(
+#         x=[df_pv_15min_mw['index'].min(), df_pv_15min_mw['index'].max()],
+#         y=[avg_pv, avg_pv],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dot"),
+#         name="Durchschnittliche PV-Leistung"))
+#
+# fig1.add_trace(
+#     go.Scatter(
+#         x=[df_wind_15min_mw['index'].min(), df_wind_15min_mw['index'].max()],
+#         y=[avg_wind, avg_wind],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dash"),
+#         name="Durchschnittliche WKA-Leistung"))
+#
+# # Diagramm 2: Kapazitätsfaktor PV und Wind
+# months = ['Jan', 'Feb', 'Mrz', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+# pv_capacity_factor = [4.4, 11.89, 13.14, 20.04, 20.57, 23.37, 22.5, 20.09, 17.56, 10.68, 5.87, 4.09]
+# wind_capacity_factor = [40.46, 40.28, 48.02, 27.73, 21.97, 24.66, 17.56, 23.71, 29.63, 39.69, 37.82, 47.46]
+#
+# df2 = pd.DataFrame({
+#     'Monat': months * 2,
+#     'Kapazitätsfaktor (%)': pv_capacity_factor + wind_capacity_factor,
+#     'Energiequelle': ['Photovoltaik'] * 12 + ['Wind'] * 12})
+#
+# fig2 = go.Figure()
+#
+# fig2.add_trace(
+#     go.Scatter(
+#         x=months,
+#         y=wind_capacity_factor,
+#         mode='lines',
+#         line=dict(color="#d7471f"),
+#         name='Wind'))
+#
+# fig2.add_trace(
+#     go.Scatter(
+#         x=months,
+#         y=pv_capacity_factor,
+#         mode='lines',
+#         line=dict(color="#901b6e"),
+#         name='PV'))
+#
+# fig = make_subplots(
+#     rows=2, cols=1,
+#     subplot_titles=[""],
+#     shared_xaxes=True,
+#     vertical_spacing=0.1)
+#
+# for trace in fig1.data:
+#     fig.add_trace(trace, row=1, col=1)
+#
+# for trace in fig2.data:
+#     fig.add_trace(trace, row=2, col=1)
+#
+# fig.update_layout(
+#     title='',
+#     width=1000,
+#     height=800,
+#     template="simple_white",
+#     showlegend=True,
+#     legend=dict(
+#         orientation="h",
+#         yanchor="bottom",
+#         y=1.1,
+#         xanchor="center",
+#         x=0.5))
+#
+# fig.update_xaxes(title_text="", row=1, col=1)
+# fig.update_yaxes(title_text="P in MW", row=1, col=1)
+# fig.update_yaxes(title_text="Kapazitätsfaktor in %", row=2, col=1)
+#
+# fig.show()
+#
+# filename = 'EE_WIND_P_Kap.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Wasserstoff-Lastkurve
+#
+# df_load_H2_15min_mw = df_load_H2_15min_mw.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+#
+# df_filtered = df_load_H2_15min_mw[(df_load_H2_15min_mw['time_input_year'] >= start_date_plots) & (df_load_H2_15min_mw['time_input_year'] <= end_date_plots)]
+#
+# fig = go.Figure()
+#
+# fig.add_trace(go.Scatter(
+#     x=df_filtered['time_input_year'],
+#     y=df_filtered['P (MW)'],
+#     mode='lines',
+#     name='Leistung H<sub>2</sub>',
+#     line=dict(color='#00008b')))  # Dunkelblau
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='Datum / Uhrzeit',
+#     yaxis_title='P H<sub>2</sub> in MW',
+#     width=1000,
+#     height=600,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=5,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]),
+#     yaxis=dict(
+#         showgrid=True,
+#         range=[0, None]))
+#
+# pio.show(fig)
+#
+# filename = 'Wasserstoff_Lastkurve.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Masse Tankvorgänge FCEV - Normalverteilung
+#
+# data = np.array(individual_tank_masses_FCEV)
+#
+# # Erstelle einen Plot mit der Dichtefunktion
+# plt.figure(figsize=(10, 6))
+# sns.histplot(data, kde=True, bins=30, stat="density", label="Datenverteilung", color="blue")
+#
+# # Plot-Anpassungen
+# plt.title("", fontsize=14)
+# plt.xlabel("Wasserstoffmasse in kg pro Tankvorgang für FCEV", fontsize=12)
+# plt.ylabel("Wahrscheinlichkeitsdichte", fontsize=12)
+# #plt.legend()
+# plt.grid()
+# plt.tight_layout()
+#
+# filename = 'Normalverteilung_Tankmassen_FCEV.png'
+# full_path = os.path.join(output_path, filename)
+# plt.savefig(full_path, format='png', dpi=300)
+# plt.show()
+# plt.close()
+#
+# # Masse Tankvorgänge FCET - Normalverteilung
+#
+# data = np.array(individual_tank_masses_FCET)
+#
+# # Erstelle einen Plot mit der Dichtefunktion
+# plt.figure(figsize=(10, 6))
+# sns.histplot(data, kde=True, bins=30, stat="density", label="Datenverteilung", color="blue")
+#
+# # Plot-Anpassungen
+# plt.title("", fontsize=14)
+# plt.xlabel("Wasserstoffmasse in kg pro Tankvorgang für FCET", fontsize=12)
+# plt.ylabel("Wahrscheinlichkeitsdichte", fontsize=12)
+# #plt.legend()
+# plt.grid()
+# plt.tight_layout()
+#
+# filename = 'Normalverteilung_Tankmassen_FCET.png'
+# full_path = os.path.join(output_path, filename)
+# plt.savefig(full_path, format='png', dpi=300)
+# plt.show()
+# plt.close()
+#
+# # Energie Ladevorgänge BEV - Normalverteilung
+#
+# data = np.array(individual_tank_energies_BEV)
+#
+# # Erstelle einen Plot mit der Dichtefunktion
+# plt.figure(figsize=(10, 6))
+# sns.histplot(data, kde=True, bins=30, stat="density", label="Datenverteilung", color="blue")
+#
+# # Plot-Anpassungen
+# plt.title("", fontsize=14)
+# plt.xlabel("Energie in kWh pro Ladevorgang", fontsize=12)
+# plt.ylabel("Wahrscheinlichkeitsdichte", fontsize=12)
+# #plt.legend()
+# plt.grid()
+# plt.tight_layout()
+#
+# filename = 'Normalverteilung_Ladeenergie_BEV.png'
+# full_path = os.path.join(output_path, filename)
+# plt.savefig(full_path, format='png', dpi=300)
+# plt.show()
+# plt.close()
+#
+# # Balkendiagramm Saisonale Tankwahrscheinlichkeit FCEV
+#
+# fig = px.bar(df_monthly_refuel_prob_BEV,
+#               x=['Jan','Feb','Mrz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez',],
+#               y=[7.233, 8.231, 8.182, 8.141, 8.176, 9.386, 8.681, 8.950, 8.239, 8.404, 8.349, 8.029], #Daten aus Excel H2-Nachfrage
+#               labels={'seasonal_refuel_prob': 'Seasonal Refuel Probability (%)'},
+#               title='Seasonal Refuel Probability by Month',
+#               color_discrete_sequence=['#00008b'])
+#
+# fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
+#
+# fig.update_traces(
+#     marker_line_color='black',  # Farbe der Umrandung
+#     marker_line_width=1.5)       # Breite der Umrandung
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='',
+#     yaxis_title='Saisonale Tankwahrscheinlichkeit in %',
+#     width=550,
+#     height=400,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=20,
+#         showgrid=True,),
+#     yaxis=dict(showgrid=True))
+#
+# fig.show()
+#
+# filename = 'Saisonale_Tankwahrscheinlichkeit_FCEV.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Balkendiagramm Saisonale Tankwahrscheinlichkeit BEV
+# fig = px.bar(df_monthly_refuel_prob_BEV,
+#               x=['Jan','Feb','Mrz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez',],
+#               y=df_monthly_refuel_prob_BEV['seasonal_refuel_prob']*100,
+#               labels={'seasonal_refuel_prob': 'Seasonal Refuel Probability (%)'},
+#               title='Seasonal Refuel Probability by Month',
+#               color_discrete_sequence=['#00008b'])
+#
+# fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
+#
+# fig.update_traces(
+#     marker_line_color='black',  # Farbe der Umrandung
+#     marker_line_width=1.5)       # Breite der Umrandung
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='',
+#     yaxis_title='Saisonale Tankwahrscheinlichkeit in %',
+#     width=550,
+#     height=400,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=20,
+#         showgrid=True,),
+#     yaxis=dict(showgrid=True))
+#
+# fig.show()
+#
+# filename = 'Saisonale_Tankwahrscheinlichkeit_BEV.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Diagramm der relativen Tankwahrscheinlichkeiten für BEV
+#
+# df_rel_refuel_prob_BEV_combined_plt = df_rel_refuel_prob_BEV_combined.copy()
+# row_00 = df_rel_refuel_prob_BEV_combined_plt[df_rel_refuel_prob_BEV_combined_plt['Time'] == '00:00']
+# row_24 = row_00.copy()
+# row_24['Time'] = '24:00'
+# df_rel_refuel_prob_BEV_combined_plt = pd.concat([df_rel_refuel_prob_BEV_combined_plt, row_24], ignore_index=True)
+#
+# mon_thu_sum=df_rel_refuel_prob_BEV_combined_plt['Mon-Thu'].sum()*4
+# fri_sum=df_rel_refuel_prob_BEV_combined_plt['Fri'].sum()
+# sat_sum=df_rel_refuel_prob_BEV_combined_plt['Sat'].sum()
+# sun_sum=df_rel_refuel_prob_BEV_combined_plt['Sun'].sum()
+# sum_sum=mon_thu_sum+fri_sum+sat_sum+sun_sum
+#
+# fig = px.line(
+#     df_rel_refuel_prob_BEV_combined_plt,
+#     x='Time',
+#     y=['Mon-Thu', 'Fri', 'Sat', 'Sun'],
+#     title='Tankwahrscheinlichkeit nach Wochentagen',
+#     labels={'Time': 'Viertelstunde', 'rel_refuel_prob': 'Tankwahrscheinlichkeit'})
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='',
+#     yaxis_title='Anteil der Ladevorgänge in %',
+#     width=1000,
+#     height=600,
+#     template="simple_white",
+#     legend_title="",
+#     xaxis=dict(
+#         tickformat='%H:%M',
+#         tickmode='auto',
+#         dtick="3600000",
+#         nticks=13,
+#         showgrid=True,
+#         range=["00:00", "24:00"]),
+#     yaxis=dict(showgrid=True),
+#     legend=dict(
+#         orientation="h",  # Horizontale Ausrichtung
+#         x=0.5,  # Horizontale Position (Mitte)
+#         y=-0.15,  # Vertikale Position (oberhalb des Plots)
+#         xanchor="center",  # Legende zentrieren
+#         yanchor="bottom"   # Legende knapp oberhalb des Plots positionieren
+#     ))
+#
+# fig['data'][0]['line']['color']="#901b6e"  # lila
+# fig['data'][1]['line']['color']="#d7471f"  # orange
+# fig['data'][2]['line']['color']="#1c1c1c"  # graphitschwarz
+# fig['data'][3]['line']['color']="#00008b"  # dunkelblau
+#
+# fig['data'][0]['name'] = "Mo-Do"
+# fig['data'][1]['name'] = "Fr"
+# fig['data'][2]['name'] = "Sa"
+# fig['data'][3]['name'] = "So"
+#
+# fig.show()
+#
+# filename = 'Relative_Ladewahrscheinlichkeit_BEV.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Diagramm der BEV-Lastkurve
+#
+# df_load_el_15min_mw = df_load_el_15min_mw.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+#
+# df_filtered = df_load_el_15min_mw[(df_load_el_15min_mw['time_input_year'] >= start_date_plots) & (df_load_el_15min_mw['time_input_year'] <= end_date_plots)]
+#
+# fig = go.Figure()
+#
+# fig.add_trace(go.Scatter(
+#     x=df_filtered['time_input_year'],
+#     y=df_filtered['P (MW)'],
+#     mode='lines',
+#     name='el. Leistung',
+#     line=dict(color='#00008b')))  # Dunkelblau
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='Datum / Uhrzeit',
+#     yaxis_title='P<sub>el</sub> in MW',
+#     width=1000,
+#     height=600,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=5,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]),
+#     yaxis=dict(
+#         showgrid=True,
+#         range=[0, None]))
+#
+# pio.show(fig)
+#
+# filename = 'BEV_Lastkurve.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Elektrolyseur - Lastkurve
+#
+# df_electrolyzer_15min = df_electrolyzer_15min.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+#
+# df_filtered = df_electrolyzer_15min[(df_electrolyzer_15min['time'] >= start_date_plots) & (df_electrolyzer_15min['time'] <= end_date_plots)]
+# y_max = df_filtered['P_ac [MW]'].max() * 1.1  # 10% Puffer hinzufügen
+#
+# fig = go.Figure()
+# fig.add_trace(go.Scatter(
+#     x=df_electrolyzer_15min['time'],
+#     y=df_electrolyzer_15min['P_ac [MW]'],
+#     mode='lines',
+#     name='P elektrisch [MW]',
+#     line=dict(color='#00008b')))
+#
+# fig.update_layout(
+#     title='',
+#     template="simple_white",
+#     xaxis_title='Datum / Uhrzeit',
+#     yaxis_title='Leistung in MW',
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=5,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]),
+#     yaxis=dict(
+#         title='Leistung in MW',
+#         showgrid=True,
+#         range=[0, y_max]),
+#     )
+#
+# pio.show(fig)
+#
+# filename = 'Lastkurve_Elektrolyseur.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Elektrolyseur - H2-Produktion
+# df_filtered = df_electrolyzer_15min[(df_electrolyzer_15min['time'] >= start_date_plots) & (df_electrolyzer_15min['time'] <= end_date_plots)]
+#
+# fig = go.Figure()
+#
+# fig.add_trace(go.Scatter(
+#     x=df_electrolyzer_15min['time'],
+#     y=df_electrolyzer_15min['hydrogen production [Kg/dt]'],
+#     mode='lines',
+#     name='H<sub>2</sub> production',
+#     line=dict(color='#00008b')))
+#
+# fig.update_layout(
+#     title='Wasserstoffproduktion Elektrolyseur',
+#     xaxis_title='Datum / Uhrzeit',
+#     yaxis_title='H<sub>2</sub> [kg/15min]',
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=7,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]),
+#         width=1000,
+#         height=600,
+#         template="simple_white",
+#         legend_title="Legende",)
+#
+# pio.show(fig)
+#
+# filename = 'Wasserstoffproduktion_Elektrolyseur.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Balkendiagramm Energiemengen Herkunft
+# # Summen der Energiemengen berechnen
+# E_pv = df_res_links_2["pv_to_el"] * dt_h
+# pv_sum = E_pv.sum()
+# E_pv_infeed = df_res_generators_2["pv_infeed"] * dt_h
+# pv_infeed_sum = E_pv_infeed.sum()
+# E_wind = df_res_links_2["wind_to_el"] * dt_h
+# wind_sum = E_wind.sum()
+# E_wind_infeed = df_res_generators_2["wind_infeed"] * dt_h
+# wind_infeed_sum = E_wind_infeed.sum()
+# E_grid = df_res_generators_2["grid"] * dt_h
+# grid_sum = E_grid.sum()
+# df_bar_energy = pd.DataFrame({'Energiequelle': ['Eigenverbrauch', 'Einspeisung', 'Eigenverbrauch', 'Einspeisung', 'Eigenverbrauch'],
+#                               'Energie [MWh]': [pv_sum, pv_infeed_sum, wind_sum, wind_infeed_sum, grid_sum],
+#                               'Quelle': ['PV', 'PV', 'Wind', 'Wind', 'Netz']})
+#
+# fig = px.bar(df_bar_energy,
+#               x='Quelle',
+#               y='Energie [MWh]',
+#               color='Energiequelle',
+#               template='simple_white',
+#               title='<b>Energieverbrauch und -herkunft für die Tankstelle</b><br><sup>Energie in MWh<sup>',
+#               text=df_bar_energy['Energie [MWh]'].round(1),
+#               width=1000,
+#               height=600,
+#               color_discrete_map={'Eigenverbrauch': "#c60c0f", 'Einspeisung': "#901b6e"}
+#               )
+#
+# fig.update_xaxes(tickfont=dict(size=12), title_text='')
+# fig.update_yaxes(tickfont=dict(size=12), title_text='')
+# fig.update_traces(width=0.5)
+# fig.update_layout(
+#     yaxis_tickformat = '.',
+#     legend_title="Legende")
+#
+# fig.show()
+#
+# filename = 'Balkendiagramm_Energiemengen_Herkunft.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Diagramm zur Leistung der einzelnen Generatoren
+#
+# df_res_generators_2 = df_res_generators_2.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+#
+# df_filtered = df_res_generators_2[(df_res_generators_2['snapshot'] >= start_date_plots) & (df_res_generators_2['snapshot'] <= end_date_plots)]
+#
+# x_values = df_res_generators_2['snapshot']
+# y_values = ['pv',
+#             'pv_infeed',
+#             'wind',
+#             'wind_infeed',
+#             'grid']
+#
+# custom_labels = {
+#     'pv':'PV (Eigenverbrauch)',
+#     'pv_infeed':'PV (Einspeisung)',
+#     'wind': 'Wind (Eigenverbrauch)',
+#     'wind_infeed': 'Wind (Einspeisung)',
+#     'grid': 'Netzbezug'}
+#
+# avg_pv = df_res_generators_2['pv'].mean()
+# avg_wind = df_res_generators_2['wind'].mean()
+# time = df_res_generators_2['snapshot'].min()
+#
+# fig = px.line(df_res_generators_2, x = x_values, y = y_values)
+#
+# fig['data'][0]['line']['color'] = "#c60c0f"  # rot
+# fig['data'][1]['line']['color'] = "#d7471f"  # orange
+# fig['data'][2]['line']['color'] = "#901b6e"  # lila
+# fig['data'][3]['line']['color'] = "#00008b"  # dunkelblau
+# fig['data'][4]['line']['color'] = "#696969"  # grau
+#
+# fig['data'][0]['name'] = custom_labels['pv']
+# fig['data'][1]['name'] = custom_labels['pv_infeed']
+# fig['data'][2]['name'] = custom_labels['wind']
+# fig['data'][3]['name'] = custom_labels['wind_infeed']
+# fig['data'][4]['name'] = custom_labels['grid']
+#
+# fig.update_layout(
+#     title = 'Leistung Generatoren',
+#     width = 1000,
+#     height = 600,
+#     xaxis_title = 'Datum / Uhrzeit',
+#     yaxis_title = 'P [MW]',
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=7,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]))
+#
+# fig.add_trace(
+#     go.Scatter(
+#         x=[df_res_generators_2['snapshot'].min(), df_res_generators_2['snapshot'].max()],
+#         y=[avg_pv, avg_pv],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dot"),
+#         name="Durchschnittliche PV-Leistung"))
+#
+# fig.add_trace(
+#     go.Scatter(
+#         x=[df_res_generators_2['snapshot'].min(), df_res_generators_2['snapshot'].max()],
+#         y=[avg_wind, avg_wind],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dash"),
+#         name="Durchschnittliche WKA-Leistung"))
+#
+# fig.show()
+#
+# filename = 'Liniendiagramm_Leistung_Generatoren.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Diagramm zur Leistung der einzelnen Links
+#
+# df_res_links_2 = df_res_links_2.reset_index() # Index zurücksetzen, um auf Spalte "time" zurückgreifen zu können
+#
+# df_filtered = df_res_links_2[(df_res_links_2['snapshot'] >= start_date_plots) & (df_res_links_2['snapshot'] <= end_date_plots)]
+#
+# x_values = df_res_links_2['snapshot']
+# y_values = ['pv_to_el',
+#             'wind_to_el',
+#             'electrolyzer',
+#             'compressor_h2_flow']
+#
+# custom_labels = {
+#     'pv_to_el': 'PV',
+#     'wind_to_el': 'Wind',
+#     'electrolyzer': 'Elektrolyseur',
+#     'compressor_h2_flow': 'Kompressor'}
+#
+# avg_electrolyzer = df_res_links_2['electrolyzer'].mean()
+# time = df_res_links_2.index.min()
+#
+# fig = px.line(df_res_links_2, x=x_values, y=y_values)
+#
+# fig['data'][0]['line']['color'] = "#c60c0f"  # rot
+# fig['data'][1]['line']['color'] = "#d7471f"  # orange
+# fig['data'][2]['line']['color'] = "#901b6e"  # lila
+# fig['data'][3]['line']['color'] = "#00008b"  # dunkelblau
+#
+# fig['data'][0]['name'] = custom_labels['pv_to_el']
+# fig['data'][1]['name'] = custom_labels['wind_to_el']
+# fig['data'][2]['name'] = custom_labels['electrolyzer']
+# fig['data'][3]['name'] = custom_labels['compressor_h2_flow']
+#
+# fig.update_layout(
+#     title='Leistung Links',
+#     width=1000,
+#     height=600,
+#     xaxis_title='Datum / Uhrzeit',
+#     yaxis_title='P [MW]',
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=7,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]))
+#
+# fig.add_trace(
+#     go.Scatter(
+#         x=[df_res_links_2['snapshot'].min(), df_res_links_2['snapshot'].max()],
+#         y=[avg_electrolyzer, avg_electrolyzer],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dot"),
+#         name="Durchschnittliche Elektrolyseur-Leistung"))
+#
+# fig.show()
+#
+# filename = 'Liniendiagramm_Leistung_Links.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Diagramm zu Speicherfüllständen
+#
+# df_res_stores_2_E = n.stores_t.e
+# df_res_stores_2_E = df_res_stores_2_E.reset_index() # Index zurücksetzen, um auf Spalte "snapshot" zurückgreifen zu können
+#
+# x_values = df_res_stores_2_E['snapshot']
+# fig = px.line(df_res_stores_2_E, x = x_values, y = 'el_storage')
+#
+# custom_labels = {
+#     'el_storage': 'Batteriespeicher',
+#     'H2_storage': 'Wasserstoffspeicher'}
+#
+# avg_el = df_res_stores_2_E['el_storage'].mean()
+# avg_h2 = df_res_stores_2_E['H2_storage'].mean()
+# time = df_res_stores_2_E['snapshot'].min()
+#
+# fig = px.line(df_res_stores_2_E, x=df_res_stores_2_E['snapshot'], y=['el_storage', 'H2_storage'])
+#
+# fig['data'][0]['line']['color']="#901b6e"  # lila
+# fig['data'][1]['line']['color']="#d7471f"  #orange
+#
+# fig['data'][0]['name'] = custom_labels['el_storage']
+# fig['data'][1]['name'] = custom_labels['H2_storage']
+#
+# fig.update_layout(
+#     title = '',
+#     width = 1000,
+#     height = 600,
+#     xaxis_title = 'Datum / Uhrzeit',
+#     yaxis_title = 'Energie in MWh',
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=7,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]))
+#
+# fig.add_trace(
+#     go.Scatter(
+#         x=[df_res_stores_2_E['snapshot'].min(), df_res_stores_2_E['snapshot'].max()],
+#         y=[avg_el, avg_el],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dot"),
+#         name="Durchschnitt Batteriespeicher"))
+#
+# fig.add_trace(
+#     go.Scatter(
+#         x=[df_res_stores_2_E['snapshot'].min(), df_res_stores_2_E['snapshot'].max()],
+#         y=[avg_h2, avg_h2],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dash"),
+#         name="Durchschnitt Wasserstoffspeicher"))
+#
+# fig.show()
+#
+# filename = 'Liniendiagramm_Speicherfüllstände.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Diagramm Last
+#
+# df_res_loads_2 = df_res_loads_2.reset_index() # Index zurücksetzen, um auf Spalte "snapshot" zurückgreifen zu können
+#
+# x_values = df_res_loads_2['snapshot']
+# fig = px.line(df_res_loads_2, x = x_values, y = 'H2_load')
+#
+# custom_labels = {
+#     'H2_load': 'H<sub>2</sub>-Last',
+#     'el_charging_station_load': 'el. Last Ladesäulen',
+#     'compressor_el_load': 'el. Last Kompressor',
+#     'electrolyzer_el_load': 'el. Last Elektrolyseur'}
+#
+# avg_elektrolyzer = df_res_loads_2['electrolyzer_el_load'].mean()
+# time = df_res_loads_2['snapshot'].min()
+#
+# fig = px.line(df_res_loads_2, x=df_res_loads_2['snapshot'], y=['H2_load', 'el_charging_station_load', 'compressor_el_load', 'electrolyzer_el_load'])
+#
+# fig['data'][0]['line']['color']="#901b6e"  # lila
+# fig['data'][1]['line']['color']="#d7471f"  #orange
+# fig['data'][2]['line']['color']="#c60c0f"  # rot
+# fig['data'][3]['line']['color']="#00008b"  # dunkelblau
+#
+# fig['data'][0]['name'] = custom_labels['H2_load']
+# fig['data'][1]['name'] = custom_labels['el_charging_station_load']
+# fig['data'][2]['name'] = custom_labels['compressor_el_load']
+# fig['data'][3]['name'] = custom_labels['electrolyzer_el_load']
+#
+# fig.update_layout(
+#     title = 'Lasten',
+#     width = 1000,
+#     height = 600,
+#     xaxis_title = 'Datum / Uhrzeit',
+#     yaxis_title = 'P [MW]',
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=7,
+#         showgrid=True,
+#         range=[start_date_plots, end_date_plots]),
+#     yaxis=dict(showgrid=True))
+#
+# fig.add_trace(
+#     go.Scatter(
+#         x=[df_res_loads_2['snapshot'].min(), df_res_loads_2['snapshot'].max()],
+#         y=[avg_elektrolyzer, avg_elektrolyzer],
+#         mode="lines",
+#         line=dict(color="black", width=3, dash="dot"),
+#         name="Durchschnitt Elektrolyseur"))
+#
+# fig.show()
+#
+# filename = 'Liniendiagramm_Lasten.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Balkendiagramm Kompressorstufen Energie
+# x_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+# y_values1 = [1, 3.12, 6.97, 15.55, 34.72, 77.51, 173.04, 386.29, 862.36, 1000]  # Werte für Gruppe 1
+# y_values2 = [30, 93.63, 209.02, 466.61, 1000, "", "", "", "", ""]   # Werte für Gruppe 2
+#
+# # Erstellen der Balken
+# fig = go.Figure(data=[
+#     go.Bar(
+#         name='Eingangsdruck 1 bar',  # Name für die Legende
+#         x=x_labels,
+#         y=y_values1,
+#         marker=dict(color='blue', line=dict(color='black', width=1.5)),
+#         width=0.4  # Balkenbreite
+#     ),
+#     go.Bar(
+#         name='Eingangsdruck 30 bar',  # Name für die Legende
+#         x=x_labels,
+#         y=y_values2,
+#         marker=dict(color='red', line=dict(color='black', width=1.5)),
+#         width=0.4  # Balkenbreite
+#     )
+# ])
+#
+# # Layout-Einstellungen
+# fig.update_layout(
+#     barmode='group',  # Gruppierte Balken
+#     title='',
+#     xaxis_title='Verdichterstufe',
+#     yaxis_title='Enddruck pro Stufe in bar',
+#     template="simple_white",
+#     width=800,
+#     height=500,
+#     legend_title="",
+#     legend=dict(
+#         x=0,
+#         y=1,
+#         xanchor='left',
+#         yanchor='top'),
+#     xaxis=dict(
+#         nticks=11,
+#         ))
+#
+# # Diagramm anzeigen
+# fig.show()
+#
+# filename = 'Kompressorstufen_Balkendiagramm.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Balkendiagramm Verteilung Energiemengen an Zapfsäule FCEV
+# df_charging_points_FCEV_sum['Nr'] = range(1, len(df_charging_points_FCEV_sum) + 1)
+#
+# fig = px.bar(df_charging_points_FCEV_sum,
+#               x=df_charging_points_FCEV_sum['Nr'],
+#               y=df_charging_points_FCEV_sum['Share [%]'],
+#               labels={'Share [%]': 'Anteil Zapfsäule an abgegebenem H<sub>2'},
+#               title='Nutzungsanteil der Zapfsäulen',
+#               color_discrete_sequence=['#00008b'])
+#
+# fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
+#
+# fig.update_traces(
+#     marker_line_color='black',  # Farbe der Umrandung
+#     marker_line_width=1.5)       # Breite der Umrandung
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='FCEV Zapfsäule Nr',
+#     yaxis_title='Anteil an H<sub>2</sub> pro Zapfsäule in %',
+#     width=550,
+#     height=400,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=25,
+#         showgrid=True,),
+#     yaxis=dict(showgrid=True))
+#
+# fig.show()
+#
+# filename = 'Anteil_H2_pro_Zapfsäule_FCEV.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Balkendiagramm Verteilung Energiemengen an Zapfsäule FCET
+# df_charging_points_FCET_sum['Nr'] = range(1, len(df_charging_points_FCET_sum) + 1)
+#
+# fig = px.bar(df_charging_points_FCET_sum,
+#               x=df_charging_points_FCET_sum['Nr'],
+#               y=df_charging_points_FCET_sum['Share [%]'],
+#               labels={'Share [%]': 'Anteil Zapfsäule an abgegebenem H<sub>2'},
+#               title='Nutzungsanteil der Zapfsäulen',
+#               color_discrete_sequence=['#00008b'])
+#
+# fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
+#
+# fig.update_traces(
+#     marker_line_color='black',  # Farbe der Umrandung
+#     marker_line_width=1.5)       # Breite der Umrandung
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='FCET Zapfsäule Nr',
+#     yaxis_title='Anteil an H<sub>2</sub> pro Zapfsäule in %',
+#     width=550,
+#     height=400,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=20,
+#         showgrid=True,),
+#     yaxis=dict(showgrid=True))
+#
+# fig.show()
+#
+# filename = 'Anteil_H2_pro_Zapfsäule_FCET.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+#
+# # Balkendiagramm Verteilung Energiemengen an Zapfsäule BEV
+# df_charging_points_sum['Nr'] = range(1, len(df_charging_points_sum) + 1)
+#
+# fig = px.bar(df_charging_points_sum,
+#               x=df_charging_points_sum['Nr'],
+#               y=df_charging_points_sum['Share [%]'],
+#               labels={'Share [%]': 'Anteil Ladesäule an abgegebener Energie'},
+#               title='Nutzungsanteil der Ladesäulen',
+#               color_discrete_sequence=['#00008b'])
+#
+# fig.update_traces(width=0.9)  # Balkenbreite auf 50% des Standardwerts reduzieren
+#
+# fig.update_traces(
+#     marker_line_color='black',  # Farbe der Umrandung
+#     marker_line_width=1.5)       # Breite der Umrandung
+#
+# fig.update_layout(
+#     title='',
+#     xaxis_title='Ladesäule Nr',
+#     yaxis_title='Anteil an Energie pro Ladesäule in %',
+#     width=550,
+#     height=400,
+#     template="simple_white",
+#     legend_title="Legende",
+#     xaxis=dict(
+#         tickformat='%Y-%m-%d %H:%M',
+#         tickmode='auto',
+#         nticks=10,
+#         showgrid=True,),
+#     yaxis=dict(showgrid=True))
+#
+# fig.show()
+#
+# filename = 'Anteil_Energie_pro_Ladesäule.png'
+# full_path = os.path.join(output_path, filename)
+# fig.write_image(full_path, format='png', scale=3)
+
+print(f"Anzahl FCEV im Jahr {year}: {n_FCEV_year:,.0f}".replace(",", "."))
+print(f"Anzahl FCET im Jahr {year}: {n_FCET_year:,.0f}".replace(",", "."))
+print(f"Anzahl FCEV-Tankvorgänge im Jahr {year}: {df_load_H2['refueling_event_FCEV'].sum():,.0f}".replace(",", "."))
+print(f"Anzahl FCET-Tankvorgänge im Jahr {year}: {df_load_H2['refueling_event_FCET'].sum():,.0f}".replace(",", "."))
+print(f"Anzahl BEV-Ladevorgänge im Jahr {year}: {df_load_BEV['refueling_event'].sum():,.0f}".replace(",", "."))
