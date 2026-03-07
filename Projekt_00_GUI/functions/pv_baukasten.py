@@ -181,7 +181,7 @@ PV_TYPEN = [
         bifaciality=0.75,
         gcr=0.35,                   # GCR = Ground Coverage Ratio (Bodenbedeckungsgrad).
         row_height=3.0,
-        row_width=4.0,
+        row_width=1.0,
         albedo=0.2,
         # Tracking
         mount_type="singleaxis",
@@ -201,6 +201,7 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=1,
         strings_per_inverter=1,
+        row_width=1.0,
     ),
 
     PVType(
@@ -214,6 +215,7 @@ PV_TYPEN = [
         temp_model="open_rack_glass_glass",
         modules_per_string=2,
         strings_per_inverter=1,
+        row_width=1.0,
     ),
 
 # Test

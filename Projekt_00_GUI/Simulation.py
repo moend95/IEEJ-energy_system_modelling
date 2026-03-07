@@ -1,6 +1,7 @@
 import os
 import sys
 import pandas as pd
+
 #Functions
 from core.io_types import GuiInput, SimOutput
 from functions.Industriegebiet import IndustryLoadAggregator
@@ -15,7 +16,7 @@ el_pv_type_number_text_mapping = {4:"horizontal", 5:"vertical", 6:"horizontal_tr
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
 weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2022_15min.csv")
-base_input = "./functions/inputs"
+base_input = os.path.join(script_dir, "functions", "inputs")
 output_dir = os.path.join(base_input, "punkte")
 os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
 
@@ -59,7 +60,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     #Berechnung
     out.h_sum_energy_kwh = 0
-    total_sys_ac_kw = None
+    h_total_sys_ac_kw = None
     for pv_type in h_pv_system.pvtypes if inp.h_pv_types and inp.highways else []:
         # CSV-Name so, wie ihn generate_pv_points gespeichert hat
         csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
@@ -68,8 +69,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         test_csv = os.path.join(output_dir, "test_single_point.csv")
         df_one.to_csv(test_csv, index=False)
 
-        energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"Energie {pv_type.name}: {energy_type_kWh:.1f} kWh"," (Nur berechneten Punkte vor Skalierung über Schrittweite)")
+        h_energy_type_kWh, h_total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
+        print(f"Energie {pv_type.name}: {h_energy_type_kWh:.1f} kWh"," (Nur berechneten Punkte vor Skalierung über Schrittweite)")
 
         # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
         scaled_energy_kwh_pv_type = 0
@@ -77,8 +78,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         if h_pv_system.step_size >= pv_type.row_width:
             scaling_factor = h_pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
             print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
-            scaled_energy_kwh_pv_type = energy_type_kWh * scaling_factor
-            scaled_total_type_ac_w = total_type_ac_w * scaling_factor
+            scaled_energy_kwh_pv_type = h_energy_type_kWh * scaling_factor
+            scaled_total_type_ac_w = h_total_type_ac_w * scaling_factor
             print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
         else:
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
@@ -86,13 +87,13 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
         ac_kw = scaled_total_type_ac_w / 1000
 
-        if total_sys_ac_kw is None:
-            total_sys_ac_kw = ac_kw
+        if h_total_sys_ac_kw is None:
+            h_total_sys_ac_kw = ac_kw
         else:
-            total_sys_ac_kw = total_sys_ac_kw.add(ac_kw, fill_value=0)
-    out.h_max_power_kw = total_sys_ac_kw.max()
-    total_sys_ac_kw.index_no_year = total_sys_ac_kw.index.strftime("%m-%d %H:%M")
-    out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
+            h_total_sys_ac_kw = h_total_sys_ac_kw.add(ac_kw, fill_value=0)
+    out.h_max_power_kw = h_total_sys_ac_kw.max()
+    h_total_sys_ac_kw.index_no_year = h_total_sys_ac_kw.index.strftime("%m-%d %H:%M")
+    out.res_df["Erzeugung_Solarautobahn [kW]"] = h_total_sys_ac_kw.clip(lower=0).values
     out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
 
     print('Solarautobahn \t\t- abgeschlossen')
@@ -115,7 +116,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.el_pv_length = agri_result.get("metadata").get('total_rows_length_m')
 
 
-        el_selected_pv_type = [PV_TYPEN[inp.el_pv_type]]
+        el_selected_pv_type = PV_TYPEN[inp.el_pv_type]
 
         # INPUT für PV Baukasten - ENERGIELANDSCHAFT
         geojson_file_2 = "Agri_PV_Centroid.geojson"
@@ -130,8 +131,23 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             base_output_dir=output_dir,
         )
 
+        # CSV-Name so, wie ihn generate_pv_points gespeicher hat
+        el_csv_name = f"punkte_{el_selected_pv_type.id}_{el_selected_pv_type.name}.csv".replace(" ", "_")
+        el_csv_path = os.path.join(output_dir, el_csv_name)
+        print(el_csv_path)
 
+        # UNBEDINGT ÜBERPRÜFEN
+        el_energy_type_kWh, el_total_type_ac_w = el_pv_system.simulate_pv_type_energy(el_selected_pv_type, el_csv_path)
 
+        modules_per_meter = el_selected_pv_type.modules_per_string * el_selected_pv_type.strings_per_inverter / el_selected_pv_type.row_width
+        el_energy_sys_kWh = el_energy_type_kWh * out.el_pv_length * modules_per_meter
+        el_total_sys_ac_kw = el_total_type_ac_w * out.el_pv_length * modules_per_meter
+
+        out.el_max_power_kw = el_total_sys_ac_kw.max()
+        el_total_sys_ac_kw.index_no_year = el_total_sys_ac_kw.index.strftime("%m-%d %H:%M")
+        out.res_df["Erzeugung_Energielandschaft [kW]"] = el_total_sys_ac_kw.clip(lower=0).values
+        out.res_df["Erzeugung_Energielandschaft [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
+        out.el_sum_energy_kwh = el_energy_sys_kWh
 
 
     else:
