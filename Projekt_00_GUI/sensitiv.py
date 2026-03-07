@@ -22,7 +22,7 @@ H_CONFIGS = {
 
     2: {
         "highways": [ "A44"],
-        "h_pv_types": [1,2,3]
+        "h_pv_types": [1,2]
     }
 }
 

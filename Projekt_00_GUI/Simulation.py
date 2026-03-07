@@ -181,21 +181,24 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
 
 
+    print('Green Energy Hub \t- abgeschlossen')
+
+
+
+
     # ------------------------------------------------------------
     # 5) Stadtentwicklung Jüchen Süd
-
-    print('Green Energy Hub \t- abgeschlossen')
     # ------------------------------------------------------------
 
 
 
 
     # ------------------------------------------------------------
-
-    print('Bilanzierung \t\t- abgeschlossen')
     # 6) Bilanz
     # ------------------------------------------------------------
 
+
+    print('Bilanzierung \t\t- abgeschlossen')
 
 
 
@@ -203,7 +206,13 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # 7) Battery
     # ------------------------------------------------------------
 
+
     print('Batterie \t\t\t- abgeschlossen')
+
+
+
+
+
 
     print('\nInput Daten:\n',inp)
     #print(out.res_df)
