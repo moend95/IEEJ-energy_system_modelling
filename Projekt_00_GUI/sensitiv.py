@@ -10,7 +10,7 @@ DEFAULT_CONFIG = {
 
     # Solarautobahn
     "highways": ["A46"],
-    "h_pv_types": [2, 3],   #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung
+    "h_pv_types": [0],   #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung
 
     # Energielandschaft
     "el_build_state": 100,
@@ -38,26 +38,42 @@ DEFAULT_CONFIG = {
 # CASE DEFINITIONS
 # ---------------------------------------------------
 
+# Solarautobahn
 H_CONFIGS = {
-    1: {},
-    2: {"highways": ["A44", "A46"], "h_pv_types": [0,1,2,3]}
+    1: {
+    "highways": ["A46"],            "h_pv_types": [0]}, #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
+    2: {
+    "highways": ["A44", "A46"],     "h_pv_types": [1,2,3]}
 }
 
+# Energielandschaft
 EL_CONFIGS = {
-    1: {},
+    1: {
+    "el_build_state": 100,
+    "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal
+    "tractor_width": 24.0,
+    "tractor_length": 15.0,
+    "tractor_turn_radius": 9.0},
+
     2: {"tractor_width": 12.0, "el_pv_type": 6}
 }
 
+# Industrie
 I_CONFIGS = {
-    1: {},
+    1: {"is_heat_cooling_electric": False,
+    "companies": [1, 2, 4]},
     2: {"companies": [5, 5, 6, 6, 7], "is_heat_cooling_electric": True}
 }
 
+# Green Energy Hub
 GEH_CONFIGS = {
     1: {},
-    2: {"h2_load_scenario": "2030", "e_load_scenario": "2030"}
+    2: {"h2_load_scenario": "2030", "e_load_scenario": "2030"},
+    3: {"h2_load_scenario": "2030", "e_load_scenario": "2030"}
+
 }
 
+# Battery
 B_CONFIGS = {
     1: {},
     2: {"bs_energy_kwh": 235000.0, "bs_power_kw": 1000.0}
@@ -109,8 +125,17 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
 
 def main():
 
+    #Ergebnisse in Heatmap
+    # Index-Labels konsistent als Strings (z.B. "[1]", "[2, 3, 4]", ...)
+   # row_labels = [str(v) for v in company_selections]
+    # Matrix vorbereiten
+    #test_matrix = pd.DataFrame(index=row_labels, columns=traktor, dtype=float)
+
+
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
     for h_case in [1]:
+        #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
+        #test_matrix_row = []
         for el_case in [1]:
             for i_case in [1]:
                 for geh_case in [1]:
@@ -126,23 +151,30 @@ def main():
                             b_case=b_case
                         )
 
+
                         out = run_simulation(inp)
+                        print('PV Reihen Länge: ', round(out.el_pv_length,2))
 
+                        #test_result = x * sum(y)
+                        #test_matrix_row.append(test_result)
+
+#Output Lastgang speichern
                         if not out.res_df.empty:
-
                             filename = f"outputs/sensi_res_dfs/res_df_{h_case}{el_case}{i_case}{geh_case}{b_case}.csv"
-
                             out.res_df.to_csv(
                                 filename,
                                 sep=",",
                                 decimal="."
                             )
-
                             print("Saved:", filename)
                             print(out.res_df.head())
+                            print(out.res_df.describe())
 
                         else:
                             print("res_df empty")
+
+            #test_matrix.loc[row_label] = test_matrix_row
+   # print(test_matrix)
 
 
 # ---------------------------------------------------

@@ -88,7 +88,8 @@ class SimOutput:
                  el_error_text:str | None = None,
                  geh_error_text:str | None = None,
                  i_error_text:str | None = None,
-                 h_number_of_points:int | None = None,):
+                 h_number_of_points:int | None = None,
+                 el_pv_length:float | None = None,):
 
         # Energiemengen für das Jahr pro Modul
         self.h_sum_energy_kwh = h_sum_energy_kwh
@@ -109,4 +110,5 @@ class SimOutput:
         self.i_error_text = i_error_text
         # Debug Zeug
         self.h_number_of_points = h_number_of_points
+        self.el_pv_length = el_pv_length
 

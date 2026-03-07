@@ -83,7 +83,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
         out.total_ac_kw = total_ac_pv_type / 1000 if out.total_ac_kw is None else out.total_ac_kw + (total_ac_pv_type / 1000)
-        out.res_df["Erzeugung_Solarautobahn [kW]"] = out.total_ac_kw.values
+        out.res_df["Erzeugung_Solarautobahn [kW]"] = out.total_ac_kw.clip(lower=0).values
+        out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
 
     # ------------------------------------------------------------
     # 2) Industriegebiet
@@ -119,7 +120,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         tractor_length_m=inp.tractor_length,
         tractor_turn_radius_m=inp.tractor_turn_radius,
     )
-    agri_pv_laenge = agri_result.get("metadata").get('total_rows_length_m')
+    out.el_pv_length = agri_result.get("metadata").get('total_rows_length_m')
 
 
     el_selected_pv_type = [PV_TYPEN[inp.el_pv_type]]
