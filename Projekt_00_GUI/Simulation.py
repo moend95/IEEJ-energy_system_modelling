@@ -80,20 +80,19 @@ def run_simulation(inp: GuiInput) -> SimOutput:
                     continue
 
                 energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-                print(
-                    f"Energie {highway} | {pv_type.name}: {energy_type_kWh:.1f} kWh (nur berechnete Punkte vor Skalierung)")
+                #print(f"Energie {highway} | {pv_type.name}: {energy_type_kWh:.1f} kWh (nur berechnete Punkte vor Skalierung)")
 
                 scaled_energy_kwh_pv_type = 0
                 scaled_total_type_ac_w = 0
 
                 if h_pv_system.step_size >= pv_type.row_width:
                     scaling_factor = h_pv_system.step_size // pv_type.row_width
-                    print(f"Scaling Faktor {highway} | {pv_type.name}: {scaling_factor}")
+                    #print(f"Scaling Faktor {highway} | {pv_type.name}: {scaling_factor}")
 
                     scaled_energy_kwh_pv_type = energy_type_kWh * scaling_factor
                     scaled_total_type_ac_w = total_type_ac_w * scaling_factor
 
-                    print(f"Skalierte Energie {highway} | {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
+                    #print(f"Skalierte Energie {highway} | {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
                 else:
                     print(f"Keine Skalierung für {highway} | {pv_type.name}, da Schrittweite kleiner als Modulbreite")
 
@@ -151,7 +150,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         # CSV-Name so, wie ihn generate_pv_points gespeicher hat
         el_csv_name = f"punkte_{el_selected_pv_type.id}_{el_selected_pv_type.name}.csv".replace(" ", "_")
         el_csv_path = os.path.join(output_dir, el_csv_name)
-        print(el_csv_path)
+        #print(el_csv_path)
 
         # UNBEDINGT ÜBERPRÜFEN
         el_energy_type_kWh, el_total_type_ac_w = el_pv_system.simulate_pv_type_energy(el_selected_pv_type, el_csv_path)
@@ -267,15 +266,17 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # 7) Battery
     # ------------------------------------------------------------
 
-    # Mit Effizienz von 95% beim Laden und Entladen
-    storage = BatteryStorageEff(
-        max_capacity_kwh=235000,
-        initial_charge_kwh=0,
-        charge_efficiency=1,
-        discharge_efficiency=1
-    )
 
-    out.bat_df = storage.process_balance(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
+    # Mit Effizienz von 95% beim Laden und Entladen
+    if inp.bs_energy_kwh is not None:
+        storage = BatteryStorageEff(
+            max_capacity_kwh=235000,
+            initial_charge_kwh=0,
+            charge_efficiency=1,
+            discharge_efficiency=1
+        )
+
+        out.bat_df = storage.process_balance(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
 
 
 

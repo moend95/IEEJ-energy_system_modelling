@@ -2,9 +2,147 @@ from core.io_types import GuiInput
 from Simulation import run_simulation
 import pandas as pd
 from itertools import product
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
+
+
+import numpy as np
+from matplotlib.colors import TwoSlopeNorm
+
+
+def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None):
+    """
+    Wissenschaftliche Heatmap:
+    - divergierende Farbskala
+    - 0 als neutraler Mittelpunkt
+    - saubere Beschriftung
+    """
+
+    plot_df = heatmap.copy()
+
+    # Lesbarere Labels erzeugen
+    plot_df.index = [f"{geh} | {ind}" for geh, ind in plot_df.index]
+    plot_df.columns = [f"{el} | {h}" for el, h in plot_df.columns]
+
+    # Gemeinsame symmetrische Skala um 0
+    max_abs = np.nanmax(np.abs(plot_df.to_numpy()))
+    norm = TwoSlopeNorm(vmin=-max_abs, vcenter=0, vmax=max_abs)
+
+    plt.figure(figsize=(12, 8))
+    ax = sns.heatmap(
+        plot_df,
+        annot=True,
+        fmt=".0f",
+        cmap="seismic",#"RdBu_r",   # negativ blau, positiv rot
+        norm=norm,
+        linewidths=0.5,
+        linecolor="lightgray",
+        cbar_kws={"label": "Energy balance [kWh]"}
+    )
+
+    ax.set_title("Sensitivitätsanalyse - Energiebilanz", pad=12)
+    ax.set_xlabel("EnergyLandscape | Highway")
+    ax.set_ylabel("GreenEnergyHub | Industry")
+    plt.xticks(rotation=45, ha="right")
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
+
+
+def plot_4d_heatmap_facets(heatmap: pd.DataFrame, save_path: str | None = None):
+    """
+    4D-Darstellung:
+    Zeilen-Facetten = GreenEnergyHub
+    Spalten-Facetten = Industry
+    Innerhalb jeder Teilgrafik:
+        x = Highway
+        y = EnergyLandscape
+    Zellwert = balance_energy_kwh
+    """
+
+    # MultiIndex-Struktur in langes Format bringen
+    long_df = heatmap.copy()
+    long_df.index.names = ["GreenEnergyHub", "Industry"]
+    long_df.columns.names = ["EnergyLandscape", "Highway"]
+
+    long_df = long_df.stack(["EnergyLandscape", "Highway"]).reset_index()
+    long_df.columns = [
+        "GreenEnergyHub", "Industry", "EnergyLandscape", "Highway", "value"
+    ]
+
+    geh_levels = sorted(long_df["GreenEnergyHub"].unique())
+    i_levels = sorted(long_df["Industry"].unique())
+    el_levels = sorted(long_df["EnergyLandscape"].unique())
+    h_levels = sorted(long_df["Highway"].unique())
+
+    max_abs = np.nanmax(np.abs(long_df["value"].to_numpy()))
+    norm = TwoSlopeNorm(vmin=-max_abs, vcenter=0, vmax=max_abs)
+
+    fig, axes = plt.subplots(
+        nrows=len(geh_levels),
+        ncols=len(i_levels),
+        figsize=(4 * len(i_levels), 4 * len(geh_levels)),
+        sharex=True,
+        sharey=True
+    )
+
+    # Falls nur 1 Zeile oder 1 Spalte existiert
+    axes = np.atleast_2d(axes)
+
+    for r, geh in enumerate(geh_levels):
+        for c, ind in enumerate(i_levels):
+            ax = axes[r, c]
+
+            subset = long_df[
+                (long_df["GreenEnergyHub"] == geh) &
+                (long_df["Industry"] == ind)
+            ]
+
+            pivot_df = subset.pivot(
+                index="EnergyLandscape",
+                columns="Highway",
+                values="value"
+            )
+
+            pivot_df = pivot_df.reindex(index=el_levels, columns=h_levels)
+
+            sns.heatmap(
+                pivot_df,
+                ax=ax,
+                annot=True,
+                fmt=".0f",
+                cmap="bwr",#"RdBu_r",
+                norm=norm,
+                cbar=False,
+                linewidths=0.5,
+                linecolor="lightgray"
+            )
+
+            ax.set_title(f"{geh} | {ind}")
+            ax.set_xlabel("Highway")
+            ax.set_ylabel("EnergyLandscape")
+
+    # Gemeinsame Colorbar
+    sm = plt.cm.ScalarMappable(cmap="bwr", norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=axes, shrink=0.85)
+    cbar.set_label("Energy balance [kWh]")
+
+    fig.suptitle("4D sensitivity heatmap", y=1.02)
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    plt.show()
 
 # ---------------------------------------------------
 # DEFAULT CONFIG
@@ -15,6 +153,13 @@ DEFAULT_CONFIG = {}
 # ---------------------------------------------------
 # CASE DEFINITIONS      1: Small, 2: Medium, 3: Large
 # ---------------------------------------------------
+
+# Welche Szenarien wirklich gerechnet werden sollen
+h_cases = [1, 2]
+el_cases = [1,2]
+i_cases = [1, 2]
+geh_cases = [1,2]
+b_cases = [0]
 
 # Solarautobahn
 H_CONFIGS = {
@@ -162,12 +307,7 @@ def main():
     # Matrix vorbereiten
     #test_matrix = pd.DataFrame(index=row_labels, columns=traktor, dtype=float)
 
-    # Welche Szenarien wirklich gerechnet werden sollen
-    h_cases = [0,1,2]
-    el_cases = [0,1,2]
-    i_cases = [0,1,2]
-    geh_cases = [0,1,2]
-    b_cases = [0,1,2]
+
 
     col_index = pd.MultiIndex.from_tuples(
         [(f"EL{el}",f"H{h}") for el, h in product(el_cases, h_cases)],
@@ -207,10 +347,7 @@ def main():
 
                             heatmap.to_excel("outputs/sensi_res_dfs/energy_balance_sensitivity_heatmap_v2.xlsx")
 
-                        #print('PV Reihen Länge: ', round(out.el_pv_length,2))
 
-                        #test_result = x * sum(y)
-                        #test_matrix_row.append(test_result)
 
                     #Output Lastgang speichern
                         if not out.res_df.empty:
@@ -225,17 +362,38 @@ def main():
                             print('\n',out.res_df.head())
                             print('\n',out.res_df.describe())
 
-                            print('-'*50,'\nBatterie Data Frame:')
-                            print('\n',out.bat_df.head())
-                            print('\n',out.bat_df.describe())
+                            if not out.bat_df.empty:
+                                print('-'*50,'\nBatterie Data Frame:')
+                                print('\n',out.bat_df.head())
+                                print('\n',out.bat_df.describe())
 
                         else:
                             print("res_df empty")
 
+    plt.figure(figsize=(10, 8))
 
-            #test_matrix.loc[row_label] = test_matrix_row
-   # print(test_matrix)
+    sns.heatmap(
+        heatmap,
+        annot=True,  # Werte anzeigen
+        fmt=".0f",  # Ganzzahlen
+        cmap="viridis"  # Farbskala
+    )
 
+    plt.title("Energy Balance Sensitivity")
+    plt.tight_layout()
+    plt.savefig("outputs/sensi_res_dfs/energy_balance_heatmap.png", dpi=300)
+    plt.show()
+
+    plot_scientific_heatmap(
+        heatmap,
+        save_path="outputs/sensi_res_dfs/energy_balance_scientific_heatmap.png"
+    )
+
+"""    plot_4d_heatmap_facets(
+        heatmap,
+        save_path="outputs/sensi_res_dfs/energy_balance_4d_heatmap.png"
+    )
+"""
 
 # ---------------------------------------------------
 # SCRIPT ENTRY
