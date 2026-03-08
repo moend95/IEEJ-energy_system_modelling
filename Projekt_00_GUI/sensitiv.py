@@ -21,16 +21,16 @@ H_CONFIGS = {
     0: {},
     1: {
         "highways": ["A46"],
-        "h_pv_types": [0,2]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
+        "h_pv_types": [0]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
     },
 
     2: {
         "highways": ["A44", 'A46'],
-        "h_pv_types": [0]
+        "h_pv_types": [1,2]
     },
     3: {
-        "highways": ["A44"],
-        "h_pv_types": [0]
+        "highways": ["A44", "A46"],
+        "h_pv_types": [1,2,3]
     }
 }
 
@@ -50,6 +50,7 @@ EL_CONFIGS = {
         "el_pv_type": 6
     },
     3: {
+        "el_build_state": 100,
         "tractor_width": 12.0,
         "el_pv_type": 4
     }
@@ -59,12 +60,17 @@ EL_CONFIGS = {
 I_CONFIGS = {
     0: {},
     1: {
-        "is_heat_cooling_electric": False,
-        "companies": [1, 2, 4]
+        "is_heat_cooling_electric": True,
+        "companies": [2, 3, 4, 5, 6]
     },
 
     2: {
-        "companies": [5, 5, 6, 6, 7],
+        "companies": [1, 5, 3, 6, 7],
+        "is_heat_cooling_electric": True
+    },
+
+    3: {
+        "companies": [0, 1, 1, 7, 7],
         "is_heat_cooling_electric": True
     }
 }
@@ -78,9 +84,15 @@ GEH_CONFIGS = {
     },
 
     2: {
+        "h2_load_scenario": "2050",
+        "e_load_scenario": "2050"
+    },
+
+    3: {
         "h2_load_scenario": "2030",
         "e_load_scenario": "2030"
-    },
+    }
+
 }
 
 # Battery
@@ -89,7 +101,7 @@ B_CONFIGS = {
     1: {
         "bs_efficiency": 0.95,
         "bs_energy_kwh": 1000.0,
-        "bs_power_kw": 500.0
+        "bs_power_kw": 500.0            # Macht noch nichts
     },
 
     2: {
@@ -151,10 +163,11 @@ def main():
     #test_matrix = pd.DataFrame(index=row_labels, columns=traktor, dtype=float)
 
     # Welche Szenarien wirklich gerechnet werden sollen
-    h_cases = [1,2]
-    el_cases = [1,2]
-    i_cases = [1,2]
-    geh_cases = [1,2]
+    h_cases = [0,1,2]
+    el_cases = [0,1,2]
+    i_cases = [0,1,2]
+    geh_cases = [0,1,2]
+    b_cases = [0,1,2]
 
     col_index = pd.MultiIndex.from_tuples(
         [(f"EL{el}",f"H{h}") for el, h in product(el_cases, h_cases)],
@@ -166,65 +179,59 @@ def main():
     )
 
     heatmap = pd.DataFrame(index=row_index, columns=col_index, dtype=float)
-    '''
-    # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in h_cases:
-        #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
-        #test_matrix_row = []
-        for el_case in el_cases:
-            for i_case in i_cases:
-                for geh_case in geh_cases:
-                    for b_case in b_cases:
-    '''
+
     for el_case in el_cases:
         for h_case in h_cases:
             for geh_case in geh_cases:
                 for i_case in i_cases:
+                    for b_case in b_cases:
 
+                        print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case}")
 
-                    print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case}")
-
-                    inp = build_test_input(
-                        el_case=el_case,
-                        h_case=h_case,
-                        geh_case=geh_case,
-                        i_case=i_case,
-                    )
-
-
-                    out = run_simulation(inp)
-
-                    heatmap.loc[
-                        (f"GEH{geh_case}", f"I{i_case}"),
-                        (f"EL{el_case}", f"H{h_case}")
-                    ] = out.balance_energy_kwh.round(0)
-
-                    heatmap.to_excel("outputs/sensi_res_dfs/energy_balance_sensitivity_heatmap_v2.xlsx")
-
-                    #print('PV Reihen Länge: ', round(out.el_pv_length,2))
-
-                    #test_result = x * sum(y)
-                    #test_matrix_row.append(test_result)
-
-                #Output Lastgang speichern
-                    if not out.res_df.empty:
-                        filename = f"outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
-                        out.res_df.to_csv(
-                            filename,
-                            sep=",",
-                            decimal="."
+                        inp = build_test_input(
+                            el_case=el_case,
+                            h_case=h_case,
+                            geh_case=geh_case,
+                            i_case=i_case,
+                            b_case=b_case
                         )
-                        print('-'*50,'\nResults Data Frame:')
-                        print("CSV saved:", filename)
-                        print('\n',out.res_df.head())
-                        print('\n',out.res_df.describe())
 
-                        print('-'*50,'\nBatterie Data Frame:')
-                        print('\n',out.bat_df.head())
-                        print('\n',out.bat_df.describe())
 
-                    else:
-                        print("res_df empty")
+                        out = run_simulation(inp)
+
+                        if b_case == b_cases[0]:
+                            heatmap.loc[
+                                (f"GEH{geh_case}", f"I{i_case}"),
+                                (f"EL{el_case}", f"H{h_case}")
+                            ] = out.balance_energy_kwh.round(0)
+
+                            heatmap.to_excel("outputs/sensi_res_dfs/energy_balance_sensitivity_heatmap_v2.xlsx")
+
+                        #print('PV Reihen Länge: ', round(out.el_pv_length,2))
+
+                        #test_result = x * sum(y)
+                        #test_matrix_row.append(test_result)
+
+                    #Output Lastgang speichern
+                        if not out.res_df.empty:
+                            filename = f"outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
+                            out.res_df.to_csv(
+                                filename,
+                                sep=",",
+                                decimal="."
+                            )
+                            print('-'*50,'\nResults Data Frame:')
+                            print("CSV saved:", filename)
+                            print('\n',out.res_df.head())
+                            print('\n',out.res_df.describe())
+
+                            print('-'*50,'\nBatterie Data Frame:')
+                            print('\n',out.bat_df.head())
+                            print('\n',out.bat_df.describe())
+
+                        else:
+                            print("res_df empty")
+
 
             #test_matrix.loc[row_label] = test_matrix_row
    # print(test_matrix)
