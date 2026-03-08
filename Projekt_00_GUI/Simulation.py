@@ -7,7 +7,7 @@ from core.io_types import GuiInput, SimOutput
 from functions.Industriegebiet import IndustryLoadAggregator
 from functions.pv_baukasten import PV_System, PV_TYPEN
 from functions.Energielandschaft import main
-from functions.battery_storage_eff import BatteryStorageEff
+from functions.battery_storage_eff import BatteryStorage
 
 
 #TYPE MAPPING
@@ -284,14 +284,16 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     # Mit Effizienz von 95% beim Laden und Entladen
     if inp.bs_energy_kwh is not None:
-        storage = BatteryStorageEff(
-            max_capacity_kwh=235000,
-            initial_charge_kwh=0,
-            charge_efficiency=1,
-            discharge_efficiency=1
+        storage = BatteryStorage(
+            capacity_kwh=inp.bs_energy_kwh,
+            initial_soc_kwh=0,
+            charge_efficiency=inp.bs_efficiency,
+            discharge_efficiency=inp.bs_efficiency,
+            max_charge_c=0.5,
+            max_discharge_c=0.5,
         )
 
-        out.bat_df = storage.process_balance(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
+        out.bat_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
 
 
 
