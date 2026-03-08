@@ -144,7 +144,7 @@ def main():
 
 
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [3]:
+    for h_case in [2]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
         for el_case in [1]:

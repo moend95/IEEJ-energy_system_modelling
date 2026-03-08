@@ -386,10 +386,13 @@ class PV_System:
         getrennt als CSV gespeichert.
         """
         results = {}
+
+        geo_name = os.path.splitext(os.path.basename(self.geojson_path))[0]
+
         for pv_type in self.pvtypes:
             output_csv = os.path.join(
                 self.base_output_dir,
-                f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_"),
+                f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_"),
             )
             calc = AzimutCalculator(
                 geojson_path=self.geojson_path,

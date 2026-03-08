@@ -34,68 +34,84 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.h_number_of_points = 0
     out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
-    h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types] if inp.h_pv_types else []
+    h_selected_pv_types = [next(pv for pv in PV_TYPEN if pv.id == i) for i in inp.h_pv_types] if inp.h_pv_types else []
+
     # ------------------------------------------------------------
     # 1) Solarautobahn
     # ------------------------------------------------------------
-    if not inp.highways:
-        out.h_error_text = "SOLARAUTOBAHN --- Keine Autobahnen/PV ausgewählt."
-    elif not inp.h_pv_types:
-        out.h_error_text= "SOLARAUTOBAHN --- Keine Autobahn/PV ausgewählt."
-    #else:   #Fall Autobahn und PV Typ ausgewählt
-
-    for highway in inp.highways if inp.h_pv_types and inp.highways else []:
-        selected_file = highway_geojson_mapping[highway]
-        geojson_path = os.path.join(script_dir, "geometry", selected_file)
-
-        h_pv_system = PV_System(
-            geojson_path=geojson_path,
-            pvtypes=h_selected_pv_types,  # 0 = Windschutzwand, 1 = Schallschutzwand
-            step_size=800,  # Punktabstand in m
-            weather_df=weather_df,
-            base_output_dir=output_dir,
-        )
-        results = h_pv_system.generate_pv_points()
-        out.h_number_of_points = len(results[h_pv_system.pvtypes[0].id])
-        print(f'Anzahl Punkte ({highway}): ',out.h_number_of_points )
-
-    #Berechnung
     out.h_sum_energy_kwh = 0
-    h_total_sys_ac_kw = None
-    for pv_type in h_pv_system.pvtypes if inp.h_pv_types and inp.highways else []:
-        # CSV-Name so, wie ihn generate_pv_points gespeichert hat
-        csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
-        csv_path = os.path.join(output_dir, csv_name)
-        df_one = pd.read_csv(csv_path).head(1)
-        test_csv = os.path.join(output_dir, "test_single_point.csv")
-        df_one.to_csv(test_csv, index=False)
+    out.h_number_of_points = 0
+    all_ac_series = []
 
-        h_energy_type_kWh, h_total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-        print(f"Energie {pv_type.name}: {h_energy_type_kWh:.1f} kWh"," (Nur berechneten Punkte vor Skalierung über Schrittweite)")
+    if not inp.highways:
+        out.h_error_text = "SOLARAUTOBAHN --- Keine Autobahnen ausgewählt."
+    elif not inp.h_pv_types:
+        out.h_error_text = "SOLARAUTOBAHN --- Keine PV-Typen ausgewählt."
+    else:
+        out.h_error_text = ""
 
-        # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
-        scaled_energy_kwh_pv_type = 0
-        scaled_total_type_ac_w = 0
-        if h_pv_system.step_size >= pv_type.row_width:
-            scaling_factor = h_pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
-            print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
-            scaled_energy_kwh_pv_type = h_energy_type_kWh * scaling_factor
-            scaled_total_type_ac_w = h_total_type_ac_w * scaling_factor
-            print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
+        for highway in inp.highways:
+            selected_file = highway_geojson_mapping[highway]
+            geojson_path = os.path.join(script_dir, "geometry", selected_file)
+
+            h_pv_system = PV_System(
+                geojson_path=geojson_path,
+                pvtypes=h_selected_pv_types,
+                step_size=800,
+                weather_df=weather_df,
+                base_output_dir=output_dir,
+            )
+
+            results = h_pv_system.generate_pv_points()
+
+            # Punkte aller PV-Typen dieser Autobahn aufsummieren
+            for pv_type in h_pv_system.pvtypes:
+                if pv_type.id in results:
+                    out.h_number_of_points += len(results[pv_type.id])
+
+            # Energie je PV-Typ berechnen und aufaddieren
+            for pv_type in h_pv_system.pvtypes:
+                geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
+                csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+                csv_path = os.path.join(output_dir, csv_name)
+
+                if not os.path.exists(csv_path):
+                    print(f"Datei nicht gefunden: {csv_path}")
+                    continue
+
+                energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
+                print(
+                    f"Energie {highway} | {pv_type.name}: {energy_type_kWh:.1f} kWh (nur berechnete Punkte vor Skalierung)")
+
+                scaled_energy_kwh_pv_type = 0
+                scaled_total_type_ac_w = 0
+
+                if h_pv_system.step_size >= pv_type.row_width:
+                    scaling_factor = h_pv_system.step_size // pv_type.row_width
+                    print(f"Scaling Faktor {highway} | {pv_type.name}: {scaling_factor}")
+
+                    scaled_energy_kwh_pv_type = energy_type_kWh * scaling_factor
+                    scaled_total_type_ac_w = total_type_ac_w * scaling_factor
+
+                    print(f"Skalierte Energie {highway} | {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
+                else:
+                    print(f"Keine Skalierung für {highway} | {pv_type.name}, da Schrittweite kleiner als Modulbreite")
+
+                out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
+
+                ac_kw = scaled_total_type_ac_w / 1000
+                all_ac_series.append(ac_kw)
+
+        # Alle Zeitreihen addieren
+        if all_ac_series:
+            total_sys_ac_kw = all_ac_series[0].copy()
+            for s in all_ac_series[1:]:
+                total_sys_ac_kw = total_sys_ac_kw.add(s, fill_value=0)
+
+            out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
+            out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
         else:
-            print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
-
-        out.h_sum_energy_kwh += scaled_energy_kwh_pv_type
-        ac_kw = scaled_total_type_ac_w / 1000
-
-        if h_total_sys_ac_kw is None:
-            h_total_sys_ac_kw = ac_kw
-        else:
-            h_total_sys_ac_kw = h_total_sys_ac_kw.add(ac_kw, fill_value=0)
-    out.h_max_power_kw = h_total_sys_ac_kw.max()
-    h_total_sys_ac_kw.index_no_year = h_total_sys_ac_kw.index.strftime("%m-%d %H:%M")
-    out.res_df["Erzeugung_Solarautobahn [kW]"] = h_total_sys_ac_kw.clip(lower=0).values
-    out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
+            out.res_df["Erzeugung_Solarautobahn [kW]"] = 0
 
     print('Solarautobahn \t\t- abgeschlossen')
 
