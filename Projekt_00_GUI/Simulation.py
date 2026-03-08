@@ -206,12 +206,12 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
     hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
 
-    h2_load_path = os.path.join(hub_dir, inp.h2_load_scenario, "BEV_load_el_15min.csv")
+    h2_load_path = os.path.join(hub_dir, inp.h2_load_scenario, "Electrolyzer_output.csv")
     df_h2_load = pd.read_csv(h2_load_path)
     df_h2_load["timestamp"] = pd.to_datetime(df_h2_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
     df_h2_load.set_index("timestamp", inplace=True)
 
-    el_load_path = os.path.join(hub_dir, inp.e_load_scenario, "Electrolyzer_output.csv")
+    el_load_path = os.path.join(hub_dir, inp.e_load_scenario, "BEV_load_el_15min.csv")
     df_el_load = pd.read_csv(el_load_path)
     df_el_load["timestamp"] = pd.to_datetime(df_el_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
     df_el_load.set_index("timestamp", inplace=True)
@@ -255,7 +255,20 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             balance = balance + out.res_df[col] * sign
 
     out.res_df["Bilanz [kW]"] = balance
-    out.balance_energy_kwh = out.h_sum_energy_kwh + out.el_sum_energy_kwh - out.geh_sum_energy_kwh - out.i_sum_energy_kwh
+    h_energy = out.h_sum_energy_kwh or 0
+    el_energy = out.el_sum_energy_kwh or 0
+    geh_energy = out.geh_sum_energy_kwh or 0
+    i_energy = out.i_sum_energy_kwh or 0
+    out.balance_energy_kwh = h_energy + el_energy - geh_energy - i_energy
+
+    # für coverage_rate
+    total_generation = h_energy + el_energy
+    total_demand = geh_energy + i_energy
+
+    if total_demand > 0:
+        out.coverage_rate = min(total_generation / total_demand, 1.0)
+    else:
+        out.coverage_rate = 0.0
 
 
     print('Bilanzierung \t\t- abgeschlossen')
