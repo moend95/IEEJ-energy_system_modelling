@@ -35,13 +35,13 @@ def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None)
     plt.figure(figsize=(12, 8))
     ax = sns.heatmap(
         plot_df,
-        annot=True,
+        annot=False,
         fmt=".0f",
-        cmap="seismic",#"RdBu_r",   # negativ blau, positiv rot
+        cmap="RdYlGn",#"RdBu_r",   # negativ blau, positiv rot
         norm=norm,
         linewidths=0.5,
         linecolor="lightgray",
-        cbar_kws={"label": "Energy balance [kWh]"}
+        cbar_kws={"label": "Direktnutzungsrate[%]"}
     )
 
     ax.set_title("Sensitivitätsanalyse - Energiebilanz", pad=12)
@@ -68,11 +68,11 @@ DEFAULT_CONFIG = {}
 # ---------------------------------------------------
 
 # Welche Szenarien wirklich gerechnet werden sollen
-h_cases = [1]
-el_cases = [1]
-i_cases = [1]
-geh_cases = [1]
-b_cases = [0]
+h_cases = [1,2,3]
+el_cases = [1,2,3]
+i_cases = [1,2,3]
+geh_cases = [1,2,3]
+b_cases = [1]
 
 # Solarautobahn
 H_CONFIGS = {
@@ -253,12 +253,17 @@ def main():
                         out = run_simulation(inp)
 
                         if b_case == b_cases[0]:
+
+                            prod = out.res_df["Erzeugung_Solarautobahn [kW]"] + out.res_df["Erzeugung_Energielandschaft [kW]"]
+                            cons = out.res_df['Last_Industrie [kW]'] + out.res_df["Last_Green_Energy_Hub [kW]"]
+
+
                             heatmap_df.loc[
                                 (f"GEH{geh_case}", f"I{i_case}"),
                                 (f"EL{el_case}", f"H{h_case}")
-                            ] = out.balance_energy_kwh.round(0)
+                            ] = 100 * np.minimum(prod, cons).sum() / prod.sum()
 
-                            heatmap_df.to_excel("outputs/sensi_res_dfs/energy_balance_sensitivity_heatmap_v2.xlsx")
+                            heatmap_df.to_excel("outputs/sensi_res_dfs/balance_self_consumption_rate.xlsx")
 
 
 
@@ -291,11 +296,12 @@ def main():
         heatmap_df,
         annot=True,  # Werte anzeigen
         fmt=".0f",  # Ganzzahlen
-        cmap="viridis"  # Farbskala
+        cmap="RdYlGn"  # Farbskala
+
     )
-    plt.title("Energy Balance Sensitivity")
+    plt.title("Balance Avg. Neg. Power Sensitivity")
     plt.tight_layout()
-    plt.savefig("outputs/sensi_res_dfs/energy_balance_heatmap.png", dpi=300)
+    plt.savefig("outputs/sensi_res_dfs/balance_self_consumption_rate.png", dpi=300)
     plt.show()
 
 
@@ -304,7 +310,7 @@ def main():
 
     plot_scientific_heatmap(
         heatmap_df,
-        save_path="outputs/sensi_res_dfs/energy_balance_scientific_heatmap.png"
+        save_path="outputs/sensi_res_dfs/balance_self_consumption_rate.png"
     )
 
 
