@@ -157,8 +157,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         el_energy_type_kWh, el_total_type_ac_w = el_pv_system.simulate_pv_type_energy(el_selected_pv_type, el_csv_path)
 
         modules_per_meter = el_selected_pv_type.modules_per_string * el_selected_pv_type.strings_per_inverter / el_selected_pv_type.row_width
-        el_energy_sys_kWh = el_energy_type_kWh * out.el_pv_length * modules_per_meter
-        el_total_sys_ac_kw = el_total_type_ac_w * out.el_pv_length * modules_per_meter
+        el_energy_sys_kWh = el_energy_type_kWh * out.el_pv_length * modules_per_meter * (inp.el_build_state/100)
+        el_total_sys_ac_kw = el_total_type_ac_w * out.el_pv_length * modules_per_meter * (inp.el_build_state/100)
 
         out.el_max_power_kw = el_total_sys_ac_kw.max()
         el_total_sys_ac_kw.index_no_year = el_total_sys_ac_kw.index.strftime("%m-%d %H:%M")
