@@ -1,6 +1,7 @@
 from core.io_types import GuiInput
 from Simulation import run_simulation
 import pandas as pd
+from itertools import product
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
@@ -149,52 +150,81 @@ def main():
     # Matrix vorbereiten
     #test_matrix = pd.DataFrame(index=row_labels, columns=traktor, dtype=float)
 
+    # Welche Szenarien wirklich gerechnet werden sollen
+    h_cases = [1,2]
+    el_cases = [1,2]
+    i_cases = [1,2]
+    geh_cases = [1,2]
 
+    col_index = pd.MultiIndex.from_tuples(
+        [(f"EL{el}",f"H{h}") for el, h in product(el_cases, h_cases)],
+        names=["EnergyLandscape","Highway"]
+    )
+    row_index = pd.MultiIndex.from_tuples(
+        [(f"GEH{g}", f"I{i}") for g, i in product(geh_cases, i_cases)],
+        names=["GreenEnergyHub", "Industry"]
+    )
+
+    heatmap = pd.DataFrame(index=row_index, columns=col_index, dtype=float)
+    '''
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [1]:
+    for h_case in h_cases:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
-        for el_case in [1]:
-            for i_case in [1]:
-                for geh_case in [1]:
-                    for b_case in [1]:
+        for el_case in el_cases:
+            for i_case in i_cases:
+                for geh_case in geh_cases:
+                    for b_case in b_cases:
+    '''
+    for el_case in el_cases:
+        for h_case in h_cases:
+            for geh_case in geh_cases:
+                for i_case in i_cases:
 
-                        print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case} \nb \t\t-  {b_case}")
 
-                        inp = build_test_input(
-                            h_case=h_case,
-                            el_case=el_case,
-                            i_case=i_case,
-                            geh_case=geh_case,
-                            b_case=b_case
+                    print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case}")
+
+                    inp = build_test_input(
+                        el_case=el_case,
+                        h_case=h_case,
+                        geh_case=geh_case,
+                        i_case=i_case,
+                    )
+
+
+                    out = run_simulation(inp)
+
+                    heatmap.loc[
+                        (f"GEH{geh_case}", f"I{i_case}"),
+                        (f"EL{el_case}", f"H{h_case}")
+                    ] = out.balance_energy_kwh.round(0)
+
+                    heatmap.to_excel("outputs/sensi_res_dfs/energy_balance_sensitivity_heatmap_v2.xlsx")
+
+                    #print('PV Reihen Länge: ', round(out.el_pv_length,2))
+
+                    #test_result = x * sum(y)
+                    #test_matrix_row.append(test_result)
+
+                #Output Lastgang speichern
+                    if not out.res_df.empty:
+                        filename = f"outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
+                        out.res_df.to_csv(
+                            filename,
+                            sep=",",
+                            decimal="."
                         )
+                        print('-'*50,'\nResults Data Frame:')
+                        print("CSV saved:", filename)
+                        print('\n',out.res_df.head())
+                        print('\n',out.res_df.describe())
 
+                        print('-'*50,'\nBatterie Data Frame:')
+                        print('\n',out.bat_df.head())
+                        print('\n',out.bat_df.describe())
 
-                        out = run_simulation(inp)
-                        #print('PV Reihen Länge: ', round(out.el_pv_length,2))
-
-                        #test_result = x * sum(y)
-                        #test_matrix_row.append(test_result)
-
-#Output Lastgang speichern
-                        if not out.res_df.empty:
-                            filename = f"outputs/sensi_res_dfs/res_df_{h_case}{el_case}{i_case}{geh_case}{b_case}.csv"
-                            out.res_df.to_csv(
-                                filename,
-                                sep=",",
-                                decimal="."
-                            )
-                            print('-'*50,'\nResults Data Frame:')
-                            print("CSV saved:", filename)
-                            print('\n',out.res_df.head())
-                            print('\n',out.res_df.describe())
-
-                            print('-'*50,'\nBatterie Data Frame:')
-                            print('\n',out.bat_df.head())
-                            print('\n',out.bat_df.describe())
-
-                        else:
-                            print("res_df empty")
+                    else:
+                        print("res_df empty")
 
             #test_matrix.loc[row_label] = test_matrix_row
    # print(test_matrix)
