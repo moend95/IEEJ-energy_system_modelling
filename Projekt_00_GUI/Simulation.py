@@ -34,7 +34,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.h_number_of_points = 0
     out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
-    h_selected_pv_types = [next(pv for pv in PV_TYPEN if pv.id == i) for i in inp.h_pv_types] if inp.h_pv_types else []
+    h_selected_pv_types =  [PV_TYPEN[i] for i in inp.h_pv_types] if inp.h_pv_types else []#[next(pv for pv in PV_TYPEN if pv.id == i) for i in inp.h_pv_types] if inp.h_pv_types else []
 
     # ------------------------------------------------------------
     # 1) Solarautobahn

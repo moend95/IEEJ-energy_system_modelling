@@ -20,15 +20,15 @@ H_CONFIGS = {
     0: {},
     1: {
         "highways": ["A46"],
-        "h_pv_types": [0,2]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
+        "h_pv_types": [0]               #0: Wind, 1: Schall, 2: Schall Dach, 3: Böschung,
     },
 
     2: {
-        "highways": ["A44", 'A46'],
+        "highways": ["A44"],
         "h_pv_types": [0]
     },
     3: {
-        "highways": ["A44"],
+        "highways": ["A44", 'A46'],
         "h_pv_types": [0]
     }
 }
@@ -151,7 +151,7 @@ def main():
 
 
     # erstmal nur eine Variante testen, für die eigentliche Sensitivitätsanalyse [1] -> [1,2]
-    for h_case in [1]:
+    for h_case in [1,2,3]:
         #row_label = str(y)  # <- wichtig: gleicher Typ wie Index
         #test_matrix_row = []
         for el_case in [1]:
@@ -188,6 +188,7 @@ def main():
                             print("CSV saved:", filename)
                             print('\n',out.res_df.head())
                             print('\n',out.res_df.describe())
+
 
                             print('-'*50,'\nBatterie Data Frame:')
                             print('\n',out.bat_df.head())
