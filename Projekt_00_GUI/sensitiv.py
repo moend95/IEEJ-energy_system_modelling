@@ -57,17 +57,6 @@ def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None)
     plt.show()
 
 
-def plot_4d_heatmap_facets(heatmap: pd.DataFrame, save_path: str | None = None):
-    """
-    4D-Darstellung:
-    Zeilen-Facetten = GreenEnergyHub
-    Spalten-Facetten = Industry
-    Innerhalb jeder Teilgrafik:
-        x = Highway
-        y = EnergyLandscape
-    Zellwert = balance_energy_kwh
-    """
-
     # MultiIndex-Struktur in langes Format bringen
     long_df = heatmap.copy()
     long_df.index.names = ["GreenEnergyHub", "Industry"]
@@ -389,11 +378,6 @@ def main():
         save_path="outputs/sensi_res_dfs/energy_balance_scientific_heatmap.png"
     )
 
-"""    plot_4d_heatmap_facets(
-        heatmap,
-        save_path="outputs/sensi_res_dfs/energy_balance_4d_heatmap.png"
-    )
-"""
 
 # ---------------------------------------------------
 # SCRIPT ENTRY
