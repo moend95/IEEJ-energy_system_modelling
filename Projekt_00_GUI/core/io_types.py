@@ -86,13 +86,15 @@ class SimOutput:
                  res_df:pd.DataFrame | None = None,
                  bat_df: pd.DataFrame | None = None,
                  balance_energy_kwh:float | None = None,
+                 coverage_rate: float | None = None,
+                 balance_power_max_kw:float | None = None,
+                 balance_power_min_kw:float | None = None,
                  h_error_text:str | None = None,
                  el_error_text:str | None = None,
                  geh_error_text:str | None = None,
                  i_error_text:str | None = None,
                  h_number_of_points:int | None = None,
-                 el_pv_length:float | None = None,
-                 coverage_rate: float | None = None,):
+                 el_pv_length:float | None = None,):
 
         # Energiemengen für das Jahr pro Modul
         self.h_sum_energy_kwh = h_sum_energy_kwh
@@ -110,6 +112,8 @@ class SimOutput:
         # Bilanzenergie
         self.balance_energy_kwh = balance_energy_kwh
         self.coverage_rate = coverage_rate
+        self.balance_power_max_kw = balance_power_max_kw
+        self.balance_power_min_kw = balance_power_min_kw
         # Error Texte für die einzelnen Module
         self.h_error_text = h_error_text
         self.el_error_text = el_error_text
@@ -134,6 +138,8 @@ class SimOutput:
             f"bat_df_shape={None if self.bat_df is None else self.bat_df.shape}, "
             f"balance_energy_kw={self.balance_energy_kwh},"
             f"coverage_rate={self.coverage_rate}," 
+            f"balance_power_max_kw={self.balance_power_max_kw},"
+            f"balance_power_min_kw={self.balance_power_min_kw},"
             f"h_number_of_points={self.h_number_of_points}, "
             f"el_pv_length={self.el_pv_length}"
             f")"
