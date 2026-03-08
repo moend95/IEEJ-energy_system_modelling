@@ -85,6 +85,7 @@ class SimOutput:
                  i_max_power_kw:float | None = None,
                  res_df:pd.DataFrame | None = None,
                  bat_df: pd.DataFrame | None = None,
+                 balance_energy_kwh:float | None = None,
                  h_error_text:str | None = None,
                  el_error_text:str | None = None,
                  geh_error_text:str | None = None,
@@ -105,6 +106,8 @@ class SimOutput:
         # Result Data Frame mit Lastgängen (und batterie DF)
         self.res_df = res_df if res_df is not None else pd.DataFrame()
         self.bat_df = res_df if bat_df is not None else pd.DataFrame()
+        # Bilanzenergie
+        self.balance_energy_kwh = balance_energy_kwh
         # Error Texte für die einzelnen Module
         self.h_error_text = h_error_text
         self.el_error_text = el_error_text
@@ -127,6 +130,7 @@ class SimOutput:
             f"i_max_power_kw={self.i_max_power_kw}, "
             f"res_df_shape={None if self.res_df is None else self.res_df.shape}, "
             f"bat_df_shape={None if self.bat_df is None else self.bat_df.shape}, "
+            f"balance_energy_kw={self.balance_energy_kwh}, "
             f"h_number_of_points={self.h_number_of_points}, "
             f"el_pv_length={self.el_pv_length}"
             f")"
