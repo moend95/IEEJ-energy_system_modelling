@@ -68,10 +68,10 @@ DEFAULT_CONFIG = {}
 # ---------------------------------------------------
 
 # Welche Szenarien wirklich gerechnet werden sollen
-h_cases = [1, 2]
-el_cases = [1,2]
-i_cases = [1, 2]
-geh_cases = [1,2]
+h_cases = [1]
+el_cases = [1]
+i_cases = [1]
+geh_cases = [1]
 b_cases = [0]
 
 # Solarautobahn
@@ -239,7 +239,7 @@ def main():
                 for i_case in i_cases:
                     for b_case in b_cases:
 
-                        print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case}")
+                        print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case}\n")
 
                         inp = build_test_input(
                             el_case=el_case,
