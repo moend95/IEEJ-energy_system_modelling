@@ -108,9 +108,11 @@ def run_simulation(inp: GuiInput) -> SimOutput:
                 total_sys_ac_kw = total_sys_ac_kw.add(s, fill_value=0)
 
             out.res_df["Erzeugung_Solarautobahn [kW]"] = total_sys_ac_kw.clip(lower=0).values
+
             out.res_df["Erzeugung_Solarautobahn [kW]"] = out.res_df["Erzeugung_Solarautobahn [kW]"].fillna(0)
         else:
             out.res_df["Erzeugung_Solarautobahn [kW]"] = 0
+        out.h_max_power_kw = out.res_df["Erzeugung_Solarautobahn [kW]"].max()
 
     print('Solarautobahn \t\t- abgeschlossen')
 
@@ -155,9 +157,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         # UNBEDINGT ÜBERPRÜFEN
         el_energy_type_kWh, el_total_type_ac_w = el_pv_system.simulate_pv_type_energy(el_selected_pv_type, el_csv_path)
 
-        modules_per_meter = el_selected_pv_type.modules_per_string * el_selected_pv_type.strings_per_inverter / el_selected_pv_type.row_width
-        el_energy_sys_kWh = el_energy_type_kWh * out.el_pv_length * modules_per_meter * (inp.el_build_state/100)
-        el_total_sys_ac_kw = el_total_type_ac_w * out.el_pv_length * modules_per_meter * (inp.el_build_state/100)
+        el_energy_sys_kWh = el_energy_type_kWh * out.el_pv_length  * (inp.el_build_state/100)
+        el_total_sys_ac_kw = el_total_type_ac_w * out.el_pv_length  * (inp.el_build_state/100) /1000
 
         out.el_max_power_kw = el_total_sys_ac_kw.max()
         el_total_sys_ac_kw.index_no_year = el_total_sys_ac_kw.index.strftime("%m-%d %H:%M")
@@ -272,6 +273,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     else:
         out.coverage_rate = 0.0
 
+    out.balance_power_max_kw = out.res_df["Bilanz [kW]"].max()
+    out.balance_power_min_kw = out.res_df["Bilanz [kW]"].min()
 
     print('Bilanzierung \t\t- abgeschlossen')
 
