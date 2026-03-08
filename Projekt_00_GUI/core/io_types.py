@@ -91,7 +91,8 @@ class SimOutput:
                  geh_error_text:str | None = None,
                  i_error_text:str | None = None,
                  h_number_of_points:int | None = None,
-                 el_pv_length:float | None = None,):
+                 el_pv_length:float | None = None,
+                 coverage_rate: float | None = None,):
 
         # Energiemengen für das Jahr pro Modul
         self.h_sum_energy_kwh = h_sum_energy_kwh
@@ -105,9 +106,10 @@ class SimOutput:
         self.i_max_power_kw = i_max_power_kw
         # Result Data Frame mit Lastgängen (und batterie DF)
         self.res_df = res_df if res_df is not None else pd.DataFrame()
-        self.bat_df = res_df if bat_df is not None else pd.DataFrame()
+        self.bat_df = bat_df if bat_df is not None else pd.DataFrame()
         # Bilanzenergie
         self.balance_energy_kwh = balance_energy_kwh
+        self.coverage_rate = coverage_rate
         # Error Texte für die einzelnen Module
         self.h_error_text = h_error_text
         self.el_error_text = el_error_text
@@ -130,7 +132,8 @@ class SimOutput:
             f"i_max_power_kw={self.i_max_power_kw}, "
             f"res_df_shape={None if self.res_df is None else self.res_df.shape}, "
             f"bat_df_shape={None if self.bat_df is None else self.bat_df.shape}, "
-            f"balance_energy_kw={self.balance_energy_kwh}, "
+            f"balance_energy_kw={self.balance_energy_kwh},"
+            f"coverage_rate={self.coverage_rate}," 
             f"h_number_of_points={self.h_number_of_points}, "
             f"el_pv_length={self.el_pv_length}"
             f")"
