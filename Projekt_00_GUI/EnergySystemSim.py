@@ -2,13 +2,16 @@ import sys
 import pandas as pd
 import plotly.graph_objects as go
 from pathlib import Path
-#UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
+
+# UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
 sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 import streamlit as st
 import os
 import folium
 from streamlit_folium import st_folium
 import json
+
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
 from functions.plot_functions import (
@@ -17,19 +20,17 @@ from functions.plot_functions import (
     plot_green_hub_weekly_profiles,
     plot_green_hub_annual_energy
 )
-import re
-import streamlit.components.v1 as components
-import plotly.graph_objects as go
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-pv_name_to_id = {   "Windschutzwand": 0,
-                    "Lärmschutzwand": 1,
-                    "Dach": 2,
-                    "Böschung": 3,
-                    "Vertikal (Zaun, Nord-Süd)": 5,
-                    "Horizontal (aufgeständert, Ost-West)": 6,
-                    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)":4
+pv_name_to_id = {
+    "Windschutzwand": 0,
+    "Lärmschutzwand": 1,
+    "Dach": 2,
+    "Böschung": 3,
+    "Vertikal (Zaun, Nord-Süd)": 5,
+    "Horizontal (aufgeständert, Ost-West)": 6,
+    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": 4
 }
 
 industry_csv_mapping = {
@@ -42,6 +43,7 @@ industry_csv_mapping = {
     6: "Logistik Lebensmittel",
     7: "Stahl_2"
 }
+
 industry_order_all = [
     "Entsorgung",
     "Stahl_1",
@@ -53,55 +55,6 @@ industry_order_all = [
     "Stahl_2"
 ]
 
-def _read_energy_from_csv(csv_path):
-    """
-    Liest eine Green-Energy-Hub-CSV robust ein und berechnet die Jahresenergie.
-    Erwartet eine Zeitspalte und eine Leistungsspalte in kW.
-    Rückgabe: Energie in kWh
-    """
-    if not os.path.exists(csv_path):
-        return 0.0
-
-    df = pd.read_csv(csv_path)
-
-    # mögliche Leistungs-Spalten
-    value_candidates = [
-        "power_kW", "P [kW]", "P_kW", "power", "load",
-        "P (kW)", "P new (kW)", "Leistung", "value"
-    ]
-
-    value_col = None
-    for c in value_candidates:
-        if c in df.columns:
-            value_col = c
-            break
-
-    if value_col is None:
-        numeric_cols = df.select_dtypes(include="number").columns.tolist()
-        if not numeric_cols:
-            return 0.0
-        value_col = numeric_cols[0]
-
-    series = pd.to_numeric(df[value_col], errors="coerce").fillna(0)
-
-    # 15-Minuten-Raster angenommen -> kWh
-    return float(series.sum() * 0.25)
-
-
-def read_green_hub_demands(base_dir, h2_scenario, e_scenario):
-    """
-    Liest die jährlichen Strombedarfe des Green Energy Hub:
-    - BEV-Laden aus e_scenario
-    - Elektrolyseur aus h2_scenario
-    Rückgabe in kWh/a
-    """
-    bev_path = os.path.join(base_dir, str(e_scenario), "BEV_load_el_15min.csv")
-    ely_path = os.path.join(base_dir, str(h2_scenario), "Electrolyzer_output.csv")
-
-    bev_energy_kwh = _read_energy_from_csv(bev_path)
-    electrolyzer_energy_kwh = _read_energy_from_csv(ely_path)
-
-    return bev_energy_kwh, electrolyzer_energy_kwh
 
 def format_energy(value_kwh):
     """
@@ -116,74 +69,119 @@ def format_energy(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh/a"
 
+
 def build_synergy_diagram(inp, sim_output):
     """
-    Bilanzorientierte Systemgrafik:
-    - Erzeugung
-    - Bedarfe
-    - Versorgungsgrad
-    - Überschuss / Defizit
+    Bilanzorientierte Systemgrafik ohne Mittelknoten.
+
+    Logik:
+    1) Beide Erzeuger priorisieren zuerst das Industriegebiet
+    2) Verbleibende lokale Erzeugung versorgt danach den Green Energy Hub
+    3) Überschuss wird separat dargestellt
+    4) Restdefizite werden über das Netz gedeckt
     """
 
     # -----------------------------
-    # 1) Erzeugung aus Simulation
+    # 1) Werte direkt aus Simulation
     # -----------------------------
     solar_energy = 0.0
-    if sim_output is not None:
-        solar_energy = max(float(getattr(sim_output, "h_sum_energy_kwh", 0) or 0), 0)
-
-    # Energielandschaft aktuell noch nicht sauber im Output hinterlegt
     landscape_energy = 0.0
-    if sim_output is not None:
-        landscape_energy = float(getattr(sim_output, "el_sum_energy_kwh", 0) or 0)
-
-    total_generation = solar_energy + landscape_energy
-
-    # -----------------------------
-    # 2) Industriebedarf aus Simulation
-    # -----------------------------
     industry_energy = 0.0
-    if sim_output is not None and hasattr(sim_output, "res_df") and sim_output.res_df is not None:
-        if "Last_Industrie [kW]" in sim_output.res_df.columns:
-            series = sim_output.res_df["Last_Industrie [kW]"].fillna(0)
-            industry_energy = float(abs(series.sum()) * 0.25)  # 15-min Raster -> kWh
+    green_hub_energy = 0.0
+    total_generation = 0.0
+    total_demand = 0.0
+    coverage_percent = 0.0
+    surplus = 0.0
+    deficit = 0.0
+
+    if sim_output is not None:
+        solar_energy = max(float(getattr(sim_output, "h_sum_energy_kwh", 0) or 0), 0.0)
+        landscape_energy = max(float(getattr(sim_output, "el_sum_energy_kwh", 0) or 0), 0.0)
+        industry_energy = max(float(getattr(sim_output, "i_sum_energy_kwh", 0) or 0), 0.0)
+        green_hub_energy = max(float(getattr(sim_output, "geh_sum_energy_kwh", 0) or 0), 0.0)
+
+        total_generation = solar_energy + landscape_energy
+        total_demand = industry_energy + green_hub_energy
+
+        coverage = float(getattr(sim_output, "coverage_rate", 0) or 0)
+        coverage_percent = max(0.0, min(coverage * 100.0, 100.0))
+
+        balance = float(getattr(sim_output, "balance_energy_kwh", 0) or 0)
+        if balance >= 0:
+            surplus = balance
+            deficit = 0.0
+        else:
+            surplus = 0.0
+            deficit = abs(balance)
 
     # -----------------------------
-    # 3) Green Energy Hub Bedarfe aus CSV
+    # 2) Energetische Deckung
+    #    Priorität: Industrie -> Hub
     # -----------------------------
-    green_hub_base_dir = os.path.join(
-        script_dir,
-        "functions",
-        "inputs",
-        "green_energy_hub"
-    )
+    local_supply_industry = min(total_generation, industry_energy)
+    remaining_generation = max(total_generation - local_supply_industry, 0.0)
 
-    bev_energy = 0.0
-    electrolyzer_energy = 0.0
-    if inp.h2_load_scenario and inp.e_load_scenario:
-        bev_energy, electrolyzer_energy = read_green_hub_demands(
-            green_hub_base_dir,
-            inp.h2_load_scenario,
-            inp.e_load_scenario
-        )
+    local_supply_hub = min(remaining_generation, green_hub_energy)
+    remaining_after_hub = max(remaining_generation - local_supply_hub, 0.0)
 
-    total_demand = industry_energy + bev_energy + electrolyzer_energy
+    grid_import_industry = max(industry_energy - local_supply_industry, 0.0)
+    grid_import_hub = max(green_hub_energy - local_supply_hub, 0.0)
+
+    grid_import_total = grid_import_industry + grid_import_hub
+    surplus_local_energy = remaining_after_hub
+    grid_export = surplus_local_energy
 
     # -----------------------------
-    # 4) Bilanz / Versorgungsgrad
+    # 3) Quellenbezogene Aufteilung
+    #    Beide Erzeuger priorisieren Industrie zuerst
     # -----------------------------
-    if total_demand > 0:
-        coverage_ratio = min(total_generation / total_demand, 1.0)
-        coverage_percent = coverage_ratio * 100
+    total_gen_for_split = solar_energy + landscape_energy
+
+    if total_gen_for_split > 0:
+        solar_share = solar_energy / total_gen_for_split
+        landscape_share = landscape_energy / total_gen_for_split
     else:
-        coverage_ratio = 0.0
-        coverage_percent = 0.0
+        solar_share = 0.0
+        landscape_share = 0.0
 
-    surplus = max(total_generation - total_demand, 0.0)
-    deficit = max(total_demand - total_generation, 0.0)
+    # Lokale Versorgung Industrie proportional aus beiden Erzeugern
+    solar_to_industry = local_supply_industry * solar_share
+    landscape_to_industry = local_supply_industry * landscape_share
+
+    # Verbleibende Quellbeiträge nach Industrie
+    solar_remaining = max(solar_energy - solar_to_industry, 0.0)
+    landscape_remaining = max(landscape_energy - landscape_to_industry, 0.0)
+
+    remaining_for_hub_split = solar_remaining + landscape_remaining
+    if remaining_for_hub_split > 0:
+        solar_share_hub = solar_remaining / remaining_for_hub_split
+        landscape_share_hub = landscape_remaining / remaining_for_hub_split
+    else:
+        solar_share_hub = 0.0
+        landscape_share_hub = 0.0
+
+    solar_to_hub = local_supply_hub * solar_share_hub
+    landscape_to_hub = local_supply_hub * landscape_share_hub
+
+    solar_remaining_after_hub = max(solar_remaining - solar_to_hub, 0.0)
+    landscape_remaining_after_hub = max(landscape_remaining - landscape_to_hub, 0.0)
+
+    solar_to_surplus = solar_remaining_after_hub
+    landscape_to_surplus = landscape_remaining_after_hub
+
+    # Numerische Glättung
+    def clamp_small(x, eps=1e-6):
+        return 0.0 if abs(x) < eps else x
+
+    solar_to_industry = clamp_small(solar_to_industry)
+    landscape_to_industry = clamp_small(landscape_to_industry)
+    solar_to_hub = clamp_small(solar_to_hub)
+    landscape_to_hub = clamp_small(landscape_to_hub)
+    solar_to_surplus = clamp_small(solar_to_surplus)
+    landscape_to_surplus = clamp_small(landscape_to_surplus)
 
     # -----------------------------
-    # 5) Texte für Boxen
+    # 4) Texte für Boxen
     # -----------------------------
     solar_text = "nicht aktiv"
     if inp.highways and inp.h_pv_types:
@@ -192,173 +190,212 @@ def build_synergy_diagram(inp, sim_output):
         else:
             solar_text = "aktiv, noch ohne Ergebnis"
 
-    if inp.el_build_state == 0:
-        landscape_text = "nicht aktiv"
-    elif landscape_energy > 0:
-        landscape_text = f"Jahreserzeugung:<br>{format_energy(landscape_energy)}"
-    else:
-        landscape_text = f"Ausbaugrad: {inp.el_build_state} %<br>Erzeugung noch nicht berechnet"
+    landscape_text = "nicht aktiv"
+    if inp.el_build_state != 0:
+        if landscape_energy > 0:
+            landscape_text = f"Jahreserzeugung:<br>{format_energy(landscape_energy)}"
+        else:
+            landscape_text = f"Ausbaugrad: {inp.el_build_state} %<br>aktiv, noch ohne Ergebnis"
 
     n_companies = len([c for c in inp.companies if c is not None]) if inp.companies else 0
-    industry_status = "nicht bewertet"
-    if total_demand > 0:
-        if coverage_ratio >= 1.0:
-            industry_status = "gedeckt"
-        elif coverage_ratio > 0:
-            industry_status = "teilweise gedeckt"
-        else:
-            industry_status = "nicht gedeckt"
+
+    if industry_energy == 0:
+        industry_status = "kein Bedarf"
+    elif grid_import_industry == 0:
+        industry_status = "gedeckt"
+    elif local_supply_industry > 0:
+        industry_status = "teilweise gedeckt"
+    else:
+        industry_status = "nicht gedeckt"
 
     industry_text = (
         f"Auswahl: {n_companies} Unternehmen"
         f"<br>Bedarf: {format_energy(industry_energy)}"
+        f"<br>Lokal gedeckt: {format_energy(local_supply_industry)}"
+        f"<br>Netzbezug: {format_energy(grid_import_industry)}"
         f"<br>Status: {industry_status}"
     )
 
-    bev_status = "gedeckt" if coverage_ratio >= 1.0 else ("teilweise gedeckt" if coverage_ratio > 0 else "nicht gedeckt")
-    bev_text = (
-        f"Szenario {inp.e_load_scenario}"
-        f"<br>Bedarf: {format_energy(bev_energy)}"
-        f"<br>Status: {bev_status}"
+    if green_hub_energy == 0:
+        hub_status = "kein Bedarf"
+    elif grid_import_hub == 0:
+        hub_status = "gedeckt"
+    elif local_supply_hub > 0:
+        hub_status = "teilweise gedeckt"
+    else:
+        hub_status = "nicht gedeckt"
+
+    hub_text = (
+        f"H₂-Szenario: {inp.h2_load_scenario}"
+        f"<br>El.-Szenario: {inp.e_load_scenario}"
+        f"<br>Bedarf: {format_energy(green_hub_energy)}"
+        f"<br>Lokal gedeckt: {format_energy(local_supply_hub)}"
+        f"<br>Netzbezug: {format_energy(grid_import_hub)}"
+        f"<br>Status: {hub_status}"
     )
 
-    h2_status = "gedeckt" if coverage_ratio >= 1.0 else ("teilweise gedeckt" if coverage_ratio > 0 else "nicht gedeckt")
-    h2_text = (
-        f"Szenario {inp.h2_load_scenario}"
-        f"<br>El.-Bedarf: {format_energy(electrolyzer_energy)}"
-        f"<br>Status: {h2_status}"
+    grid_text = (
+        f"Import: {format_energy(grid_import_total)}"
+        f"<br>Export: {format_energy(grid_export)}"
+    )
+
+    surplus_text = (
+        f"Überschuss: {format_energy(surplus_local_energy)}"
+        f"<br>potenziell speicherbar"
     )
 
     # -----------------------------
-    # 6) Knotenpositionen
+    # 5) Knoten
     # -----------------------------
     nodes = {
+        "surplus": {
+            "x": 0, "y": 0.5,
+            "label": "Überschuss",
+            "info": surplus_text,
+            "color": "#F3E8FF"
+        },
         "solar": {
-            "x": 0.16, "y": 0.74,
+            "x": 0.28, "y": 0.68,
             "label": "Solarautobahn",
             "info": solar_text,
             "color": "#A7D8FF"
         },
         "landscape": {
-            "x": 0.16, "y": 0.40,
+            "x": 0.28, "y": 0.3,
             "label": "Energielandschaft",
             "info": landscape_text,
             "color": "#BFEFC4"
         },
-        "hub": {
-            "x": 0.50, "y": 0.28,
-            "label": "Green Energy Hub",
-            "info": (
-                f"H₂-Szenario: {inp.h2_load_scenario}"
-                f"<br>BEV-Szenario: {inp.e_load_scenario}"
-                f"<br>Hub-Bedarf: {format_energy(bev_energy + electrolyzer_energy)}"
-            ),
-            "color": "#D8F5D0"
-        },
         "industry": {
-            "x": 0.84, "y": 0.74,
+            "x": 0.78, "y": 0.68,
             "label": "Industriegebiet",
             "info": industry_text,
             "color": "#E8E8E8"
         },
-        "bev": {
-            "x": 0.84, "y": 0.43,
-            "label": "BEV-Mobilität",
-            "info": bev_text,
-            "color": "#FFE6B8"
-        },
-        "h2": {
-            "x": 0.84, "y": 0.12,
-            "label": "H₂-Mobilität",
-            "info": h2_text,
+        "hub": {
+            "x": 0.78, "y": 0.3,
+            "label": "Green Energy Hub",
+            "info": hub_text,
             "color": "#D8F5D0"
+        },
+        "grid": {
+            "x": 1.18, "y": 0.5,
+            "label": "Netz",
+            "info": grid_text,
+            "color": "#FDE7C6"
         }
     }
 
     # -----------------------------
-    # 7) Flüsse
+    # 6) Flüsse
     # -----------------------------
     flows = []
 
-    # Solar -> Industrie
-    if solar_energy > 0:
+    # Beide Erzeuger -> Industrie zuerst
+    if solar_to_industry > 0:
         flows.append({
             "source": "solar",
             "target": "industry",
             "color": "#4A90E2",
-            "label": format_energy(solar_energy)
+            "label": format_energy(solar_to_industry)
         })
 
-    # Energielandschaft -> Industrie
-    if inp.el_build_state != 0:
+    if landscape_to_industry > 0:
         flows.append({
             "source": "landscape",
             "target": "industry",
-            "color": "#4A90E2",
-            "label": f"{inp.el_build_state} % Ausbau" if landscape_energy <= 0 else f"{landscape_energy:,.0f} kWh/a"
+            "color": "#2E8B57",
+            "label": format_energy(landscape_to_industry)
         })
 
-    # Energielandschaft -> Green Energy Hub
-    if inp.el_build_state != 0 and (bev_energy > 0 or electrolyzer_energy > 0):
+    # Danach beide Erzeuger -> Hub
+    if solar_to_hub > 0:
+        flows.append({
+            "source": "solar",
+            "target": "hub",
+            "color": "#7DB7F0",
+            "label": format_energy(solar_to_hub)
+        })
+
+    if landscape_to_hub > 0:
         flows.append({
             "source": "landscape",
             "target": "hub",
-            "color": "#4A90E2",
-            "label": "Strombereitstellung"
+            "color": "#16A34A",
+            "label": format_energy(landscape_to_hub)
         })
 
-    # Green Energy Hub -> BEV
-    if bev_energy > 0:
+    # Netz -> Verbraucher
+    if grid_import_industry > 0:
         flows.append({
-            "source": "hub",
-            "target": "bev",
-            "color": "#F5A623",
-            "label": format_energy(bev_energy)
+            "source": "grid",
+            "target": "industry",
+            "color": "#D95F02",
+            "label": f"Import: {format_energy(grid_import_industry)}"
         })
 
-    # Green Energy Hub -> H2
-    if electrolyzer_energy > 0:
+    if grid_import_hub > 0:
         flows.append({
-            "source": "hub",
-            "target": "h2",
-            "color": "#2BB673",
-            "label": format_energy(electrolyzer_energy)
+            "source": "grid",
+            "target": "hub",
+            "color": "#D95F02",
+            "label": f"Import: {format_energy(grid_import_hub)}"
+        })
+
+    # Überschuss links
+    if solar_to_surplus > 0:
+        flows.append({
+            "source": "solar",
+            "target": "surplus",
+            "color": "#8B5CF6",
+            "label": format_energy(solar_to_surplus)
+        })
+
+    if landscape_to_surplus > 0:
+        flows.append({
+            "source": "landscape",
+            "target": "surplus",
+            "color": "#7A3EB1",
+            "label": format_energy(landscape_to_surplus)
         })
 
     # -----------------------------
-    # 8) Plotly Figure
+    # 7) Plotly Figure
     # -----------------------------
     fig = go.Figure()
-    fig.update_xaxes(visible=False, range=[0, 1])
-    fig.update_yaxes(visible=False, range=[0, 1.14])
+    fig.update_xaxes(visible=False, range=[-0.3, 1.45])
+    fig.update_yaxes(visible=False, range=[-0.08, 1.12])
 
-    box_w = 0.2
+    box_w = 0.24
     box_h = 0.15
 
     # KPI-Karten oben
-    kpi_y = 1.06
+    kpi_y = 1.01
     kpis = [
         ("Gesamterzeugung", format_energy(total_generation), "#EAF4FF"),
         ("Gesamtbedarf", format_energy(total_demand), "#F8F8F8"),
         ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
         ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", "#FFF4E8"),
+        ("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
+        ("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
     ]
-    kpi_xs = [0.14, 0.38, 0.62, 0.86]
+    kpi_xs = [0.08, 0.31, 0.54, 0.77, 1.00, 1.23]
 
     for (title, value_text, fill), x in zip(kpis, kpi_xs):
         fig.add_shape(
             type="rect",
             x0=x - 0.10, x1=x + 0.10,
-            y0=kpi_y - 0.06, y1=kpi_y + 0.06,
+            y0=kpi_y - 0.055, y1=kpi_y + 0.055,
             line=dict(color="rgba(80,80,80,0.45)", width=1.2),
             fillcolor=fill,
             layer="below"
         )
         fig.add_annotation(
-            x=x, y=kpi_y,
+            x=x,
+            y=kpi_y,
             text=f"<b>{title}</b><br>{value_text}",
             showarrow=False,
-            font=dict(size=13, color="#2F3445"),
+            font=dict(size=11, color="#2F3445"),
             align="center"
         )
 
@@ -381,10 +418,23 @@ def build_synergy_diagram(inp, sim_output):
         fig.add_annotation(
             x=x,
             y=y,
-            text=f"<b>{node['label']}</b><br><span style='font-size:12px'>{node['info']}</span>",
+            text=f"<b>{node['label']}</b>",
             showarrow=False,
             align="center",
-            font=dict(size=13, color="#2F3445")
+            font=dict(size=10, color="#2F3445")
+        )
+
+    # Unsichtbare Hover-Punkte für Detailinfos
+    for node in nodes.values():
+        fig.add_trace(
+            go.Scatter(
+                x=[node["x"]],
+                y=[node["y"]],
+                mode="markers",
+                marker=dict(size=60, opacity=0),
+                hovertemplate=f"<b>{node['label']}</b><br>{node['info']}<extra></extra>",
+                showlegend=False
+            )
         )
 
     # Pfeile
@@ -392,10 +442,25 @@ def build_synergy_diagram(inp, sim_output):
         s = nodes[flow["source"]]
         t = nodes[flow["target"]]
 
-        x0 = s["x"] + box_w / 2 - 0.01
-        y0 = s["y"]
-        x1 = t["x"] - box_w / 2 + 0.01
-        y1 = t["y"]
+        if s["x"] < t["x"]:
+            x0 = s["x"] + box_w / 2 - 0.01
+            x1 = t["x"] - box_w / 2 + 0.01
+        elif s["x"] > t["x"]:
+            x0 = s["x"] - box_w / 2 + 0.01
+            x1 = t["x"] + box_w / 2 - 0.01
+        else:
+            x0 = s["x"]
+            x1 = t["x"]
+
+        if s["y"] < t["y"]:
+            y0 = s["y"] + box_h / 2 - 0.01
+            y1 = t["y"] - box_h / 2 + 0.01
+        elif s["y"] > t["y"]:
+            y0 = s["y"] - box_h / 2 + 0.01
+            y1 = t["y"] + box_h / 2 - 0.01
+        else:
+            y0 = s["y"]
+            y1 = t["y"]
 
         fig.add_annotation(
             x=x1, y=y1,
@@ -404,33 +469,35 @@ def build_synergy_diagram(inp, sim_output):
             axref="x", ayref="y",
             showarrow=True,
             arrowhead=3,
-            arrowsize=1.2,
-            arrowwidth=3,
+            arrowsize=1.1,
+            arrowwidth=2.6,
             arrowcolor=flow["color"],
             text=""
         )
 
-        xm = (x0 + x1) / 2
-        ym = (y0 + y1) / 2 + 0.04
+        if flow["label"]:
+            xm = (x0 + x1) / 2
+            ym = (y0 + y1) / 2 + 0.03
 
-        fig.add_annotation(
-            x=xm,
-            y=ym,
-            text=f"<span style='font-size:11px'>{flow['label']}</span>",
-            showarrow=False,
-            font=dict(size=11, color=flow["color"]),
-            bgcolor="rgba(255,255,255,0.78)"
-        )
+            fig.add_annotation(
+                x=xm,
+                y=ym,
+                text=f"<span style='font-size:10px'>{flow['label']}</span>",
+                showarrow=False,
+                font=dict(size=10, color=flow["color"]),
+                bgcolor="rgba(255,255,255,0.82)"
+            )
 
     fig.update_layout(
         title="Synergien, Bilanz und potenzielle Versorgung der Teilprojekte",
-        height=900,
-        margin=dict(l=20, r=20, t=90, b=20),
+        height=850,
+        margin=dict(l=20, r=20, t=80, b=20),
         plot_bgcolor="white",
         paper_bgcolor="white"
     )
 
     return fig
+
 
 st.set_page_config(layout="centered")
 
@@ -443,12 +510,11 @@ if "simulation_ran" not in st.session_state:
 if "sim_output" not in st.session_state:
     st.session_state.sim_output = None
 
-#Überschrift
+# Überschrift
 st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
-
-# Fester Container für Darstellung der Erzeugungseingabe -> Fixierte Größe damit nachfolgender Inhalt nicht rutscht
+# Fester Container für Darstellung der Erzeugungseingabe
 with st.container(key="Erzeugung", width=1000, height=500):
 
     tab1, tab2 = st.tabs(["Solarautobahn", "Energielandschaft"])
@@ -460,56 +526,53 @@ with st.container(key="Erzeugung", width=1000, height=500):
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
         with col1_tab1:
-
             Input.highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
-            h_selected_names = st.multiselect("PV-Typ",["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
+            h_selected_names = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
             Input.h_pv_types = [pv_name_to_id[name] for name in h_selected_names]
 
-
         with col2_tab1:
-            # Mapping Autobahn → GeoJSON
             pv_geojson_mapping_col2_tab1 = {
                 "A44": "a44_beide.geojson",
                 "A46": "a46_beide.geojson",
             }
 
-            # Karte erstellen
             m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
 
-            # Loop über ausgewählte Autobahnen
             for highway in Input.highways:
                 selected_file = pv_geojson_mapping_col2_tab1[highway]
                 geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
-                # GeoJSON laden
                 with open(geojson_path, "r", encoding="utf-8") as f:
                     geojson_data = json.load(f)
 
-                # Layer hinzufügen
                 folium.GeoJson(
                     geojson_data,
                     name=f"{highway}"
                 ).add_to(m)
 
-            # Layer Control aktivieren
             folium.LayerControl().add_to(m)
-
-            # Karte in Streamlit rendern
             st_data = st_folium(m, width=400, height=400)
 
-    #ENERGIELANDSCHAFT
+    # ENERGIELANDSCHAFT
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
+
         with col1_tab2:
             Input.el_build_state = st.segmented_control(
                 "Ausbaugrad der Energielandschaft in %",
                 options=[0, 50, 100],
                 default=100,
-                format_func=lambda x: f"{x:.0f}%")
+                format_func=lambda x: f"{x:.0f}%"
+            )
 
-            el_selected_names = st.selectbox("PV-Typ", ["Vertikal (Zaun, Nord-Süd)",
-                                                       "Horizontal (aufgeständert, Ost-West)",
-                                                       "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)"])
+            el_selected_names = st.selectbox(
+                "PV-Typ",
+                [
+                    "Vertikal (Zaun, Nord-Süd)",
+                    "Horizontal (aufgeständert, Ost-West)",
+                    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)"
+                ]
+            )
             Input.el_pv_type = pv_name_to_id[el_selected_names]
 
             Input.tractor_width = st.segmented_control(
@@ -533,10 +596,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 format_func=lambda x: f"{x:.0f}m"
             )
 
-
-
         with col2_tab2:
-            # --- Mapping PV-Typ → GeoJSON-Datei ---
             pv_geojson_mapping_col2_tab2 = {
                 "Vertikal (Zaun, Nord-Süd)": {
                     50: "Geometry_Vertikal_50_Prozent_20m.geojson",
@@ -552,30 +612,23 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 },
             }
 
-
             if Input.el_build_state != 0:
                 selected_file = pv_geojson_mapping_col2_tab2[el_selected_names][Input.el_build_state]
                 geojson_path = os.path.join(script_dir, "geometry", selected_file)
-                # GeoJSON laden
+
                 with open(geojson_path, "r", encoding="utf-8") as f:
                     geojson_data = json.load(f)
 
-            # Karte erstellen
             m = folium.Map(location=[51.07596, 6.48599], zoom_start=14)
 
             if Input.el_build_state != 0:
-                # GeoJSON Layer hinzufügen
                 folium.GeoJson(
                     geojson_data,
                     name=f"{Input.el_pv_type}{Input.tractor_width}"
                 ).add_to(m)
 
-            # Layer Control (falls mehrere Layer kommen)
             folium.LayerControl().add_to(m)
-
-            # Karte in Streamlit rendern
             st_data = st_folium(m, width=400, height=400)
-
 
 st.write("### Verbrauch Eingabewerte")
 
@@ -583,7 +636,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
     tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
 
-    #INDUSTRIEGEBIET
+    # INDUSTRIEGEBIET
     with tab4:
         col1_tab4, col2_tab4 = st.columns(2)
 
@@ -621,7 +674,6 @@ with st.container(key="Verbrauch", width=1500, height=1000):
     Bei Auswahl "mit Wärme/Kälte Stromverbrauch" werden reversible Luftwärmepumpen und Geothermie-Sonden verwendet
             ''')
 
-        # Pfad zur Vorschau-CSV
         preview_csv_path = os.path.join(
             script_dir,
             "functions",
@@ -629,7 +681,6 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv"
         )
 
-        # Expander für Unternehmenserklärung + allgemeiner Balkenplot
         expander = st.expander("Erklärung Unternehmen")
         with expander:
             st.write('''
@@ -665,11 +716,9 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_annual_all)
 
-        # Auswahl in CSV-Spaltennamen übersetzen
         selected_columns = [industry_csv_mapping[i] for i in Input.companies if i in industry_csv_mapping]
-        selected_columns = list(dict.fromkeys(selected_columns))  # Duplikate entfernen
+        selected_columns = list(dict.fromkeys(selected_columns))
 
-        # Wochenvorschau nur für ausgewählte Profile
         if selected_columns:
             st.write("### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen")
 
@@ -680,6 +729,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_preview)
 
+    # GREEN ENERGY HUB
     with tab5:
         Input.h2_load_scenario = st.segmented_control(
             "Wasserstoff-Bedarf Szenario",
@@ -710,30 +760,34 @@ with st.container(key="Verbrauch", width=1500, height=1000):
     - BEV Ladesäulen mit 200 kW Leistung
     - Darstellung des Strombedarfs des Elektrolyseurs und der BEV-Ladesäulen
     - Anteil der Anzahl an FCEVs für jedes Jahr: PKW 92.77% , LKW 7.07% , Busse 0.16%
-    
+
     **Szenario 2022**
     - 5 BEV-Ladesäulen
     - 3 Wasserstoff-Ladesäulen
     - Elektrolyseur mit einer Leistung von ca. 8 MW um H2 Bedarf zu decken
-    - Anzahl an FCEVs: 
+    - Anzahl an FCEVs:
     - Anzahl BEV-Ladevorgänge: 10.381
 
     **Szenario 2030**
     - 6 BEV-Ladesäulen
     - 8 Wasserstoff-Ladesäulen
     - Elektrolyseur mit einer Leistung von ca. 30 MW
-    - Anzahl an FCEVs: 1.800.000 
+    - Anzahl an FCEVs: 1.800.000
     - Anzahl BEV-Ladevorgänge: 12.154
 
     **Szenario 2050**
     - 6 BEV-Ladesäulen
     - 8 Wasserstoff-Ladesäulen
     - Elektrolyseur mit einer Leistung von ca. 18 MW
-    - Anzahl an FCEVs: 4.560.000 
+    - Anzahl an FCEVs: 4.560.000
     - Anzahl BEV-Ladevorgänge: 16.587
 
     **Einordnung der geringeren Elektrolyseurleistung im Jahr 2050**
-    Die geringere Elektrolyseurleistung im Vergleich zum Szenario 2030 ist modellseitig dadurch begründet, dass nicht allein die Anzahl der Ladepunkte entscheidend ist, sondern vor allem die angenommene Wasserstoffnachfrage und deren zeitliche Spitzenlast am betrachteten Standort. Im 2050-Szenario verteilt sich die Nachfrage auf eine stärker ausgebaute Infrastruktur, sodass an diesem Standort trotz ausgebauter Tankstellenstruktur eine geringere Elektrolyseurleistung ausreicht.
+    Die geringere Elektrolyseurleistung im Vergleich zum Szenario 2030 ist modellseitig dadurch begründet,
+    dass nicht allein die Anzahl der Ladepunkte entscheidend ist, sondern vor allem die angenommene
+    Wasserstoffnachfrage und deren zeitliche Spitzenlast am betrachteten Standort. Im 2050-Szenario verteilt
+    sich die Nachfrage auf eine stärker ausgebaute Infrastruktur, sodass an diesem Standort trotz ausgebauter
+    Tankstellenstruktur eine geringere Elektrolyseurleistung ausreicht.
             """)
 
             fig_green_hub_bar = plot_green_hub_annual_energy(
@@ -742,7 +796,6 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_green_hub_bar)
 
-        # Auswahl für überlagerte Beispielwoche
         if Input.h2_load_scenario and Input.e_load_scenario:
             st.write("### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
 
