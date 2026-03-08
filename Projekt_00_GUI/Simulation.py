@@ -272,6 +272,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     else:
         out.coverage_rate = 0.0
 
+    out.balance_power_max_kw = out.res_df["Bilanz [kW]"].max()
+    out.balance_power_min_kw = out.res_df["Bilanz [kW]"].min()
 
     print('Bilanzierung \t\t- abgeschlossen')
 
