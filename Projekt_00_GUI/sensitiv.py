@@ -68,11 +68,11 @@ DEFAULT_CONFIG = {}
 # ---------------------------------------------------
 
 # Welche Szenarien wirklich gerechnet werden sollen
-h_cases = [1,2,3]
-el_cases = [1,2,3]
-i_cases = [1,2,3]
-geh_cases = [1,2,3]
-b_cases = [1]
+h_cases = [1]#,2,3]
+el_cases = [3]#,2,3]
+i_cases = [1]#,2,3]
+geh_cases = [1]#,2,3]
+b_cases = [0,1,2]
 
 # Solarautobahn
 H_CONFIGS = {
@@ -157,12 +157,13 @@ GEH_CONFIGS = {
 B_CONFIGS = {
     0: {},
     1: {
-        "bs_efficiency": 0.95,
-        "bs_energy_kwh": 1000.0,
+        "bs_efficiency": 1,
+        "bs_energy_kwh": 1000000.0,
         "bs_power_kw": 500.0            # Macht noch nichts
     },
 
     2: {
+        "bs_efficiency": 1,
         "bs_energy_kwh": 235000.0,
         "bs_power_kw": 1000.0
     }
@@ -214,14 +215,6 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
 
 def main():
 
-    #Ergebnisse in Heatmap
-    # Index-Labels konsistent als Strings (z.B. "[1]", "[2, 3, 4]", ...)
-   # row_labels = [str(v) for v in company_selections]
-    # Matrix vorbereiten
-    #test_matrix = pd.DataFrame(index=row_labels, columns=traktor, dtype=float)
-
-
-
     col_index = pd.MultiIndex.from_tuples(
         [(f"EL{el}",f"H{h}") for el, h in product(el_cases, h_cases)],
         names=["EnergyLandscape","Highway"]
@@ -233,13 +226,18 @@ def main():
 
     heatmap_df = pd.DataFrame(index=row_index, columns=col_index, dtype=float)
 
-    for el_case in el_cases:
-        for h_case in h_cases:
-            for geh_case in geh_cases:
-                for i_case in i_cases:
-                    for b_case in b_cases:
+    for b_case in b_cases:
+        for el_case in el_cases:
+            for h_case in h_cases:
+                for geh_case in geh_cases:
+                    for i_case in i_cases:
 
-                        print(f"\nRunning case: \nh\t\t-  {h_case} \nel\t\t-  {el_case} \ni \t\t-  {i_case} \ngeh \t-  {geh_case}\n")
+
+                        print(f"\nRunning case: \nh\t\t-  {h_case} "
+                              f"\nel\t\t-  {el_case} "
+                              f"\ni \t\t-  {i_case} "
+                              f"\ngeh \t-  {geh_case}"
+                              f"\nb\t\t- {b_case} ")
 
                         inp = build_test_input(
                             el_case=el_case,
@@ -252,22 +250,33 @@ def main():
 
                         out = run_simulation(inp)
 
-                        if b_case == b_cases[0]:
+                        prod = out.res_df["Erzeugung_Solarautobahn [kW]"] + out.res_df["Erzeugung_Energielandschaft [kW]"]
+                        cons = out.res_df['Last_Industrie [kW]'] + out.res_df["Last_Green_Energy_Hub [kW]"]
 
-                            prod = out.res_df["Erzeugung_Solarautobahn [kW]"] + out.res_df["Erzeugung_Energielandschaft [kW]"]
-                            cons = out.res_df['Last_Industrie [kW]'] + out.res_df["Last_Green_Energy_Hub [kW]"]
+                        '''heatmap_df_selfcons.loc[
+                            (f"GEH{geh_case}", f"I{i_case}"),
+                            (f"EL{el_case}", f"H{h_case}")
+                        ] = 100 * np.minimum(prod, cons).sum() / prod.sum()
+
+                        heatmap_df_selfcons.to_excel("outputs/sensi_res_dfs/balance_self_consumption_rate.xlsx")
+                        '''
 
 
+                        heatmap_df.loc[
+                            (f"GEH{geh_case}", f"I{i_case}"),
+                            (f"EL{el_case}", f"H{h_case}")
+                        ] = out.res_df['Bilanz [kW]'].sum()/4 #
+
+                        if not out.bat_df.empty:
                             heatmap_df.loc[
                                 (f"GEH{geh_case}", f"I{i_case}"),
                                 (f"EL{el_case}", f"H{h_case}")
-                            ] = 100 * np.minimum(prod, cons).sum() / prod.sum()
+                            ] = out.bat_df['new_balance_kw'].sum() / 4  # out.res_df['Bilanz [kW]'].sum()/4 #
 
-                            heatmap_df.to_excel("outputs/sensi_res_dfs/balance_self_consumption_rate.xlsx")
+                        print(heatmap_df)
+                        heatmap_df.to_excel("outputs/sensi_res_dfs/bat_balance.xlsx")
 
-
-
-                    #Output Lastgang speichern
+                        #Output Lastgang speichern
                         if not out.res_df.empty:
                             filename = f"outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
                             out.res_df.to_csv(
@@ -278,6 +287,8 @@ def main():
                             print('-'*50,'\nResults Data Frame:')
                             print("CSV saved:", filename)
                             print('\n',out.res_df.head())
+                            print('\n', out.res_df.sum(axis=0))
+                            #print('\n', out.res_df.sum().sum())
                             print('\n',out.res_df.describe())
 
                             if not out.bat_df.empty:
