@@ -11,6 +11,7 @@ import os
 import folium
 from streamlit_folium import st_folium
 import json
+from PIL import Image
 
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
@@ -22,6 +23,19 @@ from functions.plot_functions import (
 )
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
+
+icon_dir = os.path.join(script_dir, "icon")
+
+ICON_PATHS = {
+    "solar": os.path.join(icon_dir, "solar_highway.png"),
+    "landscape": os.path.join(icon_dir, "energy_landscape.png"),
+    "battery": os.path.join(icon_dir, "battery_storage.png"),
+    "industry": os.path.join(icon_dir, "industrial_area.png"),
+    "hub": os.path.join(icon_dir, "green_energy_hub.png"),
+    "grid": os.path.join(icon_dir, "grid_supply.png"),
+    "surplus": None,
+}
+
 
 pv_name_to_id = {
     "Windschutzwand": 0,
@@ -69,6 +83,129 @@ def format_energy(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh/a"
 
+
+def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="below"):
+    """
+    Fügt ein Icon und den Knotentitel hinzu.
+    Der eigentliche weiße Hintergrundkasten wird separat gezeichnet.
+    """
+    icon_path = ICON_PATHS.get(icon_key)
+
+    if icon_path and os.path.exists(icon_path):
+        fig.add_layout_image(
+            dict(
+                source=Image.open(icon_path).convert("RGBA"),
+                xref="x",
+                yref="y",
+                x=x,
+                y=y,
+                sizex=box_w * 0.80,
+                sizey=box_h * 0.80,
+                xanchor="center",
+                yanchor="middle",
+                layer="above"
+            )
+        )
+
+    if label_pos == "above":
+        label_y = y + box_h / 2 + 0.04
+    else:
+        label_y = y - box_h / 2 - 0.04
+
+    fig.add_annotation(
+        x=x,
+        y=label_y,
+        text=f"<b>{label}</b>",
+        showarrow=False,
+        align="center",
+        font=dict(size=12, color="#222222")
+    )
+
+
+
+def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, label_y=None):
+    """
+    Zeichnet eine geroutete Verbindung aus mehreren Segmenten.
+    `points` ist eine Liste von (x, y)-Punkten.
+    Die Segmente werden als Linien gezeichnet, die Pfeilspitze sitzt nur am Ende.
+    """
+    if len(points) < 2:
+        return
+
+    # Alle Segmente bis auf das letzte als Linien
+    for i in range(len(points) - 2):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        fig.add_shape(
+            type="line",
+            x0=x0, y0=y0,
+            x1=x1, y1=y1,
+            line=dict(color=color, width=width)
+        )
+
+    # Letztes Segment mit Pfeilspitze
+    x0, y0 = points[-2]
+    x1, y1 = points[-1]
+    fig.add_annotation(
+        x=x1,
+        y=y1,
+        ax=x0,
+        ay=y0,
+        xref="x",
+        yref="y",
+        axref="x",
+        ayref="y",
+        showarrow=True,
+        arrowhead=3,
+        arrowsize=1.0,
+        arrowwidth=width,
+        arrowcolor=color,
+        text=""
+    )
+
+    # Optionales Label
+    if label:
+        if label_x is None or label_y is None:
+            label_x = (x0 + x1) / 2
+            label_y = (y0 + y1) / 2 + 0.03
+
+        fig.add_annotation(
+            x=label_x,
+            y=label_y,
+            text=f"<span style='font-size:11px'>{label}</span>",
+            showarrow=False,
+            font=dict(size=11, color=color),
+            bgcolor="rgba(255,255,255,0.85)"
+        )
+
+
+def add_legend(fig):
+    legend_y = 0.935
+    items = [
+        ("Renewable Supply", "#10B35A", 0.10),
+        ("Storage Flow", "#1DA1F2", 0.38),
+        ("Grid Electricity", "#B9B9B9", 0.63),
+    ]
+
+    for text, color, x in items:
+        fig.add_shape(
+            type="line",
+            x0=x,
+            y0=legend_y,
+            x1=x + 0.05,
+            y1=legend_y,
+            line=dict(color=color, width=3)
+        )
+
+        fig.add_annotation(
+            x=x + 0.06,
+            y=legend_y,
+            text=text,
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=11, color="#333333")
+        )
 
 def build_synergy_diagram(inp, sim_output):
     """
@@ -180,6 +317,11 @@ def build_synergy_diagram(inp, sim_output):
     solar_to_surplus = clamp_small(solar_to_surplus)
     landscape_to_surplus = clamp_small(landscape_to_surplus)
 
+    storage_input = solar_to_surplus + landscape_to_surplus
+    COLOR_RENEWABLE = "#10B35A"
+    COLOR_STORAGE = "#1DA1F2"
+    COLOR_GRID = "#B9B9B9"
+
     # -----------------------------
     # 4) Texte für Boxen
     # -----------------------------
@@ -239,135 +381,63 @@ def build_synergy_diagram(inp, sim_output):
         f"<br>Export: {format_energy(grid_export)}"
     )
 
-    surplus_text = (
-        f"Überschuss: {format_energy(surplus_local_energy)}"
-        f"<br>potenziell speicherbar"
-    )
 
     # -----------------------------
     # 5) Knoten
     # -----------------------------
     nodes = {
-        "surplus": {
-            "x": 0, "y": 0.5,
-            "label": "Überschuss",
-            "info": surplus_text,
-            "color": "#F3E8FF"
-        },
         "solar": {
-            "x": 0.28, "y": 0.68,
-            "label": "Solarautobahn",
+            "x": 0.12, "y": 0.72,
+            "label": "Solar Highway",
             "info": solar_text,
-            "color": "#A7D8FF"
+            "icon": "solar"
         },
         "landscape": {
-            "x": 0.28, "y": 0.3,
-            "label": "Energielandschaft",
+            "x": 0.12, "y": 0.28,
+            "label": "Energy Landscape",
             "info": landscape_text,
-            "color": "#BFEFC4"
+            "icon": "landscape"
+        },
+        "battery": {
+            "x": 0.39, "y": 0.50,
+            "label": "Battery Storage",
+            "info": (
+                f"Schematische Speicheranbindung.<br>"
+                f"Potenziell speicherbarer bilanzieller Überschuss: {format_energy(storage_input)}<br>"
+                f"Derzeit keine explizite Batteriesimulation "
+                f"(keine Kapazität, kein SOC, keine Verluste)."
+            ),
+            "icon": "battery"
         },
         "industry": {
-            "x": 0.78, "y": 0.68,
-            "label": "Industriegebiet",
+            "x": 0.88, "y": 0.72,
+            "label": "Industrial Area",
             "info": industry_text,
-            "color": "#E8E8E8"
+            "icon": "industry"
         },
         "hub": {
-            "x": 0.78, "y": 0.3,
+            "x": 0.88, "y": 0.28,
             "label": "Green Energy Hub",
             "info": hub_text,
-            "color": "#D8F5D0"
+            "icon": "hub"
         },
         "grid": {
-            "x": 1.18, "y": 0.5,
-            "label": "Netz",
+            "x": 1.18, "y": 0.50,
+            "label": "Grid Supply",
             "info": grid_text,
-            "color": "#FDE7C6"
+            "icon": "grid"
         }
     }
-
-    # -----------------------------
-    # 6) Flüsse
-    # -----------------------------
-    flows = []
-
-    # Beide Erzeuger -> Industrie zuerst
-    if solar_to_industry > 0:
-        flows.append({
-            "source": "solar",
-            "target": "industry",
-            "color": "#4A90E2",
-            "label": format_energy(solar_to_industry)
-        })
-
-    if landscape_to_industry > 0:
-        flows.append({
-            "source": "landscape",
-            "target": "industry",
-            "color": "#2E8B57",
-            "label": format_energy(landscape_to_industry)
-        })
-
-    # Danach beide Erzeuger -> Hub
-    if solar_to_hub > 0:
-        flows.append({
-            "source": "solar",
-            "target": "hub",
-            "color": "#7DB7F0",
-            "label": format_energy(solar_to_hub)
-        })
-
-    if landscape_to_hub > 0:
-        flows.append({
-            "source": "landscape",
-            "target": "hub",
-            "color": "#16A34A",
-            "label": format_energy(landscape_to_hub)
-        })
-
-    # Netz -> Verbraucher
-    if grid_import_industry > 0:
-        flows.append({
-            "source": "grid",
-            "target": "industry",
-            "color": "#D95F02",
-            "label": f"Import: {format_energy(grid_import_industry)}"
-        })
-
-    if grid_import_hub > 0:
-        flows.append({
-            "source": "grid",
-            "target": "hub",
-            "color": "#D95F02",
-            "label": f"Import: {format_energy(grid_import_hub)}"
-        })
-
-    # Überschuss links
-    if solar_to_surplus > 0:
-        flows.append({
-            "source": "solar",
-            "target": "surplus",
-            "color": "#8B5CF6",
-            "label": format_energy(solar_to_surplus)
-        })
-
-    if landscape_to_surplus > 0:
-        flows.append({
-            "source": "landscape",
-            "target": "surplus",
-            "color": "#7A3EB1",
-            "label": format_energy(landscape_to_surplus)
-        })
 
     # -----------------------------
     # 7) Plotly Figure
     # -----------------------------
     fig = go.Figure()
-    fig.update_xaxes(visible=False, range=[-0.3, 1.45])
-    fig.update_yaxes(visible=False, range=[-0.08, 1.12])
+    fig.update_xaxes(visible=False, range=[-0.02, 1.30])
+    fig.update_yaxes(visible=False, range=[0.02, 1.12])
 
-    box_w = 0.24
-    box_h = 0.15
+    box_w = 0.22
+    box_h = 0.16
 
     # KPI-Karten oben
     kpi_y = 1.01
@@ -399,8 +469,10 @@ def build_synergy_diagram(inp, sim_output):
             align="center"
         )
 
-    # Boxen
-    for node in nodes.values():
+    add_legend(fig)
+
+    # Boxen + Icons
+    for key, node in nodes.items():
         x = node["x"]
         y = node["y"]
 
@@ -410,18 +482,22 @@ def build_synergy_diagram(inp, sim_output):
             x1=x + box_w / 2,
             y0=y - box_h / 2,
             y1=y + box_h / 2,
-            line=dict(color="rgba(70,70,70,0.7)", width=1.5),
-            fillcolor=node["color"],
+            line=dict(color="black", width=2),
+            fillcolor="white",
             layer="below"
         )
 
-        fig.add_annotation(
+        label_pos = "above" if key in ["solar", "industry"] else "below"
+
+        add_node_with_icon(
+            fig=fig,
             x=x,
             y=y,
-            text=f"<b>{node['label']}</b>",
-            showarrow=False,
-            align="center",
-            font=dict(size=10, color="#2F3445")
+            label=node["label"],
+            icon_key=node["icon"],
+            box_w=box_w,
+            box_h=box_h,
+            label_pos=label_pos
         )
 
     # Unsichtbare Hover-Punkte für Detailinfos
@@ -436,67 +512,210 @@ def build_synergy_diagram(inp, sim_output):
                 showlegend=False
             )
         )
+    # -------------------------------------------------
+    # Geroutete Hauptpfade im Layout der Zielskizze
+    # -------------------------------------------------
+    COLOR_RENEWABLE = "#10B35A"
+    COLOR_STORAGE = "#1DA1F2"
+    COLOR_GRID = "#B9B9B9"
 
-    # Pfeile
-    for flow in flows:
-        s = nodes[flow["source"]]
-        t = nodes[flow["target"]]
+    x_left_join = 0.62
+    x_merge = 0.62
+    x_right_join = 0.89
+    y_mid = 0.50
 
-        if s["x"] < t["x"]:
-            x0 = s["x"] + box_w / 2 - 0.01
-            x1 = t["x"] - box_w / 2 + 0.01
-        elif s["x"] > t["x"]:
-            x0 = s["x"] - box_w / 2 + 0.01
-            x1 = t["x"] + box_w / 2 - 0.01
-        else:
-            x0 = s["x"]
-            x1 = t["x"]
+    has_industry_supply = local_supply_industry > 0
+    has_hub_supply = local_supply_hub > 0
+    has_storage = storage_input > 0
 
-        if s["y"] < t["y"]:
-            y0 = s["y"] + box_h / 2 - 0.01
-            y1 = t["y"] - box_h / 2 + 0.01
-        elif s["y"] > t["y"]:
-            y0 = s["y"] - box_h / 2 + 0.01
-            y1 = t["y"] + box_h / 2 - 0.01
-        else:
-            y0 = s["y"]
-            y1 = t["y"]
+    # Anschlusspunkte: mittig an den Boxseiten
+    solar_right_mid = (nodes["solar"]["x"] + box_w / 2, nodes["solar"]["y"])
+    landscape_right_mid = (nodes["landscape"]["x"] + box_w / 2, nodes["landscape"]["y"])
 
-        fig.add_annotation(
-            x=x1, y=y1,
-            ax=x0, ay=y0,
-            xref="x", yref="y",
-            axref="x", ayref="y",
-            showarrow=True,
-            arrowhead=3,
-            arrowsize=1.1,
-            arrowwidth=2.6,
-            arrowcolor=flow["color"],
-            text=""
+    solar_bottom_mid = (nodes["solar"]["x"], nodes["solar"]["y"] - box_h / 2)
+    landscape_top_mid = (nodes["landscape"]["x"], nodes["landscape"]["y"] + box_h / 2)
+
+    battery_left_mid = (nodes["battery"]["x"] - box_w / 2, nodes["battery"]["y"])
+    battery_right_mid = (nodes["battery"]["x"] + box_w / 2, nodes["battery"]["y"])
+
+    industry_bottom_mid = (nodes["industry"]["x"], nodes["industry"]["y"] - box_h / 2)
+    hub_top_mid = (nodes["hub"]["x"], nodes["hub"]["y"] + box_h / 2)
+
+    industry_right_mid = (nodes["industry"]["x"] + box_w / 2, nodes["industry"]["y"])
+    hub_right_mid = (nodes["hub"]["x"] + box_w / 2, nodes["hub"]["y"])
+
+    grid_top_mid = (nodes["grid"]["x"], nodes["grid"]["y"] + box_h / 2)
+    grid_bottom_mid = (nodes["grid"]["x"], nodes["grid"]["y"] - box_h / 2)
+
+    # --- Grüne Hauptstruktur links ---
+    if (solar_to_industry + solar_to_hub) > 0:
+        add_routed_arrow(
+            fig,
+            points=[solar_right_mid, (x_left_join, solar_right_mid[1])],
+            color=COLOR_RENEWABLE
         )
 
-        if flow["label"]:
-            xm = (x0 + x1) / 2
-            ym = (y0 + y1) / 2 + 0.03
+    if (landscape_to_industry + landscape_to_hub) > 0:
+        add_routed_arrow(
+            fig,
+            points=[landscape_right_mid, (x_left_join, landscape_right_mid[1])],
+            color=COLOR_RENEWABLE
+        )
 
-            fig.add_annotation(
-                x=xm,
-                y=ym,
-                text=f"<span style='font-size:10px'>{flow['label']}</span>",
-                showarrow=False,
-                font=dict(size=10, color=flow["color"]),
-                bgcolor="rgba(255,255,255,0.82)"
+    # linker vertikaler Sammelstrang - verbunden
+    if has_industry_supply or has_hub_supply:
+        fig.add_shape(
+            type="line",
+            x0=x_left_join, y0=landscape_right_mid[1],
+            x1=x_left_join, y1=solar_right_mid[1],
+            line=dict(color=COLOR_RENEWABLE, width=2.5)
+        )
+        fig.add_shape(
+            type="line",
+            x0=x_left_join, y0=y_mid,
+            x1=x_merge, y1=y_mid,
+            line=dict(color=COLOR_RENEWABLE, width=2.5)
+        )
+
+    # mittlere Direct Supply Leitung
+    if has_industry_supply or has_hub_supply:
+        add_routed_arrow(
+            fig,
+            points=[(x_merge, y_mid), (x_right_join, y_mid)],
+            color=COLOR_RENEWABLE,
+            label="Direct Supply",
+            label_x=0.84,
+            label_y=0.53
+        )
+
+    # rechter vertikaler Verteiler - startet erst rechts von den Boxen
+    if has_industry_supply or has_hub_supply:
+        y_top = industry_bottom_mid[1] if has_industry_supply else y_mid
+        y_bottom = hub_top_mid[1] if has_hub_supply else y_mid
+
+        if y_top != y_bottom:
+            fig.add_shape(
+                type="line",
+                x0=x_right_join, y0=y_bottom,
+                x1=x_right_join, y1=y_top,
+                line=dict(color=COLOR_RENEWABLE, width=2.5)
             )
+
+    # grüner Pfeil -> Industry mittig unten
+    if has_industry_supply:
+        add_routed_arrow(
+            fig,
+            points=[
+                (x_right_join, y_mid),
+                (x_right_join, industry_bottom_mid[1]),
+                industry_bottom_mid
+            ],
+            color=COLOR_RENEWABLE
+        )
+        fig.add_annotation(
+            x=0.80, y=0.61,
+            text=f"<span style='font-size:11px'>{format_energy(local_supply_industry)}</span>",
+            showarrow=False,
+            font=dict(size=11, color=COLOR_RENEWABLE),
+            bgcolor="rgba(255,255,255,0.85)"
+        )
+
+    # grüner Pfeil -> Hub mittig oben
+    if has_hub_supply:
+        add_routed_arrow(
+            fig,
+            points=[
+                (x_right_join, y_mid),
+                (x_right_join, hub_top_mid[1]),
+                hub_top_mid
+            ],
+            color=COLOR_RENEWABLE
+        )
+        fig.add_annotation(
+            x=0.80, y=0.18,
+            text=f"<span style='font-size:11px'>{format_energy(local_supply_hub)}</span>",
+            showarrow=False,
+            font=dict(size=11, color=COLOR_RENEWABLE),
+            bgcolor="rgba(255,255,255,0.85)"
+        )
+
+    # --- Blauer Speicherpfad ---
+    if solar_to_surplus > 0:
+        add_routed_arrow(
+            fig,
+            points=[solar_bottom_mid, (solar_bottom_mid[0], battery_left_mid[1]), battery_left_mid],
+            color=COLOR_STORAGE,
+            label="Surplus Energy",
+            label_x=0.24,
+            label_y=0.54
+        )
+
+    if landscape_to_surplus > 0:
+        add_routed_arrow(
+            fig,
+            points=[landscape_top_mid, (landscape_top_mid[0], battery_left_mid[1]), battery_left_mid],
+            color=COLOR_STORAGE
+        )
+
+    if has_storage:
+        add_routed_arrow(
+            fig,
+            points=[battery_right_mid, (x_merge, y_mid)],
+            color=COLOR_STORAGE
+        )
+
+    # --- Grauer Netzpfad ---
+    if grid_import_industry > 0:
+        add_routed_arrow(
+            fig,
+            points=[
+                grid_top_mid,
+                (grid_top_mid[0], industry_right_mid[1]),
+                industry_right_mid
+            ],
+            color=COLOR_GRID
+        )
+
+        fig.add_annotation(
+            x=1.05, y=0.76,
+            text=f"<span style='font-size:11px'>{format_energy(grid_import_industry)}</span>",
+            showarrow=False,
+            font=dict(size=11, color=COLOR_GRID),
+            bgcolor="rgba(255,255,255,0.85)"
+        )
+
+    if grid_import_hub > 0:
+        add_routed_arrow(
+            fig,
+            points=[
+                grid_bottom_mid,
+                (grid_bottom_mid[0], hub_right_mid[1]),
+                hub_right_mid
+            ],
+            color=COLOR_GRID
+        )
+        fig.add_annotation(
+            x=1.05, y=0.22,
+            text=f"<span style='font-size:11px'>{format_energy(grid_import_hub)}</span>",
+            showarrow=False,
+            font=dict(size=11, color=COLOR_GRID),
+            bgcolor="rgba(255,255,255,0.85)"
+        )
 
     fig.update_layout(
         title="Synergien, Bilanz und potenzielle Versorgung der Teilprojekte",
-        height=850,
-        margin=dict(l=20, r=20, t=80, b=20),
+        height=860,
+        margin=dict(l=20, r=20, t=110, b=20),
         plot_bgcolor="white",
         paper_bgcolor="white"
     )
 
     return fig
+
+
+
+
+
 
 
 st.set_page_config(layout="centered")
