@@ -36,6 +36,14 @@ ICON_PATHS = {
     "surplus": None,
 }
 
+ICON_SCALE = {
+    "solar": 0.96,
+    "landscape": 0.96,
+    "industry": 1,
+    "hub": 1,
+    "battery": 0.6,
+    "grid": 0.5,
+}
 
 pv_name_to_id = {
     "Windschutzwand": 0,
@@ -90,6 +98,7 @@ def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="belo
     Der eigentliche weiße Hintergrundkasten wird separat gezeichnet.
     """
     icon_path = ICON_PATHS.get(icon_key)
+    scale = ICON_SCALE.get(icon_key, 0.80)
 
     if icon_path and os.path.exists(icon_path):
         fig.add_layout_image(
@@ -99,8 +108,8 @@ def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="belo
                 yref="y",
                 x=x,
                 y=y,
-                sizex=box_w * 0.80,
-                sizey=box_h * 0.80,
+                sizex=box_w * scale,
+                sizey=box_h * scale,
                 xanchor="center",
                 yanchor="middle",
                 layer="above"
@@ -209,7 +218,7 @@ def add_legend(fig):
 
 def build_synergy_diagram(inp, sim_output):
     """
-    Bilanzorientierte Systemgrafik ohne Mittelknoten.
+    Bilanzorientierte Systemgrafik - Fluss Logik
 
     Logik:
     1) Beide Erzeuger priorisieren zuerst das Industriegebiet
