@@ -25,7 +25,7 @@ class GuiInput:
                  e_load_scenario:str | None = None,
                  bs_efficiency:float | None = None,
                  bs_energy_kwh:float | None = None,
-                 bs_power_kw:float | None = None,):
+                 bs_c_factor:float | None = None,):
         # ERZEUGUNG
         # Solarautobahn
         self.highways = highways                                    # Auswahl Autobahnen
@@ -45,7 +45,7 @@ class GuiInput:
         # Batteriespeicher
         self.bs_efficiency = bs_efficiency
         self.bs_energy_kwh = bs_energy_kwh
-        self.bs_power_kw = bs_power_kw
+        self.bs_c_factor = bs_c_factor
 
     def __repr__(self):
         return (
@@ -62,7 +62,7 @@ class GuiInput:
             f"e_load_scenario={self.e_load_scenario}, "
             f"bs_efficiency={self.bs_efficiency}, "
             f"bs_energy_kwh={self.bs_energy_kwh}, "
-            f"bs_power_kw={self.bs_power_kw}"
+            f"bs_c_factor={self.bs_c_factor}"
             f")"
         )
 # =========================
@@ -107,8 +107,9 @@ class SimOutput:
         self.el_max_power_kw = el_max_power_kw
         self.geh_max_power_kw = geh_max_power_kw
         self.i_max_power_kw = i_max_power_kw
-        # Result Data Frame mit Lastgängen (und batterie DF plus stats)
+        # Result Data Frame mit Lastgängen
         self.res_df = res_df if res_df is not None else pd.DataFrame()
+        #Batterie Data Frame und Stats dict
         self.bat_df = bat_df if bat_df is not None else pd.DataFrame()
         self.battery_stats = battery_stats if battery_stats is not None else {}
         # Bilanzenergie

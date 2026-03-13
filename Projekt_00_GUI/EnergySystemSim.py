@@ -1328,6 +1328,41 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         else:
             st.info("Green Energy Hub ist deaktiviert.")
 
+st.write("### Batterie Eingabewerte")
+
+with st.container(key="Batterie", width=1500, height=500):
+
+    #tab7 = st.tabs(["Batterie"])
+    # Batterie
+    #with tab7:
+
+    scenario_options = [None, "10 MWh", "100 MWh", "235 MWh"]
+
+    Input.bs_energy_kwh = st.segmented_control(
+        "Kapazität",
+        options=[0, 10000, 100000, 235000],
+        default=0,
+        format_func=lambda x: f"{x/1000:.0f} MWh"
+    )
+
+    Input.bs_efficiency = st.segmented_control(
+        "Lade- & Entladeeffizienz",
+        options=[1,0.9,0.8],
+        default=1,
+        #format_func=lambda x: f"{x/1000:.0f} MWh"
+    )
+
+    bat_active = (
+            Input.bs_energy_kwh > 0
+    )
+
+    if bat_active:
+        st.info("Batterie aktiv.")
+    else:
+        st.info("Batterie deaktiviert.")
+
+
+
 if st.button("Simulation starten"):
     Output = run_simulation(Input)
 

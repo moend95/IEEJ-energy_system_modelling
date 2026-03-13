@@ -292,8 +292,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             initial_soc_kwh=0,
             charge_efficiency=inp.bs_efficiency,
             discharge_efficiency=inp.bs_efficiency,
-            #max_charge_c=1.0,
-            #max_discharge_c=1.0,
+            max_charge_c=inp.bs_c_factor,
+            max_discharge_c=inp.bs_c_factor,
         )
 
         out.bat_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
