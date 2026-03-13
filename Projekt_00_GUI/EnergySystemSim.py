@@ -187,33 +187,189 @@ def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, la
             bgcolor="rgba(255,255,255,0.85)"
         )
 
+def scale_arrow_width(flow_value, max_flow, min_width=1.5, max_width=5.0):
+    """
+    Skaliert die Pfeildicke linear auf Basis des größten dargestellten Flusses.
+    """
+    flow_value = float(flow_value or 0)
+    max_flow = float(max_flow or 1)
+
+    if flow_value <= 0:
+        return min_width
+
+    return min_width + (flow_value / max_flow) * (max_width - min_width)
+
+
+def add_physical_connection(
+    fig,
+    points,
+    color="#A8A8A8",
+    width=1.3,
+    dash="dot",
+    add_arrow=False
+):
+    """
+    Zeichnet eine physische, dauerhaft vorhandene Verbindung.
+    Optional mit kleiner Pfeilspitze am Ende.
+    """
+    if len(points) < 2:
+        return
+
+    for i in range(len(points) - 1):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        fig.add_shape(
+            type="line",
+            x0=x0, y0=y0,
+            x1=x1, y1=y1,
+            line=dict(color=color, width=width, dash=dash)
+        )
+
+    if add_arrow:
+        x0, y0 = points[-2]
+        x1, y1 = points[-1]
+
+        dx = x1 - x0
+        dy = y1 - y0
+
+        fig.add_annotation(
+            x=x1,
+            y=y1,
+            ax=x1 - dx * 0.12,
+            ay=y1 - dy * 0.12,
+            xref="x",
+            yref="y",
+            axref="x",
+            ayref="y",
+            showarrow=True,
+            arrowhead=3,
+            arrowsize=0.9,
+            arrowwidth=max(width, 1.4),
+            arrowcolor=color,
+            text=""
+        )
 
 def add_legend(fig):
-    legend_y = 0.935
-    items = [
-        ("Renewable Supply", "#10B35A", 0.10),
-        ("Storage Flow", "#1DA1F2", 0.38),
-        ("Grid Electricity", "#B9B9B9", 0.63),
+    legend_y1 = 0.06
+    legend_y2 = 0.035
+
+    # Zeile 1: durchgezogene Linien
+    items_row1 = [
+        ("Erneuerbare Versorgung", "#10B35A", 0.1, "solid"),
+        ("Überschuss / Speicheroption", "#1DA1F2", 0.4, "solid"),
+        ("Netzstrombezug", "#B9B9B9", 0.75, "solid"),
     ]
 
-    for text, color, x in items:
+    # Zeile 2: gestrichelte Linien
+    items_row2 = [
+        ("Optionale Nutzung", "#1DA1F2", 0.1, "dot"),
+        ("Netzanbindung", "#A8A8A8", 0.4, "dot"),
+    ]
+
+    for text, color, x, dash in items_row1:
         fig.add_shape(
             type="line",
             x0=x,
-            y0=legend_y,
+            y0=legend_y1,
             x1=x + 0.05,
-            y1=legend_y,
-            line=dict(color=color, width=3)
+            y1=legend_y1,
+            line=dict(color=color, width=3, dash=dash)
         )
-
         fig.add_annotation(
             x=x + 0.06,
-            y=legend_y,
+            y=legend_y1,
             text=text,
             showarrow=False,
             xanchor="left",
             yanchor="middle",
             font=dict(size=11, color="#333333")
+        )
+
+    for text, color, x, dash in items_row2:
+        fig.add_shape(
+            type="line",
+            x0=x,
+            y0=legend_y2,
+            x1=x + 0.05,
+            y1=legend_y2,
+            line=dict(color=color, width=3, dash=dash)
+        )
+        fig.add_annotation(
+            x=x + 0.06,
+            y=legend_y2,
+            text=text,
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=11, color="#333333")
+        )
+
+def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot", label=None, label_x=None, label_y=None):
+    """
+    Zeichnet eine optionale / konzeptionelle Verbindung.
+    Nicht als simulierten Energiefluss interpretieren.
+    """
+    if len(points) < 2:
+        return
+
+    for i in range(len(points) - 2):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        fig.add_shape(
+            type="line",
+            x0=x0, y0=y0,
+            x1=x1, y1=y1,
+            line=dict(color=color, width=width, dash=dash)
+        )
+
+    x0, y0 = points[-2]
+    x1, y1 = points[-1]
+
+    fig.add_shape(
+        type="line",
+        x0=x0, y0=y0,
+        x1=x1, y1=y1,
+        line=dict(color=color, width=width, dash=dash)
+    )
+
+    dx = x1 - x0
+    dy = y1 - y0
+
+    # Mindestlänge für sichtbare Pfeilspitze
+    arrow_len = 0.025
+
+    if abs(dx) >= abs(dy):  # eher horizontal
+        ax = x1 - arrow_len if dx >= 0 else x1 + arrow_len
+        ay = y1
+    else:  # eher vertikal
+        ax = x1
+        ay = y1 - arrow_len if dy >= 0 else y1 + arrow_len
+
+    fig.add_annotation(
+        x=x1,
+        y=y1,
+        ax=ax,
+        ay=ay,
+        xref="x",
+        yref="y",
+        axref="x",
+        ayref="y",
+        showarrow=True,
+        arrowhead=3,
+        arrowsize=1.2,
+        arrowwidth=max(width, 1.8),
+        arrowcolor=color,
+        text=""
+    )
+
+    if label:
+        fig.add_annotation(
+            x=label_x if label_x is not None else (x0 + x1) / 2,
+            y=label_y if label_y is not None else (y0 + y1) / 2 + 0.02,
+            text=f"<span style='font-size:10px'>{label}</span>",
+            showarrow=False,
+            font=dict(size=10, color=color),
+            bgcolor="rgba(255,255,255,0.75)"
         )
 
 def build_synergy_diagram(inp, sim_output):
@@ -332,6 +488,22 @@ def build_synergy_diagram(inp, sim_output):
     COLOR_GRID = "#B9B9B9"
 
     # -----------------------------
+    # 3b) Skalierung der Pfeildicken
+    # -----------------------------
+    flow_values = [
+        local_supply_industry,
+        local_supply_hub,
+        grid_import_industry,
+        grid_import_hub,
+        storage_input,
+        grid_export,
+        solar_to_industry + solar_to_hub,
+        landscape_to_industry + landscape_to_hub,
+    ]
+    max_flow = max(flow_values) if max(flow_values) > 0 else 1.0
+
+
+    # -----------------------------
     # 4) Texte für Boxen
     # -----------------------------
     solar_text = "nicht aktiv"
@@ -376,18 +548,21 @@ def build_synergy_diagram(inp, sim_output):
     else:
         hub_status = "nicht gedeckt"
 
-    hub_text = (
-        f"H₂-Szenario: {inp.h2_load_scenario}"
-        f"<br>El.-Szenario: {inp.e_load_scenario}"
-        f"<br>Bedarf: {format_energy(green_hub_energy)}"
-        f"<br>Lokal gedeckt: {format_energy(local_supply_hub)}"
-        f"<br>Netzbezug: {format_energy(grid_import_hub)}"
-        f"<br>Status: {hub_status}"
-    )
+    if inp.h2_load_scenario is None or inp.e_load_scenario is None:
+        hub_text = "deaktiviert"
+    else:
+        hub_text = (
+            f"H₂-Szenario: {inp.h2_load_scenario}"
+            f"<br>El.-Szenario: {inp.e_load_scenario}"
+            f"<br>Bedarf: {format_energy(green_hub_energy)}"
+            f"<br>Lokal gedeckt: {format_energy(local_supply_hub)}"
+            f"<br>Netzbezug: {format_energy(grid_import_hub)}"
+            f"<br>Status: {hub_status}"
+        )
 
     grid_text = (
         f"Import: {format_energy(grid_import_total)}"
-        f"<br>Export: {format_energy(grid_export)}"
+        f"<br>Möglicher Export: {format_energy(grid_export)}"
     )
 
 
@@ -397,30 +572,33 @@ def build_synergy_diagram(inp, sim_output):
     nodes = {
         "solar": {
             "x": 0.12, "y": 0.72,
-            "label": "Solar Highway",
+            "label": "Solar Autobahn",
             "info": solar_text,
             "icon": "solar"
         },
         "landscape": {
             "x": 0.12, "y": 0.28,
-            "label": "Energy Landscape",
+            "label": "Energie Landschaft",
             "info": landscape_text,
             "icon": "landscape"
         },
         "battery": {
             "x": 0.39, "y": 0.50,
-            "label": "Battery Storage",
+            "label": "Batterie Speicher",
             "info": (
-                f"Schematische Speicheranbindung.<br>"
-                f"Potenziell speicherbarer bilanzieller Überschuss: {format_energy(storage_input)}<br>"
-                f"Derzeit keine explizite Batteriesimulation "
-                f"(keine Kapazität, kein SOC, keine Verluste)."
+                f"Schematische Option zur Nutzung bilanzieller Überschüsse.<br>"
+                f"Bilanzieller Überschuss: {format_energy(storage_input)}<br>"
+                f"Mögliche Nutzung: Zwischenspeicherung für spätere lokale Nutzung "
+                f"oder Netzeinspeisung.<br>"
+                f"Keine explizite Batteriesimulation "
+                f"(keine Kapazität, kein SOC, keine Lade-/Entladeverluste, kein Dispatch)."
             ),
             "icon": "battery"
         },
+
         "industry": {
             "x": 0.88, "y": 0.72,
-            "label": "Industrial Area",
+            "label": "Industriegebiet",
             "info": industry_text,
             "icon": "industry"
         },
@@ -432,7 +610,7 @@ def build_synergy_diagram(inp, sim_output):
         },
         "grid": {
             "x": 1.18, "y": 0.50,
-            "label": "Grid Supply",
+            "label": "Netz Versorgung",
             "info": grid_text,
             "icon": "grid"
         }
@@ -442,7 +620,7 @@ def build_synergy_diagram(inp, sim_output):
     # 7) Plotly Figure
     # -----------------------------
     fig = go.Figure()
-    fig.update_xaxes(visible=False, range=[-0.02, 1.30])
+    fig.update_xaxes(visible=False, range=[-0.02, 1.33])
     fig.update_yaxes(visible=False, range=[0.02, 1.12])
 
     box_w = 0.22
@@ -451,12 +629,12 @@ def build_synergy_diagram(inp, sim_output):
     # KPI-Karten oben
     kpi_y = 1.01
     kpis = [
-        ("Gesamterzeugung", format_energy(total_generation), "#EAF4FF"),
-        ("Gesamtbedarf", format_energy(total_demand), "#F8F8F8"),
-        ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
-        ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", "#FFF4E8"),
+        ("Jahreserzeugung", format_energy(total_generation), "#EAF4FF"),
+        ("Jahresbedarf", format_energy(total_demand), "#F8F8F8"),
+        ("Jährl.<br>Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
+        ("Jahresbilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", "#FFF4E8"),
         ("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
-        ("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
+        ("Mögliche<br>Überschussnutzung", format_energy(grid_export), "#F3E8FF"),
     ]
     kpi_xs = [0.08, 0.31, 0.54, 0.77, 1.00, 1.23]
 
@@ -530,12 +708,16 @@ def build_synergy_diagram(inp, sim_output):
 
     x_left_join = 0.62
     x_merge = 0.62
-    x_right_join = 0.89
+    x_right_join = nodes["industry"]["x"]
     y_mid = 0.50
 
     has_industry_supply = local_supply_industry > 0
     has_hub_supply = local_supply_hub > 0
     has_storage = storage_input > 0
+    has_generation = total_generation > 0
+    has_any_load = (industry_energy > 0) or (green_hub_energy > 0)
+    has_any_local_supply = has_industry_supply or has_hub_supply
+    only_export_case = has_generation and not has_any_load
 
     # Anschlusspunkte: mittig an den Boxseiten
     solar_right_mid = (nodes["solar"]["x"] + box_w / 2, nodes["solar"]["y"])
@@ -547,6 +729,9 @@ def build_synergy_diagram(inp, sim_output):
     battery_left_mid = (nodes["battery"]["x"] - box_w / 2, nodes["battery"]["y"])
     battery_right_mid = (nodes["battery"]["x"] + box_w / 2, nodes["battery"]["y"])
 
+    direct_mid_left = (x_merge, y_mid)
+    grid_left_mid = (nodes["grid"]["x"] - box_w / 2, nodes["grid"]["y"])
+
     industry_bottom_mid = (nodes["industry"]["x"], nodes["industry"]["y"] - box_h / 2)
     hub_top_mid = (nodes["hub"]["x"], nodes["hub"]["y"] + box_h / 2)
 
@@ -557,34 +742,69 @@ def build_synergy_diagram(inp, sim_output):
     grid_bottom_mid = (nodes["grid"]["x"], nodes["grid"]["y"] - box_h / 2)
 
     # --- Grüne Hauptstruktur links ---
-    if (solar_to_industry + solar_to_hub) > 0:
+    if solar_energy > 0:
         add_routed_arrow(
             fig,
             points=[solar_right_mid, (x_left_join, solar_right_mid[1])],
-            color=COLOR_RENEWABLE
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(solar_energy, max_flow)
         )
 
-    if (landscape_to_industry + landscape_to_hub) > 0:
+    if landscape_energy > 0:
         add_routed_arrow(
             fig,
             points=[landscape_right_mid, (x_left_join, landscape_right_mid[1])],
-            color=COLOR_RENEWABLE
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(landscape_energy, max_flow)
         )
 
-    # linker vertikaler Sammelstrang - verbunden
-    if has_industry_supply or has_hub_supply:
-        fig.add_shape(
-            type="line",
-            x0=x_left_join, y0=landscape_right_mid[1],
-            x1=x_left_join, y1=solar_right_mid[1],
-            line=dict(color=COLOR_RENEWABLE, width=2.5)
+    # linker vertikaler Sammelstrang - dynamisch
+    if has_generation:
+        main_renewable_width = scale_arrow_width(total_generation, max_flow)
+
+        active_source_ys = []
+
+        if solar_energy > 0:
+            active_source_ys.append(solar_right_mid[1])
+
+        if landscape_energy > 0:
+            active_source_ys.append(landscape_right_mid[1])
+
+        if active_source_ys:
+            y_top = max(max(active_source_ys), y_mid)
+            y_bottom = min(min(active_source_ys), y_mid)
+
+            fig.add_shape(
+                type="line",
+                x0=x_left_join, y0=y_bottom,
+                x1=x_left_join, y1=y_top,
+                line=dict(color=COLOR_RENEWABLE, width=main_renewable_width)
+            )
+
+    # --- Sonderfall: nur Erzeugung -> direkte Netzeinspeisung ---
+    if only_export_case:
+        add_routed_arrow(
+            fig,
+            points=[
+                (x_merge, y_mid),
+                grid_left_mid
+            ],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(total_generation, max_flow),
+            label="Direkte Netzeinspeisung",
+            label_x=0.84,
+            label_y=0.53
         )
-        fig.add_shape(
-            type="line",
-            x0=x_left_join, y0=y_mid,
-            x1=x_merge, y1=y_mid,
-            line=dict(color=COLOR_RENEWABLE, width=2.5)
+
+        fig.add_annotation(
+            x=0.88,
+            y=0.46,
+            text=f"<span style='font-size:11px'>{format_energy(total_generation)}</span>",
+            showarrow=False,
+            font=dict(size=11, color=COLOR_RENEWABLE),
+            bgcolor="rgba(255,255,255,0.85)"
         )
+
 
     # mittlere Direct Supply Leitung
     if has_industry_supply or has_hub_supply:
@@ -592,23 +812,12 @@ def build_synergy_diagram(inp, sim_output):
             fig,
             points=[(x_merge, y_mid), (x_right_join, y_mid)],
             color=COLOR_RENEWABLE,
+            width=scale_arrow_width(local_supply_industry + local_supply_hub, max_flow),
             label="Direct Supply",
-            label_x=0.84,
+            label_x=0.79,
             label_y=0.53
         )
 
-    # rechter vertikaler Verteiler - startet erst rechts von den Boxen
-    if has_industry_supply or has_hub_supply:
-        y_top = industry_bottom_mid[1] if has_industry_supply else y_mid
-        y_bottom = hub_top_mid[1] if has_hub_supply else y_mid
-
-        if y_top != y_bottom:
-            fig.add_shape(
-                type="line",
-                x0=x_right_join, y0=y_bottom,
-                x1=x_right_join, y1=y_top,
-                line=dict(color=COLOR_RENEWABLE, width=2.5)
-            )
 
     # grüner Pfeil -> Industry mittig unten
     if has_industry_supply:
@@ -616,10 +825,11 @@ def build_synergy_diagram(inp, sim_output):
             fig,
             points=[
                 (x_right_join, y_mid),
-                (x_right_join, industry_bottom_mid[1]),
+                (industry_bottom_mid[0], y_mid),
                 industry_bottom_mid
             ],
-            color=COLOR_RENEWABLE
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(local_supply_industry, max_flow)
         )
         fig.add_annotation(
             x=0.80, y=0.61,
@@ -635,10 +845,11 @@ def build_synergy_diagram(inp, sim_output):
             fig,
             points=[
                 (x_right_join, y_mid),
-                (x_right_join, hub_top_mid[1]),
+                (hub_top_mid[0], y_mid),
                 hub_top_mid
             ],
-            color=COLOR_RENEWABLE
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(local_supply_hub, max_flow)
         )
         fig.add_annotation(
             x=0.80, y=0.18,
@@ -649,31 +860,98 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     # --- Blauer Speicherpfad ---
-    if solar_to_surplus > 0:
+    if solar_to_surplus > 0 and not only_export_case:
         add_routed_arrow(
             fig,
             points=[solar_bottom_mid, (solar_bottom_mid[0], battery_left_mid[1]), battery_left_mid],
             color=COLOR_STORAGE,
-            label="Surplus Energy",
+            width=scale_arrow_width(solar_to_surplus, max_flow),
+            label="Bilanzieller Überschuss",
             label_x=0.24,
             label_y=0.54
         )
 
-    if landscape_to_surplus > 0:
+    if storage_input > 0 and has_any_local_supply:
+        add_optional_connection(
+            fig,
+            points=[
+                battery_right_mid,
+                (x_merge - 0.03, battery_right_mid[1]),
+                (x_merge - 0.03, y_mid),
+                (x_merge, y_mid)
+            ],
+            color=COLOR_STORAGE,
+            width=1.5,
+            dash="dot",
+            label="optionale Speichernutzung",
+            label_x=0.47,
+            label_y=0.59
+        )
+
+    if storage_input > 0 and only_export_case:
+        add_optional_connection(
+            fig,
+            points=[
+                (x_merge, y_mid),
+                (battery_right_mid[0] + 0.02, y_mid),
+                (battery_right_mid[0] + 0.02, battery_right_mid[1]),
+                battery_right_mid
+            ],
+            color=COLOR_STORAGE,
+            width=1.5,
+            dash="dot",
+            label="optionale Speicherung",
+            label_x=0.47,
+            label_y=0.59
+        )
+
+
+
+    if landscape_to_surplus > 0 and not only_export_case:
         add_routed_arrow(
             fig,
             points=[landscape_top_mid, (landscape_top_mid[0], battery_left_mid[1]), battery_left_mid],
-            color=COLOR_STORAGE
+            color=COLOR_STORAGE,
+            width=scale_arrow_width(landscape_to_surplus, max_flow)
         )
 
-    if has_storage:
-        add_routed_arrow(
-            fig,
-            points=[battery_right_mid, (x_merge, y_mid)],
-            color=COLOR_STORAGE
-        )
+    # if has_storage:
+    #     add_routed_arrow(
+    #         fig,
+    #         points=[battery_right_mid, (x_merge, y_mid)],
+    #         color=COLOR_STORAGE
+    #     )
 
-    # --- Grauer Netzpfad ---
+
+
+    # --- Grauer Pfad - Physische Netzanbindung immer sichtbar ---
+    add_physical_connection(
+        fig,
+        points=[
+            grid_top_mid,
+            (grid_top_mid[0], industry_right_mid[1]),
+            industry_right_mid
+        ],
+        color="#A8A8A8",
+        width=1.3,
+        dash="dot",
+        add_arrow=True
+    )
+
+    add_physical_connection(
+        fig,
+        points=[
+            grid_bottom_mid,
+            (grid_bottom_mid[0], hub_right_mid[1]),
+            hub_right_mid
+        ],
+        color="#A8A8A8",
+        width=1.3,
+        dash="dot",
+        add_arrow = True
+    )
+
+    # --- Grauer Netzpfad: bilanzieller Import ---
     if grid_import_industry > 0:
         add_routed_arrow(
             fig,
@@ -682,7 +960,8 @@ def build_synergy_diagram(inp, sim_output):
                 (grid_top_mid[0], industry_right_mid[1]),
                 industry_right_mid
             ],
-            color=COLOR_GRID
+            color=COLOR_GRID,
+            width=scale_arrow_width(grid_import_industry, max_flow)
         )
 
         fig.add_annotation(
@@ -701,8 +980,10 @@ def build_synergy_diagram(inp, sim_output):
                 (grid_bottom_mid[0], hub_right_mid[1]),
                 hub_right_mid
             ],
-            color=COLOR_GRID
+            color=COLOR_GRID,
+            width=scale_arrow_width(grid_import_hub, max_flow)
         )
+
         fig.add_annotation(
             x=1.05, y=0.22,
             text=f"<span style='font-size:11px'>{format_energy(grid_import_hub)}</span>",
@@ -711,8 +992,9 @@ def build_synergy_diagram(inp, sim_output):
             bgcolor="rgba(255,255,255,0.85)"
         )
 
+
     fig.update_layout(
-        title="Synergien, Bilanz und potenzielle Versorgung der Teilprojekte",
+        title="Synergien, Jahresbilanz und potenzielle Versorgung der Teilprojekte",
         height=860,
         margin=dict(l=20, r=20, t=110, b=20),
         plot_bgcolor="white",
@@ -959,17 +1241,6 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
     # GREEN ENERGY HUB
     with tab5:
-        Input.h2_load_scenario = st.segmented_control(
-            "Wasserstoff-Bedarf Szenario",
-            ["2022", "2030", "2050"],
-            default="2030"
-        )
-        Input.e_load_scenario = st.segmented_control(
-            "Elektro-Bedarf Szenario",
-            ["2022", "2030", "2050"],
-            default="2030"
-        )
-
         green_hub_base_dir = os.path.join(
             script_dir,
             "functions",
@@ -993,7 +1264,6 @@ with st.container(key="Verbrauch", width=1500, height=1000):
     - 5 BEV-Ladesäulen
     - 3 Wasserstoff-Ladesäulen
     - Elektrolyseur mit einer Leistung von ca. 8 MW um H2 Bedarf zu decken
-    - Anzahl an FCEVs:
     - Anzahl BEV-Ladevorgänge: 10.381
 
     **Szenario 2030**
@@ -1024,7 +1294,28 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_green_hub_bar)
 
-        if Input.h2_load_scenario and Input.e_load_scenario:
+        scenario_options = [None, "2022", "2030", "2050"]
+
+        Input.h2_load_scenario = st.segmented_control(
+            "Wasserstoff-Bedarf Szenario",
+            options=scenario_options,
+            default=None,
+            format_func=lambda x: "Keine" if x is None else x
+        )
+
+        Input.e_load_scenario = st.segmented_control(
+            "Elektro-Bedarf Szenario",
+            options=scenario_options,
+            default=None,
+            format_func=lambda x: "Keine" if x is None else x
+        )
+
+        green_hub_active = (
+                Input.h2_load_scenario is not None and
+                Input.e_load_scenario is not None
+        )
+
+        if green_hub_active:
             st.write("### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
 
             fig_green_hub_week = plot_green_hub_weekly_profiles(
@@ -1034,6 +1325,8 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                 start="2022-03-05"
             )
             st.pyplot(fig_green_hub_week)
+        else:
+            st.info("Green Energy Hub ist deaktiviert.")
 
 if st.button("Simulation starten"):
     Output = run_simulation(Input)
