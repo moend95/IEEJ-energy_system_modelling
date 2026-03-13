@@ -25,7 +25,7 @@ class GuiInput:
                  e_load_scenario:str | None = None,
                  bs_efficiency:float | None = None,
                  bs_energy_kwh:float | None = None,
-                 bs_c_factor:float | None = None,):
+                 bs_c_rate:float | None = None,):
         # ERZEUGUNG
         # Solarautobahn
         self.highways = highways                                    # Auswahl Autobahnen
@@ -43,9 +43,9 @@ class GuiInput:
         self.h2_load_scenario = h2_load_scenario                    # Auswahl H2 Bedarf Szenario 2022, 2030, 2050
         self.e_load_scenario = e_load_scenario                      # Auswahl E Bedarf Szenario 2022, 2030, 2050
         # Batteriespeicher
-        self.bs_efficiency = bs_efficiency
-        self.bs_energy_kwh = bs_energy_kwh
-        self.bs_c_factor = bs_c_factor
+        self.bs_efficiency = bs_efficiency                          # Batterie Round Trip Effizienz
+        self.bs_energy_kwh = bs_energy_kwh                          # Batterie Kapazität in kWh
+        self.bs_c_rate = bs_c_rate                              # C rate der Batterie
 
     def __repr__(self):
         return (
@@ -62,7 +62,7 @@ class GuiInput:
             f"e_load_scenario={self.e_load_scenario}, "
             f"bs_efficiency={self.bs_efficiency}, "
             f"bs_energy_kwh={self.bs_energy_kwh}, "
-            f"bs_c_factor={self.bs_c_factor}"
+            f"bs_c_rate={self.bs_c_rate}"
             f")"
         )
 # =========================

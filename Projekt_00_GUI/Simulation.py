@@ -1,5 +1,7 @@
 import os
 import sys
+
+import numpy as np
 import pandas as pd
 
 #Functions
@@ -290,10 +292,10 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         storage = BatteryStorage(
             capacity_kwh=inp.bs_energy_kwh,
             initial_soc_kwh=0,
-            charge_efficiency=inp.bs_efficiency,
-            discharge_efficiency=inp.bs_efficiency,
-            max_charge_c=inp.bs_c_factor,
-            max_discharge_c=inp.bs_c_factor,
+            charge_efficiency=np.sqrt(inp.bs_efficiency),
+            discharge_efficiency=np.sqrt(inp.bs_efficiency),
+            max_charge_c=inp.bs_c_rate,
+            max_discharge_c=inp.bs_c_rate,
         )
 
         out.bat_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)

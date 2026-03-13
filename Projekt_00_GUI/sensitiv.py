@@ -159,14 +159,14 @@ B_CONFIGS = {
     1: {
         "bs_efficiency": 1,
         "bs_energy_kwh": 10000.0,
-        "bs_c_factor": 1,
+        "bs_c_rate": 1,
         # Leistung kann mittels c faktor angegeben werden, default = 1
     },
 
     2: {
         "bs_efficiency": 1,
         "bs_energy_kwh": 235000.0,
-        "bs_c_factor": 1,
+        "bs_c_rate": 1,
     }
 }
 
@@ -205,7 +205,7 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
 
     inp.bs_efficiency = cfg.get("bs_efficiency", None)
     inp.bs_energy_kwh = cfg.get("bs_energy_kwh", None)
-    inp.bs_c_factor = cfg.get("bs_c_factor", None)
+    inp.bs_c_rate = cfg.get("bs_c_rate", None)
 
     return inp
 
