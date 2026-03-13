@@ -1359,7 +1359,7 @@ with st.container(key="Batterie", width=1500, height=500):
         )
         Input.bs_energy_kwh = int(custom_mwh * 1000)
 
-    #st.write(f"Aktive Kapazität: **{Input.bs_energy_kwh / 1000:.0f} MWh**")
+    st.write("\n")
 
     Input.bs_efficiency = st.select_slider(
         "Roundtrip Effizienz",
@@ -1386,8 +1386,22 @@ with st.container(key="Batterie", width=1500, height=500):
 
 
 
-if st.button("Simulation starten"):
-    Output = run_simulation(Input)
+col1, col2, col3 = st.columns([0.15, 0.7, 0.15])
+
+with col2:
+    run = st.button(
+        "⚡ Simulation starten",
+        type="primary",
+        use_container_width=True
+    )
+
+
+if run:
+    with st.spinner("Simulation läuft..."):
+        Output = run_simulation(Input)
+
+    st.success("Simulation abgeschlossen.")
+
 
     st.session_state.simulation_ran = True
     st.session_state.sim_output = Output

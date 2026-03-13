@@ -32,9 +32,13 @@ class BatteryStorage:
         self.charge_efficiency = charge_efficiency
         self.discharge_efficiency = discharge_efficiency
 
+        self.max_charge_c = float(max_charge_c or 0)
+        self.max_discharge_c = float(max_charge_c or 0)
+
+
         # C-Faktor -> maximale Leistung in kW
-        self.max_charge_kw = capacity_kwh * max_charge_c
-        self.max_discharge_kw = capacity_kwh * max_discharge_c
+        self.max_charge_kw = self.capacity_kwh * self.max_charge_c
+        self.max_discharge_kw = self.capacity_kwh * self.max_discharge_c
 
     def simulate(self, balance_series: pd.Series, timestep_hours: float = 1.0) -> pd.DataFrame:
         """
