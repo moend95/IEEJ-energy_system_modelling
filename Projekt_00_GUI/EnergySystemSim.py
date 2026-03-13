@@ -12,6 +12,7 @@ import folium
 from streamlit_folium import st_folium
 import json
 from PIL import Image
+import numpy as np
 
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
@@ -1336,20 +1337,35 @@ with st.container(key="Batterie", width=1500, height=500):
     # Batterie
     #with tab7:
 
-    scenario_options = [None, "10 MWh", "100 MWh", "235 MWh"]
-
-    Input.bs_energy_kwh = st.segmented_control(
-        "Kapazität",
-        options=[0, 10000, 100000, 235000],
-        default=0,
-        format_func=lambda x: f"{x/1000:.0f} MWh"
+    capacity_mode = st.radio(
+        "Kapazität wählen über",
+        options=["Standardwert", "Eigene Eingabe"],
+        horizontal=True
     )
 
-    Input.bs_efficiency = st.segmented_control(
-        "Lade- & Entladeeffizienz",
-        options=[1,0.9,0.8],
-        default=1,
-        #format_func=lambda x: f"{x/1000:.0f} MWh"
+    if capacity_mode == "Standardwert":
+        Input.bs_energy_kwh = st.segmented_control(
+            "Kapazität",
+            options=[0, 10000, 50000, 100000, 235000],
+            default=0,
+            format_func=lambda x: f"{x / 1000:.0f} MWh"
+        )
+    else:
+        custom_mwh = st.number_input(
+            "Eigene Kapazität [MWh]",
+            min_value=0.0,
+            value=42.0,
+            step=1.0
+        )
+        Input.bs_energy_kwh = int(custom_mwh * 1000)
+
+    #st.write(f"Aktive Kapazität: **{Input.bs_energy_kwh / 1000:.0f} MWh**")
+
+    Input.bs_efficiency = st.select_slider(
+        "Roundtrip Effizienz",
+        options=[round(x, 3) for x in list(np.arange(0.8, 1.01, 0.01))],
+        value=1.0,
+        format_func=lambda x: f"{x:.0%}"
     )
 
     bat_active = (
@@ -1357,7 +1373,14 @@ with st.container(key="Batterie", width=1500, height=500):
     )
 
     if bat_active:
-        st.info("Batterie aktiv.")
+        st.info(
+            f"""
+            **Batterie aktiv:**
+
+            Kapazität: **{Input.bs_energy_kwh / 1000:.0f} MWh**  
+            Roundtrip Effizienz: **{Input.bs_efficiency:.0%}**
+            """
+        )
     else:
         st.info("Batterie deaktiviert.")
 
