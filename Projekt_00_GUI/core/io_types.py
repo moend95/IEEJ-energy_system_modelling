@@ -85,6 +85,7 @@ class SimOutput:
                  i_max_power_kw:float | None = None,
                  res_df:pd.DataFrame | None = None,
                  bat_df: pd.DataFrame | None = None,
+                 battery_stats: dict | None = None,
                  balance_energy_kwh:float | None = None,
                  coverage_rate: float | None = None,
                  balance_power_max_kw:float | None = None,
@@ -106,9 +107,10 @@ class SimOutput:
         self.el_max_power_kw = el_max_power_kw
         self.geh_max_power_kw = geh_max_power_kw
         self.i_max_power_kw = i_max_power_kw
-        # Result Data Frame mit Lastgängen (und batterie DF)
+        # Result Data Frame mit Lastgängen (und batterie DF plus stats)
         self.res_df = res_df if res_df is not None else pd.DataFrame()
         self.bat_df = bat_df if bat_df is not None else pd.DataFrame()
+        self.battery_stats = battery_stats if battery_stats is not None else {}
         # Bilanzenergie
         self.balance_energy_kwh = balance_energy_kwh
         self.coverage_rate = coverage_rate

@@ -72,7 +72,7 @@ h_cases = [1]#,2,3]
 el_cases = [3]#,2,3]
 i_cases = [1]#,2,3]
 geh_cases = [1]#,2,3]
-b_cases = [0,1,2]
+b_cases = [2]
 
 # Solarautobahn
 H_CONFIGS = {
@@ -158,14 +158,13 @@ B_CONFIGS = {
     0: {},
     1: {
         "bs_efficiency": 1,
-        "bs_energy_kwh": 1000000.0,
-        "bs_power_kw": 500.0            # Macht noch nichts
+        "bs_energy_kwh": 10000.0,
+        # Leistung kann mittels c faktor angegeben werden, default = 1
     },
 
     2: {
         "bs_efficiency": 1,
-        "bs_energy_kwh": 235000.0,
-        "bs_power_kw": 1000.0
+        "bs_energy_kwh": 235000.0
     }
 }
 
@@ -295,6 +294,7 @@ def main():
                                 print('-'*50,'\nBatterie Data Frame:')
                                 print('\n',out.bat_df.head())
                                 print('\n',out.bat_df.describe())
+                                print('\nStats: \n', {k: round(v, 0) if isinstance(v, float) else v for k, v in out.battery_stats.items()})
 
                         else:
                             print("res_df empty")

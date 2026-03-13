@@ -286,17 +286,19 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     # Mit Effizienz von 95% beim Laden und Entladen
-    if inp.bs_energy_kwh is not None:
+    if inp.bs_energy_kwh is not None and inp.bs_energy_kwh > 0:
         storage = BatteryStorage(
             capacity_kwh=inp.bs_energy_kwh,
             initial_soc_kwh=0,
             charge_efficiency=inp.bs_efficiency,
             discharge_efficiency=inp.bs_efficiency,
-            max_charge_c=1.0,
-            max_discharge_c=1.0,
+            #max_charge_c=1.0,
+            #max_discharge_c=1.0,
         )
 
         out.bat_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
+
+        out.battery_stats = storage.get_stats(out.bat_df, timestep_hours=0.25)
 
 
 
