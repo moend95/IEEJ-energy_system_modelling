@@ -181,14 +181,14 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     #df_industrie = pd.DataFrame()
     industry_aggregator = IndustryLoadAggregator()
 
-    if inp.is_companies is []:
+    if inp.i_companies is []:
         out.i_error_text = "INDUSTRIEGEBIET --- Kein Unternehmen ausgewählt."
-    elif inp.is_companies:
+    elif inp.i_companies:
         out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
 
         df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
-            mode_choice=industrie_heating_choice_mapping[inp.is_heat_cooling_electric],
-            selection_indices=inp.is_companies,
+            mode_choice=industrie_heating_choice_mapping[inp.i_heat_cooling_electric],
+            selection_indices=inp.i_companies,
 
         )
         if df_industrie is None or df_industrie.empty:
@@ -271,9 +271,9 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     total_demand = geh_energy + i_energy
 
     if total_demand > 0:
-        out.coverage_rate = min(total_generation / total_demand, 1.0)
+        out.balance_coverage_rate = min(total_generation / total_demand, 1.0)
     else:
-        out.coverage_rate = 0.0
+        out.balance_coverage_rate = 0.0
 
     out.balance_power_max_kw = out.res_df["Bilanz [kW]"].max()
     out.balance_power_min_kw = out.res_df["Bilanz [kW]"].min()
@@ -298,9 +298,9 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             max_discharge_c=inp.bs_c_rate,
         )
 
-        out.bat_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
+        out.bs_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
 
-        out.battery_stats = storage.get_stats(out.bat_df, timestep_hours=0.25)
+        out.bs_stats = storage.get_stats(out.bs_df, timestep_hours=0.25)
 
 
 

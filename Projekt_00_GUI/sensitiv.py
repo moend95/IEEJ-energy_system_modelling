@@ -197,8 +197,8 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
     inp.el_tractor_length = cfg.get("tractor_length", None)
     inp.el_tractor_turn_radius = cfg.get("tractor_turn_radius", None)
 
-    inp.is_heat_cooling_electric = cfg.get("is_heat_cooling_electric", False)
-    inp.is_companies = cfg.get("companies", [])
+    inp.i_heat_cooling_electric = cfg.get("is_heat_cooling_electric", False)
+    inp.i_companies = cfg.get("companies", [])
 
     inp.geh_h2_load_scenario = cfg.get("h2_load_scenario", None)
     inp.geh_e_load_scenario = cfg.get("e_load_scenario", None)
@@ -268,11 +268,11 @@ def main():
                             (f"EL{el_case}", f"H{h_case}")
                         ] = out.res_df['Bilanz [kW]'].sum()/4 #
 
-                        if not out.bat_df.empty:
+                        if not out.bs_df.empty:
                             heatmap_df.loc[
                                 (f"GEH{geh_case}", f"I{i_case}"),
                                 (f"EL{el_case}", f"H{h_case}")
-                            ] = out.bat_df['new_balance_kw'].sum() / 4  # out.res_df['Bilanz [kW]'].sum()/4 #
+                            ] = out.bs_df['new_balance_kw'].sum() / 4  # out.res_df['Bilanz [kW]'].sum()/4 #
 
                         print(heatmap_df)
                         heatmap_df.to_excel("outputs/sensi_res_dfs/bat_balance.xlsx")
@@ -292,11 +292,11 @@ def main():
                             #print('\n', out.res_df.sum().sum())
                             print('\n',out.res_df.describe())
 
-                            if not out.bat_df.empty:
+                            if not out.bs_df.empty:
                                 print('-'*50,'\nBatterie Data Frame:')
-                                print('\n',out.bat_df.head())
-                                print('\n',out.bat_df.describe())
-                                print('\nStats: \n', {k: round(v, 0) if isinstance(v, float) else v for k, v in out.battery_stats.items()})
+                                print('\n', out.bs_df.head())
+                                print('\n', out.bs_df.describe())
+                                print('\nStats: \n', {k: round(v, 0) if isinstance(v, float) else v for k, v in out.bs_stats.items()})
 
                         else:
                             print("res_df empty")

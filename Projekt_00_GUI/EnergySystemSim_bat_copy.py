@@ -521,7 +521,7 @@ def build_synergy_diagram_old(inp, sim_output):
         else:
             landscape_text = f"Ausbaugrad: {inp.el_build_state} %<br>aktiv, noch ohne Ergebnis"
 
-    n_companies = len([c for c in inp.is_companies if c is not None]) if inp.is_companies else 0
+    n_companies = len([c for c in inp.i_companies if c is not None]) if inp.i_companies else 0
 
     if industry_energy == 0:
         industry_status = "kein Bedarf"
@@ -1106,7 +1106,7 @@ def build_synergy_diagram(inp, sim_output):
             f"Ausbaugrad: {inp.el_build_state} %<br>aktiv, noch ohne Ergebnis"
         )
 
-    n_companies = len([c for c in inp.is_companies if c is not None]) if inp.is_companies else 0
+    n_companies = len([c for c in inp.i_companies if c is not None]) if inp.i_companies else 0
 
     industry_status = (
         "kein Bedarf" if industry_energy == 0 else
@@ -1619,7 +1619,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
             st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
-            Input.is_companies = []
+            Input.i_companies = []
             for i in range(5):
                 choice = st.selectbox(
                     f"Unternehmen {i + 1}",
@@ -1628,10 +1628,10 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                     key=f"selection_{i}"
                 )
                 if choice is not None:
-                    Input.is_companies.append(choice)
+                    Input.i_companies.append(choice)
 
         with col2_tab4:
-            Input.is_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
+            Input.i_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
             expander = st.expander("Erklärung Wärme/Kälte")
             expander.write('''
     Bei Auswahl "ohne Wärme/Kälte Stromverbrauch" werden fossiler Energiequellen für Wärme benutzt und es gibt keine Kälte
@@ -1681,7 +1681,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_annual_all)
 
-        selected_columns = [industry_csv_mapping[i] for i in Input.is_companies if i in industry_csv_mapping]
+        selected_columns = [industry_csv_mapping[i] for i in Input.i_companies if i in industry_csv_mapping]
         selected_columns = list(dict.fromkeys(selected_columns))
 
         if selected_columns:
