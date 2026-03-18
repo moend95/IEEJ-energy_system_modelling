@@ -6,228 +6,215 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 from pvlib.location import Location
-from pvlib.pvsystem import PVSystem
 from pvlib.modelchain import ModelChain
 from pvlib.bifacial.pvfactors import pvfactors_timeseries
-from pvlib import location as pv_location, pvsystem
 from pvlib import pvsystem
+from dataclasses import dataclass
 
 
 sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
 cec_inverters = pvlib.pvsystem.retrieve_sam('CECInverter')
 temp_models_sapm = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']
 
-
+@dataclass(frozen=True)
 class PVType:
-    """
-    Beschreibt einen vordefinierten PV-Typ mit typischen Eigenschaften.
-    - azimut: entweder fester Winkel (z. B. 180) oder "variabel" (= entlang der Geometrie)
-    - tilt: fester Neigungswinkel (in °)
-    - module, inverter, temp_model: Namen/Keys, um später die Parameter zu holen
-    """
+    # 1. Identifikation / Position
+    id: int
+    name: str
+    azimut: float | str | None = None    # Ausrichtung (°) oder "variabel"
+    tilt: float | None = None            # Neigungswinkel (°)
 
-    def __init__(
-        self,
-        id_: int,
-        name: str,
-        bifazial: float,              # einfacher Mehrertragsfaktor (0.0 = aus)
-        azimut=None,
-        tilt=None,
-        module: str = None,
-        inverter: str = None,
-        temp_model: str = None,
-        modules_per_string: int = None,
-        strings_per_inverter: int = None,
-        # NEU:
-        is_bifacial_detailed: bool = False,   # True = pvlib/pvfactors benutzen
-        bifaciality: float | None = None,     # z.B. 0.75
-        gcr: float | None = None,             # ground coverage ratio
-        row_height: float | None = None,      # m
-        row_width: float | None = None,       # m
-        albedo: float | None = None,          # 0.2–0.3 etc.
+    # 2. Modul- und Systemtechnik
+    module: str | None = None
+    inverter: str | None = None
+    temp_model: str | None = None
+    modules_per_string: int | None = None
+    strings_per_inverter: int | None = None
+    row_height: float | None = None      # m
+    row_width: float | None = None       # m
 
-        # NEU Tracking:
-        mount_type: str = "fixed",  # "fixed" oder "singleaxis"
-        axis_tilt: float = 0.0,
-        axis_azimuth: float = 0.0,  # 0 = N-S Achse, 90 = E-W Achse
-        max_angle: float = 60.0,
-        backtrack: bool = True,
+    # 3. Bifaziale Eigenschaften
+    bifazial: bool = False               # True = bifaziale Berechnung aktiv
+    is_bifacial_detailed: bool = False   # (optional, z. B. pvlib/pvfactors)
+    bifaciality: float | None = None     # Rückseitenwirkungsgrad (0–1)
+    gcr: float | None = None             # Bodenbedeckungsgrad
+    albedo: float | None = None          # Bodenreflexion (0.2–0.3 typ.)
 
-    ):
-        self.id = id_
-        self.name = name
-        self.bifazial = bifazial
-        self.azimut = azimut
-        self.tilt = tilt
-        self.module = module
-        self.inverter = inverter
-        self.temp_model = temp_model
-        self.modules_per_string = modules_per_string
-        self.strings_per_inverter = strings_per_inverter
-
-        # neu:
-        self.is_bifacial_detailed = is_bifacial_detailed
-        self.bifaciality = bifaciality
-        self.gcr = gcr
-        self.row_height = row_height
-        self.row_width = row_width
-        self.albedo = albedo
-
-        #tracking
-        self.mount_type = mount_type
-        self.axis_tilt = axis_tilt
-        self.axis_azimuth = axis_azimuth
-        self.max_angle = max_angle
-        self.backtrack = backtrack
-
-    def __str__(self):
-        return f"[{self.id}] {self.name}"
-
+    # 4. Tracking / Nachführung
+    mount_type: str = "fixed"            # "fixed" oder "singleaxis"
+    axis_tilt: float = 0.0               # Achsenneigung
+    axis_azimuth: float = 0.0            # Achsenrichtung (0 = N-S, 90 = E-W)
+    max_angle: float = 60.0              # maximale Drehung (°)
+    backtrack: bool = True               # Rückführung bei Verschattung aktiv
 
 PV_TYPEN = [
+    # 1. Windschutzwand
     PVType(
-        1,
-        "Windschutzwand",
-        bifazial=0,                 # Faktor für prozentual mehr erzeugung dadurch das es bifazial ist
+        # 1. Identifikation / Position
+        id=1,
+        name="Windschutzwand",
         azimut="variabel",
         tilt=90,
+
+        # 2. Modul- und Systemtechnik
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
-        # NEU:
-        is_bifacial_detailed=False,
-        bifaciality=0.75,
-        gcr=0.35,
         row_height=3.0,
         row_width=4.0,
-        albedo=0.2,
+
+        # 3. Bifaziale Eigenschaften
+        bifazial=True,  # aktiviert, weil es bifazial ist
+        bifaciality=0.75,  # Rückseitenwirkungsgrad
+        gcr=0.35,  # Bodenbedeckungsgrad
+        albedo=0.2,  # Bodenreflexion
+
+        # 4. Tracking / Nachführung (fixe Wand, kein Tracking nötig)
+        mount_type="fixed"
     ),
 
+    # 2. Schallschutzwand
     PVType(
-        2,
-        "Schallschutzwand",
-        bifazial=0.0,
+        id=2,
+        name="Schallschutzwand",
         azimut="variabel",
         tilt=90,
+
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
-        # Bifazial berechnung True setzen:
-        is_bifacial_detailed=False,
-        bifaciality=0.80,
-        gcr=0.35,
         row_height=3.0,
         row_width=4.0,
+
+        bifazial=False,
+        bifaciality=0.80,
+        gcr=0.35,
         albedo=0.2,
 
+        mount_type="fixed"
     ),
+
+    # 3. Schallschutzwand_Dach
     PVType(
-        3,
-        "Schallschutzwand_Dach",
-        bifazial=0.0,
+        id=3,
+        name="Schallschutzwand_Dach",
         azimut="variabel",
         tilt=30,
+
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
-        # Bifazial berechnung True setzen:
-        is_bifacial_detailed=False,
-        bifaciality=0.80,
-        gcr=0.35,
         row_height=3.0,
         row_width=4.0,
+
+        bifazial=False,
+        bifaciality=0.80,
+        gcr=0.35,
         albedo=0.2,
 
+        mount_type="fixed"
     ),
+
+    # 4. Böschung
     PVType(
-        4,
-        "Böschung",
-        bifazial=0.0,
+        id=4,
+        name="Böschung",
         azimut="variabel",
         tilt=30,
+
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
-        temp_model="close_mount_glass_glass",
+        temp_model="open_rack_glass_glass",
         modules_per_string=4,
         strings_per_inverter=1,
-        # Bifazial berechnung True setzen :
-        is_bifacial_detailed=False,
-        bifaciality=0.80,
-        gcr=0.35,
         row_height=3.0,
         row_width=4.0,
+
+        bifazial=False,
+        bifaciality=0.80,
+        gcr=0.35,
         albedo=0.2,
 
+        mount_type="fixed"
     ),
+
+    # 5. Freifläche_bzw_Agri_geneigt
     PVType(
-        5,
-        "Freifläche_bzw_Agri_geneigt",
-        bifazial=0.0,
+        id=5,
+        name="Freifläche_bzw_Agri_geneigt",
         azimut=180,
-        tilt=30,  # 90 war hier eher ein Vertikal-Wert – kannst du anpassen, wie ihr wollt
+        tilt=30,
+
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=2,
         strings_per_inverter=1,
-        # NEU:
-        is_bifacial_detailed=False,
-        bifaciality=0.75,
-        gcr=0.35,                   # GCR = Ground Coverage Ratio (Bodenbedeckungsgrad).
         row_height=3.0,
         row_width=1.0,
+
+        bifazial=False,
+        bifaciality=0.75,
+        gcr=0.35,
         albedo=0.2,
-        # Tracking
+
         mount_type="singleaxis",
         axis_tilt=0,
         axis_azimuth=0,
         max_angle=60,
-        backtrack=True,
+        backtrack=True
     ),
+
+    # 6. Agri_vertikal
     PVType(
-        6,
-        "Agri_vertikal",
-        bifazial=0.0,
-        azimut=90,  # oder "variabel", je nach späterem Konzept
+        id=6,
+        name="Agri_vertikal",
+        azimut=90,
         tilt=90,
+
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=1,
         strings_per_inverter=1,
         row_width=1.0,
+
+        bifazial=False,
+        bifaciality=None,
+        gcr=None,
+        albedo=None,
+
+        mount_type="fixed"
     ),
 
+    # 7. Haus_Dach
     PVType(
-        7,
-        "Haus_Dach",
-        bifazial=0.0,
-        azimut=180,  # Süddach
+        id=7,
+        name="Haus_Dach",
+        azimut=180,
         tilt=30,
+
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
         temp_model="open_rack_glass_glass",
         modules_per_string=2,
         strings_per_inverter=1,
         row_width=1.0,
+
+        bifazial=False,
+        bifaciality=None,
+        gcr=None,
+        albedo=None,
+
+        mount_type="fixed"
     ),
-
-# Test
-
-
 ]
-
-
-
-# Azimut
-# -----------------------------------------------------
-
 
 class AzimutCalculator:
     def __init__(self, geojson_path, step_size, pv_type: PVType, output_csv_path):
