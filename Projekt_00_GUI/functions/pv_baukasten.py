@@ -1,6 +1,8 @@
 import pvlib
 import geopandas as gpd
 from shapely.ops import unary_union
+from shapely.geometry import LineString, Point
+from typing import List
 import math
 import os
 import matplotlib.pyplot as plt
@@ -217,30 +219,35 @@ PV_TYPEN = [
 ]
 
 class AzimutCalculator:
-    def __init__(self, geojson_path, step_size, pv_type: PVType, output_csv_path):
+    """
+    Calculates PV orientation (azimuth) along a geometry (point or line)
+    and exports the results to a CSV file.
+    """
+    def __init__(self, geojson_path: str, step_size: float, pv_type: PVType, output_csv_path: str):
         self.geojson_path = geojson_path
-        self.step_size = step_size  # in Metern
+        self.step_size = step_size
         self.pv_type = pv_type
         self.output_csv_path = output_csv_path
 
         self.gdf = None
-        self.merged_line = None
-        self.number_of_points = None
-        self.point_azimut_list = []
+        self.merged_line: LineString | Point | None = None
+        self.number_of_points: List[Point] = []
+        self.point_azimut_list: List[tuple[Point, float]] = []
 
-    def load_geometry(self):
+    # ---------------- Geometry ----------------
+    def load_geometry(self) -> LineString | Point:
+        """Load GeoJSON, project to UTM zone 32N, and unify geometries."""
         try:
-            self.gdf = gpd.read_file(self.geojson_path)  # nutzt fiona
-        except Exception:
-            # Fallback zur alten Methode falls pyogrio nicht verfügbar ist
             self.gdf = gpd.read_file(self.geojson_path)
+        except Exception:
+            self.gdf = gpd.read_file(self.geojson_path)  # fallback
 
-        self.gdf = self.gdf.to_crs(epsg=25832)  # metrisches Koordinatensystem
+        self.gdf = self.gdf.to_crs(epsg=25832)
         self.merged_line = unary_union(self.gdf.geometry)
         return self.merged_line
 
-    def interpolate_points(self):
-        # Point-GeoJSON: genau einen Punkt nutzen
+    def interpolate_points(self) -> List[Point]:
+        """Interpolate points along the line according to the step size."""
         if self.merged_line.geom_type == "Point":
             self.number_of_points = [self.merged_line]
             return self.number_of_points
@@ -251,99 +258,132 @@ class AzimutCalculator:
             for distance in range(0, int(total_length), self.step_size)
         ]
 
-        # Falls Linie Länge 0 hat: einen Punkt setzen
+        # Line length is zero → add a single point
         if not self.number_of_points and total_length == 0:
             self.number_of_points = [self.merged_line.interpolate(0)]
 
         return self.number_of_points
 
-    def _append_point(self, point, azimut):
+    # ---------------- Points & Azimuth ----------------
+    def _append_point(self, point: Point, azimut: float) -> None:
+        """Append a point and azimuth to the internal list, ensure it's a Point."""
+        if not isinstance(point, Point):
+            point = Point(point)
         self.point_azimut_list.append((point, azimut))
 
-    def calculate_azimut(self):
-        # 1) Geometrie laden und Punkte erzeugen
+    def calculate_azimut(self) -> List[Point]:
+        """Calculate azimuth for all interpolated points."""
         self.load_geometry()
         self.interpolate_points()
 
-        # Sonderfall: nur ein Punkt
         if len(self.number_of_points) == 1:
-            p1 = self.number_of_points[0]
-            azimut_final = 180.0 if self.pv_type.azimut == "variabel" else self.pv_type.azimut
-            self._append_point(point=p1, azimut=azimut_final)
+            p = self.number_of_points[0]
+            az = 180.0 if self.pv_type.azimut == "variabel" else self.pv_type.azimut
+            self._append_point(p, az)
         else:
-            # 2) Punkte durchlaufen und Azimut berechnen
             for i in range(len(self.number_of_points) - 1):
                 p1 = self.number_of_points[i]
                 p2 = self.number_of_points[i + 1]
+                dx, dy = p2.x - p1.x, p2.y - p1.y
+                theta_deg = math.degrees(math.atan2(dy, dx))
+                az = (90 - theta_deg) % 360 if self.pv_type.azimut == "variabel" else self.pv_type.azimut
+                self._append_point(p1, az)
 
-                dx = p2.x - p1.x
-                dy = p2.y - p1.y
-                theta_rad = math.atan2(dy, dx)
-                theta_deg = math.degrees(theta_rad)
-                azimut_tangent = (90 - theta_deg) % 360  # Norden = 0°, Osten = 90°, ...
+        return [p for p, _ in self.point_azimut_list]
 
-                if self.pv_type.azimut == "variabel":
-                    azimut_final = azimut_tangent
-                else:
-                    azimut_final = self.pv_type.azimut
-
-                self._append_point(point=p1, azimut=azimut_final)
-
-        # 3) Ergebnis nach WGS84 zurückprojizieren und speichern
-        points_geom = [p for p, _ in self.point_azimut_list]
+    # ---------------- GeoDataFrame & CSV ----------------
+    def to_gdf(self) -> gpd.GeoDataFrame:
+        """Create a GeoDataFrame from the points and azimuth list."""
+        points = [p if isinstance(p, Point) else p[0] for p, _ in self.point_azimut_list]
         azimuts = [a for _, a in self.point_azimut_list]
 
-        # GeoDataFrame im UTM-System
-        gdf_points = gpd.GeoDataFrame(
+        gdf = gpd.GeoDataFrame(
             {"azimut": azimuts},
-            geometry=points_geom,
+            geometry=points,
             crs="EPSG:25832",
         )
-        # zurück in lat/lon
-        gdf_points = gdf_points.to_crs(epsg=4326)
-        gdf_points["latitude"] = gdf_points.geometry.y
-        gdf_points["longitude"] = gdf_points.geometry.x
-        gdf_points["pv_type_id"] = self.pv_type.id
-        gdf_points["pv_type_name"] = self.pv_type.name
-        gdf_points["tilt"] = self.pv_type.tilt
 
-        gdf_points[["latitude", "longitude", "azimut", "tilt", "pv_type_id", "pv_type_name"]].to_csv(
-            self.output_csv_path,
-            index=False,
+        gdf = gdf.to_crs(epsg=4326)  # convert to lat/lon
+        gdf["latitude"] = gdf.geometry.y
+        gdf["longitude"] = gdf.geometry.x
+        gdf["pv_type_id"] = self.pv_type.id
+        gdf["pv_type_name"] = self.pv_type.name
+        gdf["tilt"] = self.pv_type.tilt
+        return gdf
+
+    def export_to_csv(self) -> None:
+        """Export calculated points and azimuths as CSV."""
+        gdf = self.to_gdf()
+        gdf[["latitude", "longitude", "azimut", "tilt", "pv_type_id", "pv_type_name"]].to_csv(
+            self.output_csv_path, index=False
         )
 
-        return gdf_points
+    # ---------------- Full Workflow ----------------
+    def run(self) -> gpd.GeoDataFrame:
+        """Run full azimuth calculation and export to CSV."""
+        self.calculate_azimut()
+        self.export_to_csv()
+        return self.to_gdf()
 
 class AzimutVisualizer:
-    def __init__(self, calculator: AzimutCalculator):
+    """
+    Visualizes PV points with their azimuth directions on a 2D plot.
+
+    Parameters
+    ----------
+    calculator : AzimutCalculator
+        An instance of AzimutCalculator containing PV points and azimuths.
+    """
+
+    def __init__(self, calculator):
         self.calc = calculator
 
-    def plot(self, every_nth_arrow = 10):  #Funktionsinformation: nur jeden x-ten (=10) Richtungspfeil anzeigen
-        gdf = self.calc.gdf
-        points = self.calc.point_list
-        azimuts = self.calc.azimut_list
-        pv_typ = self.calc.pv_typ
+    def plot(self, every_nth_arrow: int = 10):
+        """
+        Plot PV points and azimuth arrows.
 
+        Parameters
+        ----------
+        every_nth_arrow : int, optional
+            Only plot every nth arrow for clarity (default is 10).
+        """
+        # Extract data from the calculator
+        gdf = self.calc.gdf  # Original geometry of PV lines/polygons
+        points = self.calc.point_list  # Interpolated PV points
+        azimuts = self.calc.azimut_list  # Corresponding azimuths in degrees
+        pv_typ = getattr(self.calc.pv_type, "name", "Unknown PV Type")  # PV type name
+
+        # Create figure and axis
         fig, ax = plt.subplots(figsize=(10, 8))
-        ax.set_title(f"PV-Punkte mit Azimut ({pv_typ})")
+        ax.set_title(f"PV Points with Azimuth ({pv_typ})")
         ax.set_xlabel("X [m]")
         ax.set_ylabel("Y [m]")
 
-        # Richtungspfeile zeichnen
+        # Draw direction arrows for PV points
         for i in range(0, len(points), every_nth_arrow):
-            if isinstance(azimuts[i], (int, float)):
-                dx = 5 * math.cos(math.radians(90 - azimuts[i]))
-                dy = 5 * math.sin(math.radians(90 - azimuts[i]))
-                ax.arrow(points[i].x, points[i].y, dx, dy, head_width=2, fc="blue", ec="blue")
+            az = azimuts[i]
+            if isinstance(az, (int, float)):
+                # Convert azimuth to arrow direction
+                dx = 5 * math.cos(math.radians(90 - az))
+                dy = 5 * math.sin(math.radians(90 - az))
+                ax.arrow(points[i].x, points[i].y, dx, dy,
+                         head_width=2, fc="blue", ec="blue")
 
-        # Linien & Punkte
-        geo_gdf = gpd.GeoDataFrame(geometry=[Point(pt.x, pt.y) for pt in points], crs=gdf.crs)
-        gdf.plot(ax=ax, color="gray", linewidth=2)
+        # Plot the original PV line or polygon
+        if gdf is not None and not gdf.empty:
+            gdf.plot(ax=ax, color="gray", linewidth=2)
+
+        # Plot PV points as red dots
+        geo_gdf = gpd.GeoDataFrame(
+            geometry=[Point(pt.x, pt.y) for pt in points],
+            crs=gdf.crs if gdf is not None else None
+        )
         geo_gdf.plot(ax=ax, color="red", markersize=5)
-        plt.grid(True)
+
+        # Final plot adjustments
+        plt.grid(True, alpha=0.3)
         plt.axis("equal")
         plt.show()
-
 
 
 # -----------------------------------------------------
