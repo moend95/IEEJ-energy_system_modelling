@@ -1,0 +1,780 @@
+import pandas as pd
+import plotly.graph_objects as go
+from PIL import Image
+import os
+
+
+script_dir = os.path.dirname(os.path.abspath(__file__))   # .../functions
+project_dir = os.path.dirname(script_dir)
+
+#script_dir = os.path.dirname(os.path.abspath(__file__))
+#proj_dir = script_dir.parent
+icon_dir = os.path.join(project_dir, "icon")
+
+ICON_PATHS = {
+    "solar": os.path.join(icon_dir, "solar_highway.png"),
+    "landscape": os.path.join(icon_dir, "energy_landscape.png"),
+    "battery": os.path.join(icon_dir, "battery_storage.png"),
+    "industry": os.path.join(icon_dir, "industrial_area.png"),
+    "hub": os.path.join(icon_dir, "green_energy_hub.png"),
+    "grid": os.path.join(icon_dir, "grid_supply.png"),
+    "surplus": None,
+}
+
+ICON_SCALE = {
+    "solar": 0.96,
+    "landscape": 0.96,
+    "industry": 1,
+    "hub": 1,
+    "battery": 0.6,
+    "grid": 0.5,
+}
+
+
+def format_energy(value_kwh):
+    """
+    Formatiert Energie kompakt für die Visualisierung.
+    """
+    value_kwh = float(value_kwh or 0)
+
+    if value_kwh >= 1_000_000:
+        return f"{value_kwh / 1_000_000:.2f} GWh/a"
+    elif value_kwh >= 1_000:
+        return f"{value_kwh / 1_000:.1f} MWh/a"
+    else:
+        return f"{value_kwh:.0f} kWh/a"
+
+
+def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="below"):
+    """
+    Fügt ein Icon und den Knotentitel hinzu.
+    Der eigentliche weiße Hintergrundkasten wird separat gezeichnet.
+    """
+    icon_path = ICON_PATHS.get(icon_key)
+    scale = ICON_SCALE.get(icon_key, 0.80)
+
+    if icon_path and os.path.exists(icon_path):
+        fig.add_layout_image(
+            dict(
+                source=Image.open(icon_path).convert("RGBA"),
+                xref="x",
+                yref="y",
+                x=x,
+                y=y,
+                sizex=box_w * scale,
+                sizey=box_h * scale,
+                xanchor="center",
+                yanchor="middle",
+                layer="above"
+            )
+        )
+
+    if label_pos == "above":
+        label_y = y + box_h / 2 + 0.04
+    else:
+        label_y = y - box_h / 2 - 0.04
+
+    fig.add_annotation(
+        x=x,
+        y=label_y,
+        text=f"<b>{label}</b>",
+        showarrow=False,
+        align="center",
+        font=dict(size=12, color="#222222")
+    )
+
+
+
+def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, label_y=None):
+    """
+    Zeichnet eine geroutete Verbindung aus mehreren Segmenten.
+    `points` ist eine Liste von (x, y)-Punkten.
+    Die Segmente werden als Linien gezeichnet, die Pfeilspitze sitzt nur am Ende.
+    """
+    if len(points) < 2:
+        return
+
+    # Alle Segmente bis auf das letzte als Linien
+    for i in range(len(points) - 2):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        fig.add_shape(
+            type="line",
+            x0=x0, y0=y0,
+            x1=x1, y1=y1,
+            line=dict(color=color, width=width)
+        )
+
+    # Letztes Segment mit Pfeilspitze
+    x0, y0 = points[-2]
+    x1, y1 = points[-1]
+    fig.add_annotation(
+        x=x1,
+        y=y1,
+        ax=x0,
+        ay=y0,
+        xref="x",
+        yref="y",
+        axref="x",
+        ayref="y",
+        showarrow=True,
+        arrowhead=3,
+        arrowsize=1.0,
+        arrowwidth=width,
+        arrowcolor=color,
+        text=""
+    )
+
+    # Optionales Label
+    if label:
+        if label_x is None or label_y is None:
+            label_x = (x0 + x1) / 2
+            label_y = (y0 + y1) / 2 + 0.03
+
+        fig.add_annotation(
+            x=label_x,
+            y=label_y,
+            text=f"<span style='font-size:11px'>{label}</span>",
+            showarrow=False,
+            font=dict(size=11, color=color),
+            bgcolor="rgba(255,255,255,0.85)"
+        )
+
+def scale_arrow_width(flow_value, max_flow, min_width=1.5, max_width=5.0):
+    """
+    Skaliert die Pfeildicke linear auf Basis des größten dargestellten Flusses.
+    """
+    flow_value = float(flow_value or 0)
+    max_flow = float(max_flow or 1)
+
+    if flow_value <= 0:
+        return min_width
+
+    return min_width + (flow_value / max_flow) * (max_width - min_width)
+
+
+def add_physical_connection(
+    fig,
+    points,
+    color="#A8A8A8",
+    width=1.3,
+    dash="dot",
+    add_arrow=False
+):
+    """
+    Zeichnet eine physische, dauerhaft vorhandene Verbindung.
+    Optional mit kleiner Pfeilspitze am Ende.
+    """
+    if len(points) < 2:
+        return
+
+    for i in range(len(points) - 1):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        fig.add_shape(
+            type="line",
+            x0=x0, y0=y0,
+            x1=x1, y1=y1,
+            line=dict(color=color, width=width, dash=dash)
+        )
+
+    if add_arrow:
+        x0, y0 = points[-2]
+        x1, y1 = points[-1]
+
+        dx = x1 - x0
+        dy = y1 - y0
+
+        fig.add_annotation(
+            x=x1,
+            y=y1,
+            ax=x1 - dx * 0.12,
+            ay=y1 - dy * 0.12,
+            xref="x",
+            yref="y",
+            axref="x",
+            ayref="y",
+            showarrow=True,
+            arrowhead=3,
+            arrowsize=0.9,
+            arrowwidth=max(width, 1.4),
+            arrowcolor=color,
+            text=""
+        )
+
+def add_legend(fig):
+    legend_y1 = 0.06
+    legend_y2 = 0.035
+
+    # Zeile 1: durchgezogene Linien
+    items_row1 = [
+        ("Erneuerbare Versorgung", "#10B35A", 0.1, "solid"),
+        ("Überschuss / Speicheroption", "#1DA1F2", 0.4, "solid"),
+        ("Netzstrombezug", "#B9B9B9", 0.75, "solid"),
+    ]
+
+    # Zeile 2: gestrichelte Linien
+    items_row2 = [
+        ("Optionale Nutzung", "#1DA1F2", 0.1, "dot"),
+        ("Netzanbindung", "#A8A8A8", 0.4, "dot"),
+    ]
+
+    for text, color, x, dash in items_row1:
+        fig.add_shape(
+            type="line",
+            x0=x,
+            y0=legend_y1,
+            x1=x + 0.05,
+            y1=legend_y1,
+            line=dict(color=color, width=3, dash=dash)
+        )
+        fig.add_annotation(
+            x=x + 0.06,
+            y=legend_y1,
+            text=text,
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=11, color="#333333")
+        )
+
+    for text, color, x, dash in items_row2:
+        fig.add_shape(
+            type="line",
+            x0=x,
+            y0=legend_y2,
+            x1=x + 0.05,
+            y1=legend_y2,
+            line=dict(color=color, width=3, dash=dash)
+        )
+        fig.add_annotation(
+            x=x + 0.06,
+            y=legend_y2,
+            text=text,
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=11, color="#333333")
+        )
+
+def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot", label=None, label_x=None, label_y=None):
+    """
+    Zeichnet eine optionale / konzeptionelle Verbindung.
+    Nicht als simulierten Energiefluss interpretieren.
+    """
+    if len(points) < 2:
+        return
+
+    for i in range(len(points) - 2):
+        x0, y0 = points[i]
+        x1, y1 = points[i + 1]
+        fig.add_shape(
+            type="line",
+            x0=x0, y0=y0,
+            x1=x1, y1=y1,
+            line=dict(color=color, width=width, dash=dash)
+        )
+
+    x0, y0 = points[-2]
+    x1, y1 = points[-1]
+
+    fig.add_shape(
+        type="line",
+        x0=x0, y0=y0,
+        x1=x1, y1=y1,
+        line=dict(color=color, width=width, dash=dash)
+    )
+
+    dx = x1 - x0
+    dy = y1 - y0
+
+    # Mindestlänge für sichtbare Pfeilspitze
+    arrow_len = 0.025
+
+    if abs(dx) >= abs(dy):  # eher horizontal
+        ax = x1 - arrow_len if dx >= 0 else x1 + arrow_len
+        ay = y1
+    else:  # eher vertikal
+        ax = x1
+        ay = y1 - arrow_len if dy >= 0 else y1 + arrow_len
+
+    fig.add_annotation(
+        x=x1,
+        y=y1,
+        ax=ax,
+        ay=ay,
+        xref="x",
+        yref="y",
+        axref="x",
+        ayref="y",
+        showarrow=True,
+        arrowhead=3,
+        arrowsize=1.2,
+        arrowwidth=max(width, 1.8),
+        arrowcolor=color,
+        text=""
+    )
+
+    if label:
+        fig.add_annotation(
+            x=label_x if label_x is not None else (x0 + x1) / 2,
+            y=label_y if label_y is not None else (y0 + y1) / 2 + 0.02,
+            text=f"<span style='font-size:10px'>{label}</span>",
+            showarrow=False,
+            font=dict(size=10, color=color),
+            bgcolor="rgba(255,255,255,0.75)"
+        )
+
+
+
+def build_synergy_diagram(inp, sim_output):
+    """
+    Einfache bilanzielle Systemvisualisierung.
+
+    Logik:
+    - Solarautobahn + Energielandschaft speisen in einen zentralen Systemknoten
+    - Vom Systemknoten gehen Flüsse zu Industriegebiet und Green Energy Hub
+    - Bei Jahresüberschuss: Pfeil vom System zum Netz
+    - Bei Jahresdefizit: Pfeil vom Netz zum System
+    - Batterie aktuell nur als Layout-Knoten, ohne simulierten Lade-/Entladefluss
+    """
+
+    # =========================================================
+    # 1) Werte aus Simulation lesen
+    # =========================================================
+    solar_energy = 0.0
+    landscape_energy = 0.0
+    industry_energy = 0.0
+    green_hub_energy = 0.0
+    total_generation = 0.0
+    total_demand = 0.0
+    coverage_percent = 0.0
+    surplus = 0.0
+    deficit = 0.0
+
+    if sim_output is not None:
+        solar_energy = max(float(getattr(sim_output, "h_sum_energy_kwh", 0) or 0), 0.0)
+        landscape_energy = max(float(getattr(sim_output, "el_sum_energy_kwh", 0) or 0), 0.0)
+        industry_energy = max(float(getattr(sim_output, "i_sum_energy_kwh", 0) or 0), 0.0)
+        green_hub_energy = max(float(getattr(sim_output, "geh_sum_energy_kwh", 0) or 0), 0.0)
+
+        total_generation = solar_energy + landscape_energy
+        total_demand = industry_energy + green_hub_energy
+
+        coverage = float(getattr(sim_output, "coverage_rate", 0) or 0)
+        coverage_percent = max(0.0, min(coverage * 100.0, 100.0))
+
+        balance = float(getattr(sim_output, "balance_energy_kwh", 0) or 0)
+        if balance >= 0:
+            surplus = balance
+            deficit = 0.0
+        else:
+            surplus = 0.0
+            deficit = abs(balance)
+
+    # =========================================================
+    # 2) Bilanzlogik für Darstellung
+    # =========================================================
+    # Lokale Deckung insgesamt
+    local_supply_total = min(total_generation, total_demand)
+
+    # Verteilung der lokalen Versorgung proportional auf die beiden Verbraucher
+    if total_demand > 0:
+        industry_share = industry_energy / total_demand
+        hub_share = green_hub_energy / total_demand
+    else:
+        industry_share = 0.0
+        hub_share = 0.0
+
+    local_supply_industry = local_supply_total * industry_share
+    local_supply_hub = local_supply_total * hub_share
+
+    grid_import_industry = max(industry_energy - local_supply_industry, 0.0)
+    grid_import_hub = max(green_hub_energy - local_supply_hub, 0.0)
+    grid_import_total = grid_import_industry + grid_import_hub
+    grid_export = surplus
+
+    # Quellaufteilung Solar / Landschaft für die Abgänge vom linken Bereich
+    total_gen_for_split = solar_energy + landscape_energy
+    if total_gen_for_split > 0:
+        solar_share = solar_energy / total_gen_for_split
+        landscape_share = landscape_energy / total_gen_for_split
+    else:
+        solar_share = 0.0
+        landscape_share = 0.0
+
+    solar_to_system = total_generation * solar_share
+    landscape_to_system = total_generation * landscape_share
+
+    # Batterie nur visuell aktiv/inaktiv
+    battery_active = bool(getattr(inp, "bs_energy_kwh", 0) and getattr(inp, "bs_energy_kwh", 0) > 0)
+
+    # =========================================================
+    # 3) Texte für Hover
+    # =========================================================
+    solar_text = "nicht aktiv"
+    if inp.h_highways and inp.h_pv_types:
+        solar_text = (
+            f"Jahreserzeugung:<br>{format_energy(solar_energy)}"
+            if solar_energy > 0 else
+            "aktiv, noch ohne Ergebnis"
+        )
+
+    landscape_text = "nicht aktiv"
+    if inp.el_build_state != 0:
+        landscape_text = (
+            f"Jahreserzeugung:<br>{format_energy(landscape_energy)}"
+            if landscape_energy > 0 else
+            f"Ausbaugrad: {inp.el_build_state} %<br>aktiv, noch ohne Ergebnis"
+        )
+
+    n_companies = len([c for c in inp.i_companies if c is not None]) if inp.i_companies else 0
+
+    industry_status = (
+        "kein Bedarf" if industry_energy == 0 else
+        "gedeckt" if grid_import_industry == 0 else
+        "teilweise gedeckt"
+    )
+
+    industry_text = (
+        f"Auswahl: {n_companies} Unternehmen"
+        f"<br>Bedarf: {format_energy(industry_energy)}"
+        f"<br>Lokal gedeckt: {format_energy(local_supply_industry)}"
+        f"<br>Netzbezug: {format_energy(grid_import_industry)}"
+        f"<br>Status: {industry_status}"
+    )
+
+    if inp.geh_h2_load_scenario is None or inp.geh_e_load_scenario is None:
+        hub_text = "deaktiviert"
+    else:
+        hub_status = (
+            "kein Bedarf" if green_hub_energy == 0 else
+            "gedeckt" if grid_import_hub == 0 else
+            "teilweise gedeckt"
+        )
+        hub_text = (
+            f"H₂-Szenario: {inp.geh_h2_load_scenario}"
+            f"<br>El.-Szenario: {inp.geh_e_load_scenario}"
+            f"<br>Bedarf: {format_energy(green_hub_energy)}"
+            f"<br>Lokal gedeckt: {format_energy(local_supply_hub)}"
+            f"<br>Netzbezug: {format_energy(grid_import_hub)}"
+            f"<br>Status: {hub_status}"
+        )
+
+    battery_text = (
+        f"Kapazität: {format_energy(float(getattr(inp, 'bs_energy_kwh', 0) or 0))}"
+        f"<br>Status: {'aktiv' if battery_active else 'deaktiviert'}"
+    )
+
+    grid_text = (
+        f"Import: {format_energy(grid_import_total)}"
+        f"<br>Export: {format_energy(grid_export)}"
+    )
+
+    system_text = (
+        f"Gesamterzeugung: {format_energy(total_generation)}"
+        f"<br>Gesamtbedarf: {format_energy(total_demand)}"
+        f"<br>Versorgungsgrad: {coverage_percent:.1f} %"
+        f"<br>Bilanz: + {format_energy(surplus)}" if surplus > 0
+        else f"Gesamterzeugung: {format_energy(total_generation)}"
+             f"<br>Gesamtbedarf: {format_energy(total_demand)}"
+             f"<br>Versorgungsgrad: {coverage_percent:.1f} %"
+             f"<br>Bilanz: - {format_energy(deficit)}"
+    )
+
+    # =========================================================
+    # 4) Knotenpositionen
+    #    -> hier kannst du später leicht rumspielen
+    # =========================================================
+    nodes = {
+        "solar": {
+            "x": 0.1, "y": 0.65,
+            "label": "Solar Highway",
+            "info": solar_text,
+            "icon": "solar"
+        },
+        "landscape": {
+            "x": 0.1, "y": 0.35,
+            "label": "Energy Landscape",
+            "info": landscape_text,
+            "icon": "landscape"
+        },
+        "grid": {
+            "x": 0.57, "y": 0.78,
+            "label": "Power Grid",
+            "info": grid_text,
+            "icon": "grid"
+        },
+        "system": {
+            "x": 0.54, "y": 0.50,
+            "label": "",
+            "info": system_text,
+            "icon": None
+        },
+        "battery": {
+            "x": 0.51, "y": 0.22,
+            "label": "Battery Storage",
+            "info": battery_text,
+            "icon": "battery"
+        },
+        "industry": {
+            "x": 0.98, "y": 0.65,
+            "label": "Industrial Area",
+            "info": industry_text,
+            "icon": "industry"
+        },
+        "hub": {
+            "x": 0.98, "y": 0.35,
+            "label": "Green Energy Hub",
+            "info": hub_text,
+            "icon": "hub"
+        }
+    }
+
+    # =========================================================
+    # 5) Figure Setup
+    # =========================================================
+    fig = go.Figure()
+    fig.update_xaxes(visible=False, range=[-0.02, 1.10])
+    fig.update_yaxes(visible=False, range=[0.00, 1.10])
+
+    box_w = 0.22
+    box_h = 0.16
+
+    COLOR_RENEWABLE = "#10B35A"
+    COLOR_GRID = "#B9B9B9"
+    COLOR_OPTIONAL = "#10B35A"
+
+    flow_values = [
+        solar_energy, landscape_energy,
+        local_supply_industry, local_supply_hub,
+        grid_import_total, grid_export
+    ]
+    max_flow = max(flow_values) if max(flow_values) > 0 else 1.0
+
+    # KPI-Karten oben
+    kpi_y = 1.04
+    kpis = [
+        ("Jahreserzeugung", format_energy(total_generation), "#EAF4FF"),
+        ("Jahresbedarf", format_energy(total_demand), "#F8F8F8"),
+        ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
+        ("Jahresbilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", "#FFF4E8"),
+        ("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
+        ("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
+    ]
+    kpi_xs = [0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
+
+    for (title, value_text, fill), x in zip(kpis, kpi_xs):
+        fig.add_shape(
+            type="rect",
+            x0=x - 0.08, x1=x + 0.08,
+            y0=kpi_y - 0.045, y1=kpi_y + 0.045,
+            line=dict(color="rgba(80,80,80,0.45)", width=1.1),
+            fillcolor=fill,
+            layer="below"
+        )
+        fig.add_annotation(
+            x=x,
+            y=kpi_y,
+            text=f"<b>{title}</b><br>{value_text}",
+            showarrow=False,
+            font=dict(size=10, color="#2F3445"),
+            align="center"
+        )
+
+    # =========================================================
+    # 6) Boxen und Knoten
+    # =========================================================
+    add_legend(fig)
+
+    # Rechteckige Knoten mit Icons
+    for key in ["solar", "landscape", "grid", "battery", "industry", "hub"]:
+        node = nodes[key]
+        x = node["x"]
+        y = node["y"]
+
+        fig.add_shape(
+            type="rect",
+            x0=x - box_w / 2,
+            x1=x + box_w / 2,
+            y0=y - box_h / 2,
+            y1=y + box_h / 2,
+            line=dict(color="black", width=2),
+            fillcolor="white",
+            layer="below"
+        )
+
+        label_pos = "above" if key in ["solar", "grid", "industry"] else "below"
+
+        add_node_with_icon(
+            fig=fig,
+            x=x,
+            y=y,
+            label=node["label"],
+            icon_key=node["icon"],
+            box_w=box_w,
+            box_h=box_h,
+            label_pos=label_pos
+        )
+
+    # Zentraler Systemknoten
+    system = nodes["system"]
+    fig.add_shape(
+        type="circle",
+        x0=system["x"] - 0.025, x1=system["x"] + 0.025,
+        y0=system["y"] - 0.025, y1=system["y"] + 0.025,
+        line=dict(color="gray", width=1.2),
+        fillcolor="white"
+    )
+
+    # Hoverpunkte
+    for key, node in nodes.items():
+        marker_size = 26 if key == "system" else 60
+        fig.add_trace(
+            go.Scatter(
+                x=[node["x"]],
+                y=[node["y"]],
+                mode="markers",
+                marker=dict(size=marker_size, opacity=0),
+                hovertemplate=f"<b>{node['label'] if node['label'] else 'Systemknoten'}</b><br>{node['info']}<extra></extra>",
+                showlegend=False
+            )
+        )
+
+    # =========================================================
+    # 7) Hilfspunkte für Pfeile
+    # =========================================================
+    solar_right = (nodes["solar"]["x"] + box_w / 2, nodes["solar"]["y"])
+    landscape_right = (nodes["landscape"]["x"] + box_w / 2, nodes["landscape"]["y"])
+    grid_bottom = (nodes["grid"]["x"], nodes["grid"]["y"] - box_h / 2)
+    battery_top = (nodes["battery"]["x"], nodes["battery"]["y"] + box_h / 2)
+    industry_left = (nodes["industry"]["x"] - box_w / 2, nodes["industry"]["y"])
+    hub_left = (nodes["hub"]["x"] - box_w / 2, nodes["hub"]["y"])
+    system_center = (nodes["system"]["x"], nodes["system"]["y"])
+
+    x_left_join = (system_center[0]+solar_right[0])/2
+    x_right_split = (system_center[0]+industry_left[0])/2
+
+    half_y_grid =  (grid_bottom[1]+system_center[1])/2
+    half_y_bat =  (battery_top[1]+system_center[1])/2
+    # =========================================================
+    # 8) Erzeuger -> System
+    # =========================================================
+    if solar_to_system > 0:
+        add_routed_arrow(
+            fig,
+            points=[solar_right, (x_left_join, solar_right[1]), (x_left_join, system_center[1]), system_center],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(solar_to_system, max_flow)
+        )
+
+    if landscape_to_system > 0:
+        add_routed_arrow(
+            fig,
+            points=[landscape_right, (x_left_join, landscape_right[1]), (x_left_join, system_center[1]), system_center],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(landscape_to_system, max_flow)
+        )
+
+    # =========================================================
+    # 9) System -> Verbraucher
+    # =========================================================
+    if local_supply_industry > 0:
+        add_routed_arrow(
+            fig,
+            points=[system_center, (x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(local_supply_industry, max_flow)
+        )
+
+    if local_supply_hub > 0:
+        add_routed_arrow(
+            fig,
+            points=[system_center, (x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(local_supply_hub, max_flow)
+        )
+
+    # =========================================================
+    # 10) Batterie nur schematisch anbinden
+    # =========================================================
+    if sim_output.bs_df is not None:
+        add_routed_arrow(
+            fig,
+            points=[system_center, (system_center[0], half_y_bat),(battery_top[0], half_y_bat), battery_top],
+            color=COLOR_OPTIONAL,
+            width=1.6
+        )
+        add_routed_arrow(
+            fig,
+            points=[battery_top,(battery_top[0], half_y_bat), (system_center[0], half_y_bat),system_center],
+            color=COLOR_OPTIONAL,
+            width=1.6
+        )
+
+    # =========================================================
+    # 11) Netzlogik:
+    #     Überschuss => System -> Grid
+    #     Defizit    => Grid -> System
+    # =========================================================
+    if grid_export > 0:
+        add_routed_arrow(
+            fig,
+            points=[system_center, (system_center[0], half_y_grid), (grid_bottom[0],  half_y_grid), grid_bottom],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(grid_export, max_flow),
+            label="Überschuss",
+            label_x=0.60,
+            label_y=0.74
+        )
+
+    elif grid_import_total > 0:
+        add_routed_arrow(
+            fig,
+            points=[grid_bottom, (grid_bottom[0], half_y_grid), (system_center[0], half_y_grid), system_center],
+            color=COLOR_GRID,
+            width=scale_arrow_width(grid_import_total, max_flow),
+            label="Netzbezug",
+            label_x=0.60,
+            label_y=0.74
+        )
+
+    # Optionale gestrichelte Hinweise vom System zu den Verbrauchern bei Defizit,
+    # damit man im Stil deiner Skizze andeuten kann, dass dort Netzstrom ankommt
+    if grid_import_total > 0:
+        if grid_import_industry > 0:
+            add_optional_connection(
+                fig,
+                points=[(x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
+                color=COLOR_GRID,
+                width=1.4,
+                dash="dot",
+                label="Netzbezug",
+                label_x=0.76,
+                label_y=0.66
+            )
+
+        if grid_import_hub > 0:
+            add_optional_connection(
+                fig,
+                points=[(x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
+                color=COLOR_GRID,
+                width=1.4,
+                dash="dot",
+                label="Netzbezug",
+                label_x=0.76,
+                label_y=0.39
+            )
+
+    # =========================================================
+    # 12) Layout
+    # =========================================================
+    fig.update_layout(
+        title="Annual Energy Balance",
+        height=820,
+        margin=dict(l=20, r=20, t=100, b=20),
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
+
+    return fig
