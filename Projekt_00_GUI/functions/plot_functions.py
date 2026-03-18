@@ -148,7 +148,7 @@ def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2
     # -------------------------------------------------
     # BEV laden und plotten, falls gewählt
     # -------------------------------------------------
-    if e_year is not None:
+    if e_year not in [None, "Keine"]:
         bev_path = os.path.join(base_dir, str(e_year), "BEV_load_el_15min.csv")
         bev = _read_green_hub_timeseries(bev_path)
 
@@ -163,7 +163,7 @@ def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2
     # -------------------------------------------------
     # Elektrolyseur laden und plotten, falls gewählt
     # -------------------------------------------------
-    if h2_year is not None:
+    if h2_year not in [None, "Keine"]:
         ely_path = os.path.join(base_dir, str(h2_year), "Electrolyzer_output.csv")
         ely = _read_green_hub_timeseries(ely_path)
 

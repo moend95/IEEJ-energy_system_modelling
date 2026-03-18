@@ -359,8 +359,8 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             default="Keine",
         )
 
-        geh_h2_active = Input.geh_h2_load_scenario is not None
-        geh_e_active = Input.geh_e_load_scenario is not None
+        geh_h2_active = Input.geh_h2_load_scenario != "Keine"
+        geh_e_active = Input.geh_e_load_scenario != "Keine"
         green_hub_active = geh_h2_active or geh_e_active
 
         if green_hub_active:
