@@ -453,6 +453,8 @@ if run:
     st.session_state.simulation_ran = True
 
     st.session_state.sim_output = Output
+    print('\nOutput Daten:\n', Output)
+    st.write(Output.res_df.columns)
 
 
 
@@ -471,10 +473,11 @@ with st.spinner("Visualisierung wird erstellt..."):
 
 
 if st.session_state.simulation_ran:
-    st.write(type(Output.res_df))
+
+
     fig, ax = plt.subplots(figsize=(10, 4))
 
-    ax.plot(Output.res_df)
+    ax.plot(st.session_state.sim_output.res_df['Bilanz [kW]']) #.iloc[:,-1])
     ax.set_title("Bilanzverlauf")
     ax.set_xlabel("Zeit")
     ax.set_ylabel("Leistung [kW]")
