@@ -508,7 +508,7 @@ def build_synergy_diagram(inp, sim_output):
     # 4) Texte für Boxen
     # -----------------------------
     solar_text = "nicht aktiv"
-    if inp.highways and inp.h_pv_types:
+    if inp.h_highways and inp.h_pv_types:
         if solar_energy > 0:
             solar_text = f"Jahreserzeugung:<br>{format_energy(solar_energy)}"
         else:
@@ -521,7 +521,7 @@ def build_synergy_diagram(inp, sim_output):
         else:
             landscape_text = f"Ausbaugrad: {inp.el_build_state} %<br>aktiv, noch ohne Ergebnis"
 
-    n_companies = len([c for c in inp.companies if c is not None]) if inp.companies else 0
+    n_companies = len([c for c in inp.is_companies if c is not None]) if inp.is_companies else 0
 
     if industry_energy == 0:
         industry_status = "kein Bedarf"
@@ -549,12 +549,12 @@ def build_synergy_diagram(inp, sim_output):
     else:
         hub_status = "nicht gedeckt"
 
-    if inp.h2_load_scenario is None or inp.e_load_scenario is None:
+    if inp.geh_h2_load_scenario is None or inp.geh_e_load_scenario is None:
         hub_text = "deaktiviert"
     else:
         hub_text = (
-            f"H₂-Szenario: {inp.h2_load_scenario}"
-            f"<br>El.-Szenario: {inp.e_load_scenario}"
+            f"H₂-Szenario: {inp.geh_h2_load_scenario}"
+            f"<br>El.-Szenario: {inp.geh_e_load_scenario}"
             f"<br>Bedarf: {format_energy(green_hub_energy)}"
             f"<br>Lokal gedeckt: {format_energy(local_supply_hub)}"
             f"<br>Netzbezug: {format_energy(grid_import_hub)}"
@@ -1037,7 +1037,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
         with col1_tab1:
-            Input.highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
+            Input.h_highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
             h_selected_names = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
             Input.h_pv_types = [pv_name_to_id[name] for name in h_selected_names]
 
@@ -1049,7 +1049,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
 
             m = folium.Map(location=[51.06280, 6.49554], zoom_start=12)
 
-            for highway in Input.highways:
+            for highway in Input.h_highways:
                 selected_file = pv_geojson_mapping_col2_tab1[highway]
                 geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
@@ -1086,21 +1086,21 @@ with st.container(key="Erzeugung", width=1000, height=500):
             )
             Input.el_pv_type = pv_name_to_id[el_selected_names]
 
-            Input.tractor_width = st.segmented_control(
+            Input.el_tractor_width = st.segmented_control(
                 "Traktorbreite",
                 options=[9.0, 12.0, 15.0],
                 default=12.0,
                 format_func=lambda x: f"{x:.0f}m"
             )
 
-            Input.tractor_length = st.segmented_control(
+            Input.el_tractor_length = st.segmented_control(
                 "Traktorlänge",
                 options=[12.0, 15.0, 18.0],
                 default=15.0,
                 format_func=lambda x: f"{x:.0f}m"
             )
 
-            Input.tractor_turn_radius = st.segmented_control(
+            Input.el_tractor_turn_radius = st.segmented_control(
                 "Traktor-Wenderadius",
                 options=[6.0, 9.0, 12.0],
                 default=9.0,
@@ -1135,7 +1135,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
             if Input.el_build_state != 0:
                 folium.GeoJson(
                     geojson_data,
-                    name=f"{Input.el_pv_type}{Input.tractor_width}"
+                    name=f"{Input.el_pv_type}{Input.el_tractor_width}"
                 ).add_to(m)
 
             folium.LayerControl().add_to(m)
@@ -1165,7 +1165,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
             st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
 
-            Input.companies = []
+            Input.is_companies = []
             for i in range(5):
                 choice = st.selectbox(
                     f"Unternehmen {i + 1}",
@@ -1174,7 +1174,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                     key=f"selection_{i}"
                 )
                 if choice is not None:
-                    Input.companies.append(choice)
+                    Input.is_companies.append(choice)
 
         with col2_tab4:
             Input.is_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
@@ -1227,7 +1227,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_annual_all)
 
-        selected_columns = [industry_csv_mapping[i] for i in Input.companies if i in industry_csv_mapping]
+        selected_columns = [industry_csv_mapping[i] for i in Input.is_companies if i in industry_csv_mapping]
         selected_columns = list(dict.fromkeys(selected_columns))
 
         if selected_columns:
@@ -1297,14 +1297,14 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
         scenario_options = [None, "2022", "2030", "2050"]
 
-        Input.h2_load_scenario = st.segmented_control(
+        Input.geh_h2_load_scenario = st.segmented_control(
             "Wasserstoff-Bedarf Szenario",
             options=scenario_options,
             default=None,
             format_func=lambda x: "Keine" if x is None else x
         )
 
-        Input.e_load_scenario = st.segmented_control(
+        Input.geh_e_load_scenario = st.segmented_control(
             "Elektro-Bedarf Szenario",
             options=scenario_options,
             default=None,
@@ -1312,8 +1312,8 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         )
 
         green_hub_active = (
-                Input.h2_load_scenario is not None and
-                Input.e_load_scenario is not None
+                Input.geh_h2_load_scenario is not None and
+                Input.geh_e_load_scenario is not None
         )
 
         if green_hub_active:
@@ -1321,8 +1321,8 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
             fig_green_hub_week = plot_green_hub_weekly_profiles(
                 green_hub_base_dir,
-                h2_year=str(Input.h2_load_scenario),
-                e_year=str(Input.e_load_scenario),
+                h2_year=str(Input.geh_h2_load_scenario),
+                e_year=str(Input.geh_e_load_scenario),
                 start="2022-03-05"
             )
             st.pyplot(fig_green_hub_week)

@@ -45,14 +45,14 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.h_number_of_points = 0
     all_ac_series = []
 
-    if not inp.highways:
+    if not inp.h_highways:
         out.h_error_text = "SOLARAUTOBAHN --- Keine Autobahnen ausgewählt."
     elif not inp.h_pv_types:
         out.h_error_text = "SOLARAUTOBAHN --- Keine PV-Typen ausgewählt."
     else:
         out.h_error_text = ""
 
-        for highway in inp.highways:
+        for highway in inp.h_highways:
             selected_file = highway_geojson_mapping[highway]
             geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
@@ -129,9 +129,9 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             interactive=False,
             output_dir="./outputs",
             pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
-            tractor_width_m=inp.tractor_width,
-            tractor_length_m=inp.tractor_length,
-            tractor_turn_radius_m=inp.tractor_turn_radius,
+            tractor_width_m=inp.el_tractor_width,
+            tractor_length_m=inp.el_tractor_length,
+            tractor_turn_radius_m=inp.el_tractor_turn_radius,
         )
         out.el_pv_length = agri_result.get("metadata").get('total_rows_length_m')
 
@@ -181,14 +181,14 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     #df_industrie = pd.DataFrame()
     industry_aggregator = IndustryLoadAggregator()
 
-    if inp.companies is []:
+    if inp.is_companies is []:
         out.i_error_text = "INDUSTRIEGEBIET --- Kein Unternehmen ausgewählt."
-    elif inp.companies:
+    elif inp.is_companies:
         out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
 
         df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
             mode_choice=industrie_heating_choice_mapping[inp.is_heat_cooling_electric],
-            selection_indices=inp.companies,
+            selection_indices=inp.is_companies,
 
         )
         if df_industrie is None or df_industrie.empty:
@@ -208,15 +208,15 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # 4) Green Energy Hub
     # ------------------------------------------------------------
 
-    if inp.h2_load_scenario or inp.e_load_scenario is not None:
+    if inp.geh_h2_load_scenario or inp.geh_e_load_scenario is not None:
         hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
 
-        h2_load_path = os.path.join(hub_dir, inp.h2_load_scenario, "Electrolyzer_output.csv")
+        h2_load_path = os.path.join(hub_dir, inp.geh_h2_load_scenario, "Electrolyzer_output.csv")
         df_h2_load = pd.read_csv(h2_load_path)
         df_h2_load["timestamp"] = pd.to_datetime(df_h2_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
         df_h2_load.set_index("timestamp", inplace=True)
 
-        el_load_path = os.path.join(hub_dir, inp.e_load_scenario, "BEV_load_el_15min.csv")
+        el_load_path = os.path.join(hub_dir, inp.geh_e_load_scenario, "BEV_load_el_15min.csv")
         df_el_load = pd.read_csv(el_load_path)
         df_el_load["timestamp"] = pd.to_datetime(df_el_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
         df_el_load.set_index("timestamp", inplace=True)

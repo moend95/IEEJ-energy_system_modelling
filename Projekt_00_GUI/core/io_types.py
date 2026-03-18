@@ -1,70 +1,44 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, List, Dict, Any
 import pandas as pd
 
 # =================================
-# Input aus der Streamlit-Anwendung
+# Input from the streamlit website
 # =================================
 
 @dataclass
 class GuiInput:
     """
-    Alle Parameter, die die GUI eingegeben werden können und an die Simulation übergeben werden sollen.
+    All website input parameters.
+    The following abbreviations are used in the variable names:
+        h = highway, el = energy landscape, is = industry
     """
-    def __init__(self,
-                 highways:list | None = None,
-                 h_pv_types:list | None = None,
-                 el_build_state:int | None = None,
-                 el_pv_type:int | None = None,
-                 tractor_width:float | None = None,
-                 tractor_length:float | None = None,
-                 tractor_turn_radius:float | None = None,
-                 is_heat_cooling_electric:bool | None = None,
-                 companies:list[int] | None = None,
-                 h2_load_scenario:str | None = None,
-                 e_load_scenario:str | None = None,
-                 bs_efficiency:float | None = None,
-                 bs_energy_kwh:float | None = None,
-                 bs_c_rate:float | None = None,):
-        # ERZEUGUNG
-        # Solarautobahn
-        self.highways = highways                                    # Auswahl Autobahnen
-        self.h_pv_types = h_pv_types                                # Auswahl PV-Types für die Autobahnen
-        # Energielandschaft
-        self.el_build_state = el_build_state                        # Ausbaugrad in %
-        self.el_pv_type = el_pv_type                                # Auswahl PV-Types für die Energielandschaft
-        self.tractor_width = tractor_width                          # Traktorbreite [m]
-        self.tractor_length = tractor_length                        # Traktorlänge [m]
-        self.tractor_turn_radius = tractor_turn_radius              # Traktor-Wenderadius [m]
-        # Industriegebiet
-        self.is_heat_cooling_electric = is_heat_cooling_electric    # Wärme/Kälte elektrisch? [true/false]
-        self.companies = companies                                  #Auswahl der Unternehmenstypen im Industriegebiet
-        # Green Energy Hub
-        self.h2_load_scenario = h2_load_scenario                    # Auswahl H2 Bedarf Szenario 2022, 2030, 2050
-        self.e_load_scenario = e_load_scenario                      # Auswahl E Bedarf Szenario 2022, 2030, 2050
-        # Batteriespeicher
-        self.bs_efficiency = bs_efficiency                          # Batterie Round Trip Effizienz
-        self.bs_energy_kwh = bs_energy_kwh                          # Batterie Kapazität in kWh
-        self.bs_c_rate = bs_c_rate                              # C rate der Batterie
 
-    def __repr__(self):
-        return (
-            f"GuiInput("
-            f"highways={self.highways}, "
-            f"h_pv_types={self.h_pv_types}, "
-            f"el_pv_type={self.el_pv_type}, "
-            f"tractor_width={self.tractor_width}, "
-            f"tractor_length={self.tractor_length}, "
-            f"tractor_turn_radius={self.tractor_turn_radius}, "
-            f"is_heat_cooling_electric={self.is_heat_cooling_electric}, "
-            f"companies={self.companies}, "
-            f"h2_load_scenario={self.h2_load_scenario}, "
-            f"e_load_scenario={self.e_load_scenario}, "
-            f"bs_efficiency={self.bs_efficiency}, "
-            f"bs_energy_kwh={self.bs_energy_kwh}, "
-            f"bs_c_rate={self.bs_c_rate}"
-            f")"
-        )
+    # ERZEUGUNG
+    # Solarautobahn
+    h_highways: Optional[List[str]] = None              # IDs der ausgewählten Autobahnen
+    h_pv_types: Optional[List[str]] = None              # PV-Typen entlang der Autobahnen
+
+    # Energielandschaft
+    el_build_state: Optional[int] = None                # Ausbaugrad [%]
+    el_pv_type: Optional[int] = None                    # PV-Typ Energielandschaft
+    el_tractor_width: Optional[float] = None            # [m]
+    el_tractor_length: Optional[float] = None           # [m]
+    el_tractor_turn_radius: Optional[float] = None      # [m]
+
+    # Industriegebiet
+    is_heat_cooling_electric: Optional[bool] = None     # Elektrische Wärme/Kälte
+    is_companies: Optional[List[int]] = None            # Unternehmens-Typen
+
+    # Green Energy Hub
+    geh_h2_load_scenario: Optional[str] = None          # Szenario: 2022, 2030, 2050
+    geh_e_load_scenario: Optional[str] = None           # Szenario: 2022, 2030, 2050
+
+    # Batteriespeicher
+    bs_efficiency: Optional[float] = None               # Roundtrip-Effizienz [0–1]
+    bs_energy_kwh: Optional[float] = None               # Kapazität [kWh]
+    bs_c_rate: Optional[float] = None                   # C-Rate
+
 # =========================
 # Output der Simulation
 # =========================

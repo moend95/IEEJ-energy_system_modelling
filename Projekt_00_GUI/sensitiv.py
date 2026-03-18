@@ -187,21 +187,21 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
 
     inp = GuiInput()
 
-    inp.highways = cfg.get("highways", [])
+    inp.h_highways = cfg.get("highways", [])
     inp.h_pv_types = cfg.get("h_pv_types", [])
 
     inp.el_build_state = cfg.get("el_build_state", None)
     inp.el_pv_type = cfg.get("el_pv_type", None)
 
-    inp.tractor_width = cfg.get("tractor_width", None)
-    inp.tractor_length = cfg.get("tractor_length", None)
-    inp.tractor_turn_radius = cfg.get("tractor_turn_radius", None)
+    inp.el_tractor_width = cfg.get("tractor_width", None)
+    inp.el_tractor_length = cfg.get("tractor_length", None)
+    inp.el_tractor_turn_radius = cfg.get("tractor_turn_radius", None)
 
     inp.is_heat_cooling_electric = cfg.get("is_heat_cooling_electric", False)
-    inp.companies = cfg.get("companies", [])
+    inp.is_companies = cfg.get("companies", [])
 
-    inp.h2_load_scenario = cfg.get("h2_load_scenario", None)
-    inp.e_load_scenario = cfg.get("e_load_scenario", None)
+    inp.geh_h2_load_scenario = cfg.get("h2_load_scenario", None)
+    inp.geh_e_load_scenario = cfg.get("e_load_scenario", None)
 
     inp.bs_efficiency = cfg.get("bs_efficiency", None)
     inp.bs_energy_kwh = cfg.get("bs_energy_kwh", None)
