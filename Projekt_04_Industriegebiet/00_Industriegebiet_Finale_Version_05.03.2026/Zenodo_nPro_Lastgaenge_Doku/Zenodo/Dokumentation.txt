@@ -1,5 +1,0 @@
-1. Einlesung Zenodo Lastgänge
-2. Nur relevante Lastgänge werden beibehalten 
-3. Relevante Zenodo Lastgänge mit festgelegten Faktoren multiplizieren (Skalierungsfaktoren siehe Word-Dokument)
-4. Umbenennung der Spalten nach Branche/Unternehmen
-5. Export neuer CSV-Datei mit jeweiligen Branchen/Unternehmen und zugehörigen skalierten Lastgängen
