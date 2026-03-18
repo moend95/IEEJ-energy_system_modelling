@@ -214,11 +214,11 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.geh_max_power_kw = 0.0
     out.geh_sum_energy_kwh = 0.0
 
-    if inp.geh_h2_load_scenario is not None or inp.geh_e_load_scenario is not None:
+    if inp.geh_h2_load_scenario not in [None, "Keine"] or inp.geh_e_load_scenario not in [None, "Keine"]:
         geh_series = pd.Series(0.0, index=out.res_df.index)
 
         # H2-Last separat laden, falls gewählt
-        if inp.geh_h2_load_scenario is not None:
+        if inp.geh_h2_load_scenario not in [None, "Keine"]:
             h2_load_path = os.path.join(hub_dir, inp.geh_h2_load_scenario, "Electrolyzer_output.csv")
             df_h2_load = pd.read_csv(h2_load_path)
             df_h2_load["timestamp"] = pd.to_datetime(
@@ -233,7 +233,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             geh_series = geh_series.add(h2_series.reindex(out.res_df.index, fill_value=0.0), fill_value=0.0)
 
         # Elektro-Last separat laden, falls gewählt
-        if inp.geh_e_load_scenario is not None:
+        if inp.geh_e_load_scenario not in [None, "Keine"]:
             el_load_path = os.path.join(hub_dir, inp.geh_e_load_scenario, "BEV_load_el_15min.csv")
             df_el_load = pd.read_csv(el_load_path)
             df_el_load["timestamp"] = pd.to_datetime(
