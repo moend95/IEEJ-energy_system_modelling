@@ -264,19 +264,19 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     el_energy = out.el_sum_energy_kwh or 0
     geh_energy = out.geh_sum_energy_kwh or 0
     i_energy = out.i_sum_energy_kwh or 0
-    out.balance_energy_kwh = h_energy + el_energy - geh_energy - i_energy
+    out.bal_energy_kwh = h_energy + el_energy - geh_energy - i_energy
 
     # für coverage_rate
     total_generation = h_energy + el_energy
     total_demand = geh_energy + i_energy
 
     if total_demand > 0:
-        out.balance_coverage_rate = min(total_generation / total_demand, 1.0)
+        out.bal_coverage_rate = min(total_generation / total_demand, 1.0)
     else:
-        out.balance_coverage_rate = 0.0
+        out.bal_coverage_rate = 0.0
 
-    out.balance_power_max_kw = out.res_df["Bilanz [kW]"].max()
-    out.balance_power_min_kw = out.res_df["Bilanz [kW]"].min()
+    out.bal_power_max_kw = out.res_df["Bilanz [kW]"].max()
+    out.bal_power_min_kw = out.res_df["Bilanz [kW]"].min()
 
     print('Bilanzierung \t\t- abgeschlossen')
 

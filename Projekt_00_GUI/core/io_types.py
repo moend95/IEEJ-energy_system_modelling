@@ -11,7 +11,7 @@ class GuiInput:
     """
     All website input parameters.
     The following abbreviations are used in the variable names:
-        h = highway, el = energy landscape, i = industry, geh = green energy hub
+        h = highway, el = energy landscape, i = industry, geh = green energy hub, bs = battery storage
     """
 
     # Energy production
@@ -47,6 +47,8 @@ class GuiInput:
 class SimOutput:
     """
     All results that are shown on the website.
+    The following abbreviations are used in the variable names:
+        h = highway, el = energy landscape, i = industry, geh = green energy hub, bs = battery storage
     """
 
     # Energy amounts [kWh]
@@ -69,10 +71,10 @@ class SimOutput:
     bs_stats: dict = field(default_factory=dict)
 
     # System balance
-    balance_energy_kwh: float | None = None
-    balance_coverage_rate: float | None = None
-    balance_power_max_kw: float | None = None
-    balance_power_min_kw: float | None = None
+    bal_energy_kwh: float | None = None
+    bal_coverage_rate: float | None = None
+    bal_power_max_kw: float | None = None
+    bal_power_min_kw: float | None = None
 
     # Error texts
     h_error_text: str | None = None
