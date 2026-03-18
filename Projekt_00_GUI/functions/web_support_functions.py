@@ -307,7 +307,7 @@ def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot",
         yref="y",
         axref="x",
         ayref="y",
-        showarrow=True,
+        showarrow=False,
         arrowhead=3,
         arrowsize=1.2,
         arrowwidth=max(width, 1.8),
@@ -361,10 +361,10 @@ def build_synergy_diagram(inp, sim_output):
         total_generation = solar_energy + landscape_energy
         total_demand = industry_energy + green_hub_energy
 
-        coverage = float(getattr(sim_output, "coverage_rate", 0) or 0)
+        coverage = float(getattr(sim_output, "bal_coverage_rate", 0) or 0)
         coverage_percent = max(0.0, min(coverage * 100.0, 100.0))
 
-        balance = float(getattr(sim_output, "balance_energy_kwh", 0) or 0)
+        balance = float(getattr(sim_output, "bal_energy_kwh", 0) or 0)
         if balance >= 0:
             surplus = balance
             deficit = 0.0
@@ -657,6 +657,7 @@ def build_synergy_diagram(inp, sim_output):
 
     half_y_grid =  (grid_bottom[1]+system_center[1])/2
     half_y_bat =  (battery_top[1]+system_center[1])/2
+
     # =========================================================
     # 8) Erzeuger -> System
     # =========================================================
@@ -679,26 +680,26 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     # 9) System -> Verbraucher
     # =========================================================
-    if local_supply_industry > 0:
+    if industry_energy > 0:
         add_routed_arrow(
             fig,
             points=[system_center, (x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
             color=COLOR_RENEWABLE,
-            width=scale_arrow_width(local_supply_industry, max_flow)
+            width=scale_arrow_width(industry_energy, max_flow)
         )
 
-    if local_supply_hub > 0:
+    if green_hub_energy > 0:
         add_routed_arrow(
             fig,
             points=[system_center, (x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
             color=COLOR_RENEWABLE,
-            width=scale_arrow_width(local_supply_hub, max_flow)
+            width=scale_arrow_width(green_hub_energy, max_flow)
         )
 
     # =========================================================
     # 10) Batterie nur schematisch anbinden
     # =========================================================
-    if sim_output.bs_df is not None:
+    if sim_output.bs_df.empty is False:
         add_routed_arrow(
             fig,
             points=[system_center, (system_center[0], half_y_bat),(battery_top[0], half_y_bat), battery_top],
@@ -724,8 +725,8 @@ def build_synergy_diagram(inp, sim_output):
             color=COLOR_RENEWABLE,
             width=scale_arrow_width(grid_export, max_flow),
             label="Überschuss",
-            label_x=0.60,
-            label_y=0.74
+            label_x=system_center[0]-0.025,
+            label_y=half_y_grid+0.025
         )
 
     elif grid_import_total > 0:
@@ -735,35 +736,29 @@ def build_synergy_diagram(inp, sim_output):
             color=COLOR_GRID,
             width=scale_arrow_width(grid_import_total, max_flow),
             label="Netzbezug",
-            label_x=0.60,
-            label_y=0.74
+            label_x=system_center[0]-0.025,
+            label_y=half_y_grid+0.025
         )
 
     # Optionale gestrichelte Hinweise vom System zu den Verbrauchern bei Defizit,
     # damit man im Stil deiner Skizze andeuten kann, dass dort Netzstrom ankommt
-    if grid_import_total > 0:
+    if grid_import_total > 0: #== 7: #temp fix soll nicht in die if rein gehen (statt auskommentieren)
         if grid_import_industry > 0:
             add_optional_connection(
                 fig,
-                points=[(x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
+                points=[system_center,(x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
                 color=COLOR_GRID,
                 width=1.4,
                 dash="dot",
-                label="Netzbezug",
-                label_x=0.76,
-                label_y=0.66
             )
 
         if grid_import_hub > 0:
             add_optional_connection(
                 fig,
-                points=[(x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
+                points=[system_center,(x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
                 color=COLOR_GRID,
                 width=1.4,
                 dash="dot",
-                label="Netzbezug",
-                label_x=0.76,
-                label_y=0.39
             )
 
     # =========================================================

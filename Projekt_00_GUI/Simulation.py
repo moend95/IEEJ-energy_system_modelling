@@ -320,13 +320,13 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.bs_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
 
         out.bs_stats = storage.get_stats(out.bs_df, timestep_hours=0.25)
+        out.bal_power_max_kw = out.res_df["new_balance_kw"].max()
+        out.bal_power_min_kw = out.res_df["new_balance_kw"].min()
 
 
 
 
     print('Batterie \t\t\t- abgeschlossen')
-
-
 
 
 

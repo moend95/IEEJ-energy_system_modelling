@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+
 # UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -10,6 +11,7 @@ import folium
 from streamlit_folium import st_folium
 import json
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from core.io_types import GuiInput, SimOutput
@@ -452,13 +454,30 @@ if run:
 
     st.session_state.sim_output = Output
 
+
+
+
 # =========================================================
 # Neue Visualisierung: Synergie-Diagramm
 # =========================================================
 
 st.title("Energiesystem – Visualisierung")
-sim_output = st.session_state.sim_output if st.session_state.simulation_ran else Output
+#sim_output = st.session_state.sim_output if st.session_state.simulation_ran else Output
 
 with st.spinner("Visualisierung wird erstellt..."):
     fig_synergy = build_synergy_diagram(Input, st.session_state.sim_output)
     st.plotly_chart(fig_synergy, width="stretch")
+
+
+
+if st.session_state.simulation_ran:
+    st.write(type(Output.res_df))
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    ax.plot(Output.res_df)
+    ax.set_title("Bilanzverlauf")
+    ax.set_xlabel("Zeit")
+    ax.set_ylabel("Leistung [kW]")
+    ax.grid(True)
+
+    st.pyplot(fig)
