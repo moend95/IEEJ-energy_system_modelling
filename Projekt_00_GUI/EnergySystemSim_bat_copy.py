@@ -345,34 +345,31 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             )
             st.pyplot(fig_green_hub_bar)
 
-        scenario_options = [None, "2022", "2030", "2050"]
+        scenario_options = ["Keine", "2022", "2030", "2050"]
 
         Input.geh_h2_load_scenario = st.segmented_control(
             "Wasserstoff-Bedarf Szenario",
             options=scenario_options,
-            default=None,
-            format_func=lambda x: "Keine" if x is None else x
+            default="Keine",
         )
 
         Input.geh_e_load_scenario = st.segmented_control(
             "Elektro-Bedarf Szenario",
             options=scenario_options,
-            default=None,
-            format_func=lambda x: "Keine" if x is None else x
+            default="Keine",
         )
 
-        green_hub_active = (
-                Input.geh_h2_load_scenario is not None and
-                Input.geh_e_load_scenario is not None
-        )
+        geh_h2_active = Input.geh_h2_load_scenario is not None
+        geh_e_active = Input.geh_e_load_scenario is not None
+        green_hub_active = geh_h2_active or geh_e_active
 
         if green_hub_active:
             st.write("### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
 
             fig_green_hub_week = plot_green_hub_weekly_profiles(
                 green_hub_base_dir,
-                h2_year=str(Input.geh_h2_load_scenario),
-                e_year=str(Input.geh_e_load_scenario),
+                h2_year=Input.geh_h2_load_scenario,
+                e_year=Input.geh_e_load_scenario,
                 start="2022-03-05"
             )
             st.pyplot(fig_green_hub_week)

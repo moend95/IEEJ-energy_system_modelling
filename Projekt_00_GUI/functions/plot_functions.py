@@ -135,41 +135,68 @@ def _read_green_hub_timeseries(csv_path):
     return series
 
 
-def plot_green_hub_weekly_profiles(base_dir, h2_year, e_year, start="2022-03-05"):
+def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2022-03-05"):
     """
-    Überlagerte Beispielwoche:
-    - Elektrolyseur aus dem gewählten H2-Szenario
-    - BEV-Last aus dem gewählten Elektro-Szenario
+    Beispielwoche des Green Energy Hub:
+    - optional Elektrolyseur aus dem gewählten H2-Szenario
+    - optional BEV-Last aus dem gewählten Elektro-Szenario
     """
 
     fig, ax = plt.subplots(figsize=(15, 7))
+    plotted_anything = False
 
-    bev_path = os.path.join(base_dir, str(e_year), "BEV_load_el_15min.csv")
-    ely_path = os.path.join(base_dir, str(h2_year), "Electrolyzer_output.csv")
+    # -------------------------------------------------
+    # BEV laden und plotten, falls gewählt
+    # -------------------------------------------------
+    if e_year is not None:
+        bev_path = os.path.join(base_dir, str(e_year), "BEV_load_el_15min.csv")
+        bev = _read_green_hub_timeseries(bev_path)
 
-    bev = _read_green_hub_timeseries(bev_path)
-    ely = _read_green_hub_timeseries(ely_path)
+        try:
+            bev_week = bev.loc[start:].iloc[:7 * 24 * 4]
+        except Exception:
+            bev_week = bev.iloc[:7 * 24 * 4]
 
-    # eine Woche ab Start, sonst erste Woche
-    try:
-        bev_week = bev.loc[start:].iloc[:7 * 24 * 4]
-        ely_week = ely.loc[start:].iloc[:7 * 24 * 4]
-    except Exception:
-        bev_week = bev.iloc[:7 * 24 * 4]
-        ely_week = ely.iloc[:7 * 24 * 4]
+        ax.plot(bev_week.index, bev_week.values, label=f"BEV {e_year}")
+        plotted_anything = True
 
-    ax.plot(bev_week.index, bev_week.values, label=f"BEV {e_year}")
-    ax.plot(ely_week.index, ely_week.values, linestyle="--", label=f"Elektrolyseur {h2_year}")
+    # -------------------------------------------------
+    # Elektrolyseur laden und plotten, falls gewählt
+    # -------------------------------------------------
+    if h2_year is not None:
+        ely_path = os.path.join(base_dir, str(h2_year), "Electrolyzer_output.csv")
+        ely = _read_green_hub_timeseries(ely_path)
+
+        try:
+            ely_week = ely.loc[start:].iloc[:7 * 24 * 4]
+        except Exception:
+            ely_week = ely.iloc[:7 * 24 * 4]
+
+        ax.plot(ely_week.index, ely_week.values, linestyle="--", label=f"Elektrolyseur {h2_year}")
+        plotted_anything = True
+
+    # -------------------------------------------------
+    # Falls gar nichts gewählt wurde
+    # -------------------------------------------------
+    if not plotted_anything:
+        ax.text(
+            0.5, 0.5,
+            "Keine Green-Energy-Hub-Daten ausgewählt.",
+            ha="center",
+            va="center",
+            transform=ax.transAxes
+        )
 
     ax.set_title("Beispielhafte Wochenprofile des Green Energy Hub")
     ax.set_xlabel("Zeit")
     ax.set_ylabel("Leistung [kW]")
     ax.grid(True)
-    ax.legend()
+
+    if plotted_anything:
+        ax.legend()
+
     fig.tight_layout()
-
     return fig
-
 
 def plot_green_hub_annual_energy(base_dir, years=("2022", "2030", "2050")):
     """

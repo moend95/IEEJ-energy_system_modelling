@@ -203,34 +203,53 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     print('Industriegebiet \t- abgeschlossen')
 
-
     # ------------------------------------------------------------
     # 4) Green Energy Hub
     # ------------------------------------------------------------
 
-    if inp.geh_h2_load_scenario or inp.geh_e_load_scenario is not None:
-        hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
+    hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
 
-        h2_load_path = os.path.join(hub_dir, inp.geh_h2_load_scenario, "Electrolyzer_output.csv")
-        df_h2_load = pd.read_csv(h2_load_path)
-        df_h2_load["timestamp"] = pd.to_datetime(df_h2_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
-        df_h2_load.set_index("timestamp", inplace=True)
+    # Default: nichts aktiv -> Nullprofil
+    out.res_df["Last_Green_Energy_Hub [kW]"] = 0.0
+    out.geh_max_power_kw = 0.0
+    out.geh_sum_energy_kwh = 0.0
 
-        el_load_path = os.path.join(hub_dir, inp.geh_e_load_scenario, "BEV_load_el_15min.csv")
-        df_el_load = pd.read_csv(el_load_path)
-        df_el_load["timestamp"] = pd.to_datetime(df_el_load["timestamp"], format="%d-%m %H:%M", errors="coerce")
-        df_el_load.set_index("timestamp", inplace=True)
+    if inp.geh_h2_load_scenario is not None or inp.geh_e_load_scenario is not None:
+        geh_series = pd.Series(0.0, index=out.res_df.index)
 
-        #Einzeloutputs
-        #out.res_df["Last Elektrolyeur Green Energy Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values
-        #out.res_df["Last E-Ladesäulen Green Energy Hub [kW]"] = df_el_load["power_kW"].clip(lower=0).values
+        # H2-Last separat laden, falls gewählt
+        if inp.geh_h2_load_scenario is not None:
+            h2_load_path = os.path.join(hub_dir, inp.geh_h2_load_scenario, "Electrolyzer_output.csv")
+            df_h2_load = pd.read_csv(h2_load_path)
+            df_h2_load["timestamp"] = pd.to_datetime(
+                df_h2_load["timestamp"],
+                format="%d-%m %H:%M",
+                errors="coerce"
+            )
+            df_h2_load.set_index("timestamp", inplace=True)
 
-        #Sammeloutpus
-        out.res_df["Last_Green_Energy_Hub [kW]"] = df_h2_load["power_kW"].clip(lower=0).values + df_el_load["power_kW"].clip(lower=0).values
+            h2_series = df_h2_load["power_kW"].clip(lower=0).reset_index(drop=True)
+            h2_series.index = out.res_df.index[:len(h2_series)]
+            geh_series = geh_series.add(h2_series.reindex(out.res_df.index, fill_value=0.0), fill_value=0.0)
+
+        # Elektro-Last separat laden, falls gewählt
+        if inp.geh_e_load_scenario is not None:
+            el_load_path = os.path.join(hub_dir, inp.geh_e_load_scenario, "BEV_load_el_15min.csv")
+            df_el_load = pd.read_csv(el_load_path)
+            df_el_load["timestamp"] = pd.to_datetime(
+                df_el_load["timestamp"],
+                format="%d-%m %H:%M",
+                errors="coerce"
+            )
+            df_el_load.set_index("timestamp", inplace=True)
+
+            el_series = df_el_load["power_kW"].clip(lower=0).reset_index(drop=True)
+            el_series.index = out.res_df.index[:len(el_series)]
+            geh_series = geh_series.add(el_series.reindex(out.res_df.index, fill_value=0.0), fill_value=0.0)
+
+        out.res_df["Last_Green_Energy_Hub [kW]"] = geh_series
         out.geh_max_power_kw = out.res_df["Last_Green_Energy_Hub [kW]"].max()
-        df_geh_energy_kwh_profile = out.res_df["Last_Green_Energy_Hub [kW]"] * 0.25
-        out.geh_sum_energy_kwh = df_geh_energy_kwh_profile.sum()
-
+        out.geh_sum_energy_kwh = (out.res_df["Last_Green_Energy_Hub [kW]"] * 0.25).sum()
 
     print('Green Energy Hub \t- abgeschlossen')
 
