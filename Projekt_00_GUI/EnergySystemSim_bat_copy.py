@@ -1378,7 +1378,7 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     # 10) Batterie nur schematisch anbinden
     # =========================================================
-    if sim_output.bat_df is not None:
+    if sim_output.bs_df is not None:
         add_routed_arrow(
             fig,
             points=[system_center, (system_center[0], half_y_bat),(battery_top[0], half_y_bat), battery_top],

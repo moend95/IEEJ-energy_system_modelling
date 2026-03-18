@@ -11,7 +11,7 @@ class GuiInput:
     """
     All website input parameters.
     The following abbreviations are used in the variable names:
-        h = highway, el = energy landscape, i = industry, geh = green energy hub
+        h = highway, el = energy landscape, i = industry, geh = green energy hub, bs = battery storage
     """
 
     # Energy production
@@ -47,6 +47,8 @@ class GuiInput:
 class SimOutput:
     """
     All results that are shown on the website.
+    The following abbreviations are used in the variable names:
+        h = highway, el = energy landscape, i = industry, geh = green energy hub, bs = battery storage
     """
 
     # Energy amounts [kWh]
