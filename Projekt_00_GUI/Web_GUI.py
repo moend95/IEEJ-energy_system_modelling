@@ -496,43 +496,9 @@ if st.session_state.simulation_ran:
 
     sim_output = st.session_state.sim_output
 
-    st.write("## Batterieergebnisse")
-
-    if not sim_output.bs_df.empty:
-        stats = sim_output.bs_stats
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        col1.metric(
-            "Netzbezug nach Batterie",
-            f"{stats.get('grid_import_kwh', 0) / 1000:.2f} MWh"
-        )
-        col2.metric(
-            "Netzeinspeisung nach Batterie",
-            f"{stats.get('grid_export_kwh', 0) / 1000:.2f} MWh"
-        )
-        col3.metric(
-            "Batterieladung",
-            f"{stats.get('battery_charge_kwh', 0) / 1000:.2f} MWh"
-        )
-        col4.metric(
-            "Batterieentladung",
-            f"{stats.get('battery_discharge_kwh', 0) / 1000:.2f} MWh"
-        )
-
-        col5, col6, col7 = st.columns(3)
-        col5.metric(
-            "Finaler SOC",
-            f"{stats.get('final_soc_kwh', 0) / 1000:.2f} MWh"
-        )
-        col6.metric(
-            "Finaler SOC [%]",
-            f"{stats.get('final_soc_percent', 0):.1f} %"
-        )
-        col7.metric(
-            "Max. Lade-/Entladeleistung",
-            f"{stats.get('max_charge_kw', 0):.0f} kW"
-        )
+    with st.expander("Batterieergebnisse anzeigen", expanded=False):
+        if not sim_output.bs_df.empty:
+            stats = sim_output.bs_stats
 
         # Plot 1: Bilanz vorher / nachher
         fig1, ax1 = plt.subplots(figsize=(12, 4))
@@ -545,16 +511,7 @@ if st.session_state.simulation_ran:
         ax1.legend()
         st.pyplot(fig1)
 
-        # Plot 2: Batteriefluss
-        fig2, ax2 = plt.subplots(figsize=(12, 4))
-        ax2.plot(sim_output.bs_df.index, sim_output.bs_df["battery_power_kw"])
-        ax2.set_title("Batteriefluss")
-        ax2.set_xlabel("Zeit")
-        ax2.set_ylabel("Leistung [kW]")
-        ax2.grid(True)
-        st.pyplot(fig2)
-
-        # Plot 3: SOC
+        # Plot 2: SOC
         fig3, ax3 = plt.subplots(figsize=(12, 4))
         ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
         ax3.set_title("State of Charge der Batterie")
@@ -562,8 +519,3 @@ if st.session_state.simulation_ran:
         ax3.set_ylabel("Energie [kWh]")
         ax3.grid(True)
         st.pyplot(fig3)
-
-        with st.expander("Batteriedaten anzeigen"):
-            st.dataframe(sim_output.bs_df)
-    else:
-        st.info("Keine Batterie aktiv oder keine Batteriedaten vorhanden.")

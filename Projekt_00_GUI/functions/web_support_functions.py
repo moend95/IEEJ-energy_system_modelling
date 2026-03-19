@@ -44,6 +44,19 @@ def format_energy(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh/a"
 
+def format_capacity(value_kwh): # für kWh und nicht kWh/a
+    """
+    Formatiert Speicherkapazität / SOC (ohne /a).
+    """
+    value_kwh = float(value_kwh or 0)
+
+    if value_kwh >= 1_000_000:
+        return f"{value_kwh / 1_000_000:.2f} GWh"
+    elif value_kwh >= 1_000:
+        return f"{value_kwh / 1_000:.1f} MWh"
+    else:
+        return f"{value_kwh:.0f} kWh"
+
 
 def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="below"):
     """
@@ -351,12 +364,24 @@ def build_synergy_diagram(inp, sim_output):
     coverage_percent = 0.0
     surplus = 0.0
     deficit = 0.0
+    battery_charge_kwh = 0.0
+    battery_discharge_kwh = 0.0
+    battery_max_charge_kw = 0.0
+    battery_grid_import_kwh = 0.0
+    battery_grid_export_kwh = 0.0
+
 
     if sim_output is not None:
         solar_energy = max(float(getattr(sim_output, "h_sum_energy_kwh", 0) or 0), 0.0)
         landscape_energy = max(float(getattr(sim_output, "el_sum_energy_kwh", 0) or 0), 0.0)
         industry_energy = max(float(getattr(sim_output, "i_sum_energy_kwh", 0) or 0), 0.0)
         green_hub_energy = max(float(getattr(sim_output, "geh_sum_energy_kwh", 0) or 0), 0.0)
+        bs_stats = getattr(sim_output, "bs_stats", {}) or {}
+        battery_charge_kwh = float(bs_stats.get("battery_charge_kwh", 0) or 0)
+        battery_discharge_kwh = float(bs_stats.get("battery_discharge_kwh", 0) or 0)
+        battery_max_charge_kw = float(bs_stats.get("max_charge_kw", 0) or 0)
+        battery_grid_import_kwh = float(bs_stats.get("grid_import_kwh", 0) or 0)
+        battery_grid_export_kwh = float(bs_stats.get("grid_export_kwh", 0) or 0)
 
         total_generation = solar_energy + landscape_energy
         total_demand = industry_energy + green_hub_energy
@@ -462,8 +487,11 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     battery_text = (
-        f"Kapazität: {format_energy(float(getattr(inp, 'bs_energy_kwh', 0) or 0))}"
-        f"<br>Status: {'aktiv' if battery_active else 'deaktiviert'}"
+        f"Status: {'aktiv' if battery_active else 'deaktiviert'}"
+        f"<br>Kapazität: {format_capacity(float(getattr(inp, 'bs_energy_kwh', 0) or 0))}"
+        f"<br>Jährliche Ladung: {format_energy(battery_charge_kwh)}"
+        f"<br>Jährliche Entladung: {format_energy(battery_discharge_kwh)}"
+        f"<br>Max. Leistung: {battery_max_charge_kw:.0f} kW"
     )
 
     grid_text = (
@@ -561,6 +589,10 @@ def build_synergy_diagram(inp, sim_output):
         ("Jahresbilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", "#FFF4E8"),
         ("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
         ("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
+        ("Batterie-Ladung", format_energy(battery_charge_kwh), "#FFF0E6"),
+        ("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
+        ("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
+
     ]
     kpi_xs = [0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
 
