@@ -462,8 +462,8 @@ if run:
     st.session_state.simulation_ran = True
 
     st.session_state.sim_output = Output
-    print('\nOutput Daten:\n', Output)
-    st.write(Output.res_df.columns)
+    #print('\nOutput Daten:\n', Output)     #debug
+    #st.write(Output.res_df.columns)        #debug
 
 
 
@@ -472,7 +472,7 @@ if run:
 # Neue Visualisierung: Synergie-Diagramm
 # =========================================================
 
-st.title("Energiesystem – Visualisierung")
+st.title("\nErgebnisse")          #, text_alignment="center") klppt nicht     #:rainbow[Simulationsergebnisse]")
 #sim_output = st.session_state.sim_output if st.session_state.simulation_ran else Output
 
 with st.spinner("Visualisierung wird erstellt..."):
@@ -496,26 +496,44 @@ if st.session_state.simulation_ran:
 
     sim_output = st.session_state.sim_output
 
-    with st.expander("Batterieergebnisse anzeigen", expanded=False):
-        if not sim_output.bs_df.empty:
-            stats = sim_output.bs_stats
+    desc = sim_output.res_df.drop(columns=["Bilanz mit Batterie [kW]","SOC Batterie [kWh]","Batteriefluss [kW]"]).describe().loc[["mean", "min", "max"]].round(2)
+    desc.loc["sum [kWh]"] = sim_output.res_df.sum()/4
+    desc.loc["sum [kWh]"] = desc.loc["sum [kWh]"].round(1)
+    desc = desc.loc[["sum [kWh]", "mean", "min", "max"]]
 
-        # Plot 1: Bilanz vorher / nachher
-        fig1, ax1 = plt.subplots(figsize=(12, 4))
-        ax1.plot(sim_output.bs_df.index, sim_output.bs_df["balance_kw"], label="Bilanz vor Batterie")
-        ax1.plot(sim_output.bs_df.index, sim_output.bs_df["new_balance_kw"], label="Bilanz nach Batterie")
-        ax1.set_title("Bilanz vor und nach Batteriespeicher")
-        ax1.set_xlabel("Zeit")
-        ax1.set_ylabel("Leistung [kW]")
-        ax1.grid(True)
-        ax1.legend()
-        st.pyplot(fig1)
+    st.dataframe(desc)
 
-        # Plot 2: SOC
-        fig3, ax3 = plt.subplots(figsize=(12, 4))
-        ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
-        ax3.set_title("State of Charge der Batterie")
-        ax3.set_xlabel("Zeit")
-        ax3.set_ylabel("Energie [kWh]")
-        ax3.grid(True)
-        st.pyplot(fig3)
+    if not sim_output.bs_df.empty:
+
+        stats = sim_output.bs_stats
+
+        with st.expander("Batterieergebnisse anzeigen", expanded=False):
+
+
+
+            # Plot 1: Bilanz vorher / nachher
+            #GLEICHER PLOT HIER UNGEEIGNET
+            fig1, ax1 = plt.subplots(figsize=(12, 4))
+            ax1.plot(sim_output.bs_df.index, sim_output.bs_df["balance_kw"], label="Bilanz vor Batterie")
+            ax1.plot(sim_output.bs_df.index, sim_output.bs_df["new_balance_kw"], label="Bilanz nach Batterie", alpha=0.5)
+            ax1.set_title("Bilanz vor und nach Batteriespeicher")
+            ax1.set_xlabel("Zeit")
+            ax1.set_ylabel("Leistung [kW]")
+            ax1.grid(True)
+            ax1.legend()
+            st.pyplot(fig1)
+
+            # Plot 2: SOC
+            fig3, ax3 = plt.subplots(figsize=(12, 4))
+            ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
+            ax3.set_title("State of Charge der Batterie")
+            ax3.set_xlabel("Zeit")
+            ax3.set_ylabel("Energie [kWh]")
+            ax3.grid(True)
+            st.pyplot(fig3)
+
+            bs_desc = sim_output.bs_df.describe().loc[["mean", "min", "max"]].round(2)
+            bs_desc.loc["sum [kWh]"] = sim_output.bs_df.sum()/4
+            bs_desc.loc["sum [kWh]"] = bs_desc.loc["sum [kWh]"].round(2)
+            bs_desc = bs_desc.loc[["sum [kWh]", "mean", "min", "max"]]
+            st.dataframe(bs_desc)
