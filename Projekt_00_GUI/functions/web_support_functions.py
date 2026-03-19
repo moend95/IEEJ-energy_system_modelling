@@ -221,16 +221,13 @@ def add_legend(fig):
 
     # Zeile 1: durchgezogene Linien
     items_row1 = [
-        ("Erneuerbare Versorgung", "#10B35A", 0.1, "solid"),
-        ("Überschuss / Speicheroption", "#1DA1F2", 0.4, "solid"),
+        ("Erneuerbare Energie", "#10B35A", 0.1, "solid"),
+        ("Batterie Energiefluss", "#1DA1F2", 0.4, "solid"),
         ("Netzstrombezug", "#B9B9B9", 0.75, "solid"),
     ]
 
     # Zeile 2: gestrichelte Linien
-    items_row2 = [
-        ("Optionale Nutzung", "#1DA1F2", 0.1, "dot"),
-        ("Netzanbindung", "#A8A8A8", 0.4, "dot"),
-    ]
+    #items_row2 = [        ("Optionale Nutzung", "#1DA1F2", 0.1, "dot"),        ("Netzanbindung", "#A8A8A8", 0.4, "dot"),]
 
     for text, color, x, dash in items_row1:
         fig.add_shape(
@@ -251,6 +248,7 @@ def add_legend(fig):
             font=dict(size=11, color="#333333")
         )
 
+'''
     for text, color, x, dash in items_row2:
         fig.add_shape(
             type="line",
@@ -269,6 +267,7 @@ def add_legend(fig):
             yanchor="middle",
             font=dict(size=11, color="#333333")
         )
+'''
 
 def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot", label=None, label_x=None, label_y=None):
     """
