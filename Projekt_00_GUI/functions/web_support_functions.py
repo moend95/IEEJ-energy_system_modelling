@@ -44,9 +44,9 @@ def format_energy(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh/a"
 
-def format_capacity(value_kwh): # für kWh und nicht kWh/a
+def format_capacity(value_kwh):
     """
-    Formatiert Speicherkapazität / SOC (ohne /a).
+    Formatiert Energie (kWh) für Kapazität / SOC.
     """
     value_kwh = float(value_kwh or 0)
 
