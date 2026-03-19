@@ -18,16 +18,17 @@ ICON_PATHS = {
     "industry": os.path.join(icon_dir, "industrial_area.png"),
     "hub": os.path.join(icon_dir, "green_energy_hub.png"),
     "grid": os.path.join(icon_dir, "grid_supply.png"),
-    "surplus": None,
+    "js": os.path.join(icon_dir, "juechen_sued.png"),
 }
 
 ICON_SCALE = {
     "solar": 0.96,
     "landscape": 0.96,
-    "industry": 1,
-    "hub": 1,
+    "industry": 1.2,
+    "hub": 1.2,
     "battery": 0.6,
     "grid": 0.5,
+    "js": 0.8,
 }
 
 
@@ -368,6 +369,7 @@ def build_synergy_diagram(inp, sim_output):
     battery_max_charge_kw = 0.0
     battery_grid_import_kwh = 0.0
     battery_grid_export_kwh = 0.0
+    juechen_sued_energy = 0.0
 
 
     if sim_output is not None:
@@ -381,9 +383,10 @@ def build_synergy_diagram(inp, sim_output):
         battery_max_charge_kw = float(bs_stats.get("max_charge_kw", 0) or 0)
         battery_grid_import_kwh = float(bs_stats.get("grid_import_kwh", 0) or 0)
         battery_grid_export_kwh = float(bs_stats.get("grid_export_kwh", 0) or 0)
+        juechen_sued_energy = max(float(getattr(sim_output, "js_sum_energy_kwh", 0) or 0), 0.0)
 
         total_generation = solar_energy + landscape_energy
-        total_demand = industry_energy + green_hub_energy
+        total_demand = industry_energy + green_hub_energy + juechen_sued_energy
 
         coverage = float(getattr(sim_output, "bal_coverage_rate", 0) or 0)
         coverage_percent = max(0.0, min(coverage * 100.0, 100.0))
@@ -400,22 +403,20 @@ def build_synergy_diagram(inp, sim_output):
     # 2) Bilanzlogik für Darstellung
     # =========================================================
     # Lokale Deckung insgesamt
-    local_supply_total = min(total_generation, total_demand)
+    total_generation = solar_energy + landscape_energy
+    total_demand = industry_energy + green_hub_energy + juechen_sued_energy
 
-    # Verteilung der lokalen Versorgung proportional auf die beiden Verbraucher
-    if total_demand > 0:
-        industry_share = industry_energy / total_demand
-        hub_share = green_hub_energy / total_demand
+    balance = float(getattr(sim_output, "bal_energy_kwh", 0) or 0)
+
+    if balance >= 0:
+        surplus = balance
+        grid_import_total = 0.0
+        grid_export = balance
     else:
-        industry_share = 0.0
-        hub_share = 0.0
+        surplus = 0.0
+        grid_import_total = abs(balance)
+        grid_export = 0.0
 
-    local_supply_industry = local_supply_total * industry_share
-    local_supply_hub = local_supply_total * hub_share
-
-    grid_import_industry = max(industry_energy - local_supply_industry, 0.0)
-    grid_import_hub = max(green_hub_energy - local_supply_hub, 0.0)
-    grid_import_total = grid_import_industry + grid_import_hub
     grid_export = surplus
 
     # Quellaufteilung Solar / Landschaft für die Abgänge vom linken Bereich
@@ -454,49 +455,55 @@ def build_synergy_diagram(inp, sim_output):
 
     n_companies = len([c for c in inp.i_companies if c is not None]) if inp.i_companies else 0
 
-    industry_status = (
-        "kein Bedarf" if industry_energy == 0 else
-        "gedeckt" if grid_import_industry == 0 else
-        "teilweise gedeckt"
-    )
+    # Industrie Hover
+    industry_active = industry_energy > 0
 
     industry_text = (
-        f"Auswahl: {n_companies} Unternehmen"
-        f"<br>Bedarf: {format_energy(industry_energy)}"
-        f"<br>Lokal gedeckt: {format_energy(local_supply_industry)}"
-        f"<br>Netzbezug: {format_energy(grid_import_industry)}"
-        f"<br>Status: {industry_status}"
+        f"Status: {'aktiv' if industry_active else 'nicht aktiv'}"
+        f"<br>Auswahl: {n_companies} Unternehmen"
+        f"<br>Jahresbedarf: {format_energy(industry_energy)}"
     )
 
-    if inp.geh_h2_load_scenario is None or inp.geh_e_load_scenario is None:
-        hub_text = "deaktiviert"
-    else:
-        hub_status = (
-            "kein Bedarf" if green_hub_energy == 0 else
-            "gedeckt" if grid_import_hub == 0 else
-            "teilweise gedeckt"
-        )
-        hub_text = (
-            f"H₂-Szenario: {inp.geh_h2_load_scenario}"
-            f"<br>El.-Szenario: {inp.geh_e_load_scenario}"
-            f"<br>Bedarf: {format_energy(green_hub_energy)}"
-            f"<br>Lokal gedeckt: {format_energy(local_supply_hub)}"
-            f"<br>Netzbezug: {format_energy(grid_import_hub)}"
-            f"<br>Status: {hub_status}"
-        )
+    # Green Energy Hub Hover
+    geh_active = (
+            inp.geh_h2_load_scenario not in [None, "Keine"] or
+            inp.geh_e_load_scenario not in [None, "Keine"]
+    )
 
+    status = "aktiv" if geh_active else "nicht aktiv"
+
+    hub_text = (
+        f"Status: {status}"
+        f"<br>H₂-Szenario: {inp.geh_h2_load_scenario}"
+        f"<br>El.-Szenario: {inp.geh_e_load_scenario}"
+        f"<br>Jahresbedarf: {format_energy(green_hub_energy)}"
+    )
+
+    # Jüchen-Süd Hover
+    js_active = inp.js_scenario not in [None, "Aus"]
+
+    js_text = (
+        f"Status: {'aktiv' if js_active else 'nicht Aktiv'}"
+        f"<br>Szenario: {inp.js_scenario}"
+        f"<br>Jahresbedarf: {format_energy(juechen_sued_energy)}"
+    )
+
+    # Batterie Hover
     battery_text = (
-        f"Status: {'aktiv' if battery_active else 'deaktiviert'}"
+        f"Status: {'aktiv' if battery_active else 'nicht aktiv'}"
         f"<br>Kapazität: {format_capacity(float(getattr(inp, 'bs_energy_kwh', 0) or 0))}"
         f"<br>Jährliche Ladung: {format_energy(battery_charge_kwh)}"
         f"<br>Jährliche Entladung: {format_energy(battery_discharge_kwh)}"
         f"<br>Max. Leistung: {battery_max_charge_kw:.0f} kW"
     )
 
+    # Netzbezug Hover
     grid_text = (
         f"Import: {format_energy(grid_import_total)}"
         f"<br>Export: {format_energy(grid_export)}"
     )
+
+
 
     system_text = (
         f"Gesamterzeugung: {format_energy(total_generation)}"
@@ -511,7 +518,7 @@ def build_synergy_diagram(inp, sim_output):
 
     # =========================================================
     # 4) Knotenpositionen
-    #    -> hier kannst du später leicht rumspielen
+    #
     # =========================================================
     nodes = {
         "solar": {
@@ -545,17 +552,26 @@ def build_synergy_diagram(inp, sim_output):
             "icon": "battery"
         },
         "industry": {
-            "x": 0.98, "y": 0.65,
+            "x": 0.98, "y": 0.75,
             "label": "Industrial Area",
             "info": industry_text,
             "icon": "industry"
+
+        },
+        "js": {
+            "x": 0.98, "y": 0.55,
+            "label": "Stadtentwicklung",
+            "info": js_text,
+            "icon": "js"
+
         },
         "hub": {
-            "x": 0.98, "y": 0.35,
+            "x": 0.98, "y": 0.32,
             "label": "Green Energy Hub",
             "info": hub_text,
             "icon": "hub"
         }
+
     }
 
     # =========================================================
@@ -573,10 +589,15 @@ def build_synergy_diagram(inp, sim_output):
     COLOR_OPTIONAL = "#10B35A"
 
     flow_values = [
-        solar_energy, landscape_energy,
-        local_supply_industry, local_supply_hub,
-        grid_import_total, grid_export
+        solar_energy,
+        landscape_energy,
+        industry_energy,
+        juechen_sued_energy,
+        green_hub_energy,
+        grid_import_total,
+        grid_export
     ]
+
     max_flow = max(flow_values) if max(flow_values) > 0 else 1.0
 
     # KPI-Karten oben
@@ -619,7 +640,7 @@ def build_synergy_diagram(inp, sim_output):
     add_legend(fig)
 
     # Rechteckige Knoten mit Icons
-    for key in ["solar", "landscape", "grid", "battery", "industry", "hub"]:
+    for key in ["solar", "landscape", "grid", "battery", "industry", "hub", "js"]:
         node = nodes[key]
         x = node["x"]
         y = node["y"]
@@ -682,6 +703,7 @@ def build_synergy_diagram(inp, sim_output):
     industry_left = (nodes["industry"]["x"] - box_w / 2, nodes["industry"]["y"])
     hub_left = (nodes["hub"]["x"] - box_w / 2, nodes["hub"]["y"])
     system_center = (nodes["system"]["x"], nodes["system"]["y"])
+    js_left = (nodes["js"]["x"] - box_w / 2, nodes["js"]["y"])
 
     x_left_join = (system_center[0]+solar_right[0])/2
     x_right_split = (system_center[0]+industry_left[0])/2
@@ -725,6 +747,14 @@ def build_synergy_diagram(inp, sim_output):
             points=[system_center, (x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
             color=COLOR_RENEWABLE,
             width=scale_arrow_width(green_hub_energy, max_flow)
+        )
+
+    if juechen_sued_energy > 0:
+        add_routed_arrow(
+            fig,
+            points=[system_center, (x_right_split, system_center[1]), (x_right_split, js_left[1]), js_left],
+            color=COLOR_RENEWABLE,
+            width=scale_arrow_width(juechen_sued_energy, max_flow)
         )
 
     # =========================================================
@@ -771,26 +801,30 @@ def build_synergy_diagram(inp, sim_output):
             label_y=half_y_grid+0.025
         )
 
-    # Optionale gestrichelte Hinweise vom System zu den Verbrauchern bei Defizit,
-    # damit man im Stil deiner Skizze andeuten kann, dass dort Netzstrom ankommt
-    if grid_import_total > 0: #== 7: #temp fix soll nicht in die if rein gehen (statt auskommentieren)
-        if grid_import_industry > 0:
-            add_optional_connection(
-                fig,
-                points=[system_center,(x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
-                color=COLOR_GRID,
-                width=1.4,
-                dash="dot",
-            )
+    if grid_import_total > 0:
+        add_optional_connection(
+            fig,
+            points=[system_center, (x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
+            color=COLOR_GRID,
+            width=1.4,
+            dash="dot",
+        )
 
-        if grid_import_hub > 0:
-            add_optional_connection(
-                fig,
-                points=[system_center,(x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
-                color=COLOR_GRID,
-                width=1.4,
-                dash="dot",
-            )
+        add_optional_connection(
+            fig,
+            points=[system_center, (x_right_split, system_center[1]), (x_right_split, js_left[1]), js_left],
+            color=COLOR_GRID,
+            width=1.4,
+            dash="dot",
+        )
+
+        add_optional_connection(
+            fig,
+            points=[system_center, (x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
+            color=COLOR_GRID,
+            width=1.4,
+            dash="dot",
+        )
 
     # =========================================================
     # 12) Layout
@@ -804,3 +838,4 @@ def build_synergy_diagram(inp, sim_output):
     )
 
     return fig
+

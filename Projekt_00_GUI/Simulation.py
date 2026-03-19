@@ -280,16 +280,16 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         if os.path.exists(js_path):
             try:
-                df_js = pd.read_csv(js_path, sep=";")
+                df_js = pd.read_csv(js_path, sep=",")
                 df_js.columns = df_js.columns.str.strip()
 
-                if "Zeit" not in df_js.columns or "Strombezug (kW)" not in df_js.columns:
+                if "Timestamp" not in df_js.columns or "Strombezug (kW)" not in df_js.columns:
                     raise ValueError(
                         f"Unerwartete Spalten in Jüchen-Süd-Datei: {list(df_js.columns)}"
                     )
 
                 df_js["timestamp"] = pd.to_datetime(
-                    "2022 " + df_js["Zeit"].astype(str).str.strip(),
+                    "2022 " + df_js["Timestamp"].astype(str).str.strip(),
                     format="%Y %d.%m. %H:%M",
                     errors="coerce"
                 )
