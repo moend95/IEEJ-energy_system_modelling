@@ -33,7 +33,7 @@ class BatteryStorage:
         self.discharge_efficiency = discharge_efficiency
 
         self.max_charge_c = float(max_charge_c or 0)
-        self.max_discharge_c = float(max_charge_c or 0)
+        self.max_discharge_c = float(max_discharge_c or 0) # angepasst war vorher max_charge_c
 
 
         # C-Faktor -> maximale Leistung in kW

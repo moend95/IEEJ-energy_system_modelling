@@ -317,11 +317,20 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             max_discharge_c=inp.bs_c_rate,
         )
 
-        out.bs_df = storage.simulate(out.res_df['Bilanz [kW]'], timestep_hours=0.25)
-
+        out.bs_df = storage.simulate(out.res_df["Bilanz [kW]"], timestep_hours=0.25)
         out.bs_stats = storage.get_stats(out.bs_df, timestep_hours=0.25)
-        out.bal_power_max_kw = out.res_df["new_balance_kw"].max()
-        out.bal_power_min_kw = out.res_df["new_balance_kw"].min()
+
+        out.res_df["Batteriefluss [kW]"] = out.bs_df["battery_power_kw"]
+        out.res_df["SOC Batterie [kWh]"] = out.bs_df["soc_kwh"]
+        out.res_df["Bilanz mit Batterie [kW]"] = out.bs_df["new_balance_kw"]
+
+        out.bal_power_max_kw = out.bs_df["new_balance_kw"].max()
+        out.bal_power_min_kw = out.bs_df["new_balance_kw"].min()
+
+    else:
+        out.res_df["Batteriefluss [kW]"] = 0.0
+        out.res_df["SOC Batterie [kWh]"] = 0.0
+        out.res_df["Bilanz mit Batterie [kW]"] = out.res_df["Bilanz [kW]"]
 
 
 
