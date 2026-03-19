@@ -237,3 +237,46 @@ def plot_green_hub_annual_energy(base_dir, years=("2022", "2030", "2050")):
     fig.tight_layout()
 
     return fig
+
+# Jüchen Süd Plots Lastgang
+def plot_js_weekly_profile(csv_path, scale_factor=1, start="2022-03-05"):
+    """
+    Beispielwoche für Jüchen Süd Lastprofil
+    """
+
+    df = pd.read_csv(csv_path, sep=",")
+    df.columns = df.columns.str.strip()
+
+    df["timestamp"] = pd.to_datetime(
+        "2022 " + df["Timestamp"].astype(str).str.strip(),
+        format="%Y %d.%m. %H:%M",
+        errors="coerce"
+    )
+
+    df["Strombezug (kW)"] = pd.to_numeric(
+        df["Strombezug (kW)"].astype(str).str.replace(",", ".", regex=False),
+        errors="coerce"
+    ).fillna(0)
+
+    df = df.set_index("timestamp").sort_index()
+
+    # Skalierung
+    series = df["Strombezug (kW)"] * scale_factor
+
+    try:
+        week = series.loc[start:].iloc[:7 * 24 * 4]
+    except Exception:
+        week = series.iloc[:7 * 24 * 4]
+
+    fig, ax = plt.subplots(figsize=(15, 7))
+
+    ax.plot(week.index, week.values, label=f"Jüchen Süd x{scale_factor}")
+
+    ax.set_title("Beispielhafte Wochenprofile – Jüchen Süd")
+    ax.set_xlabel("Zeit")
+    ax.set_ylabel("Leistung [kW]")
+    ax.grid(True)
+    ax.legend()
+
+    fig.tight_layout()
+    return fig

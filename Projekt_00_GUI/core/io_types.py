@@ -40,6 +40,10 @@ class GuiInput:
     bs_energy_kwh: Optional[float] = None               # Capacity [kWh]
     bs_c_rate: Optional[float] = None                   # C-rate
 
+    # Jüchen Süd
+    js_scenario: Optional[str] = None
+
+
 # =========================
 # Output der Simulation
 # =========================
@@ -57,12 +61,14 @@ class SimOutput:
     el_sum_energy_kwh: float | None = None
     geh_sum_energy_kwh: float | None = None
     i_sum_energy_kwh: float | None = None
+    js_sum_energy_kwh: float | None = None
 
     # Max power [kW] - all values production and consumption are positive,
     h_max_power_kw: float | None = None
     el_max_power_kw: float | None = None
     geh_max_power_kw: float | None = None
     i_max_power_kw: float | None = None
+    js_max_power_kw: float | None = None
 
     # pandas dataframes with load profiles
     res_df: pd.DataFrame = field(default_factory=pd.DataFrame)
@@ -70,6 +76,7 @@ class SimOutput:
 
     # Battery statistics
     bs_stats: dict = field(default_factory=dict)
+
 
     # System balance
     bal_energy_kwh: float | None = None
@@ -82,6 +89,7 @@ class SimOutput:
     el_error_text: str | None = None
     geh_error_text: str | None = None
     i_error_text: str | None = None
+    js_error_text: str | None = None
 
     # Debug
     h_number_of_points: int | None = None

@@ -20,7 +20,8 @@ from functions.plot_functions import (
     plot_industry_preview,
     plot_industry_annual_energy,
     plot_green_hub_weekly_profiles,
-    plot_green_hub_annual_energy
+    plot_green_hub_annual_energy,
+    plot_js_weekly_profile,
 )
 
 from functions.web_support_functions import *
@@ -378,6 +379,56 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         else:
             st.info("Green Energy Hub ist deaktiviert.")
 
+
+        # JÜCHEN SÜD
+        with tab6:
+            st.write("Wähle das Szenario für das Neubaugebiet Jüchen Süd:")
+
+            js_options = {
+                "Aus": 0,
+                "1000 Bewohner": 1,
+                "2000 Bewohner": 2,
+                "3000 Bewohner": 3
+            }
+
+            Input.js_scenario = st.segmented_control(
+                "Szenario",
+                options=list(js_options.keys()),
+                default="Aus"
+            )
+
+            js_factor = js_options[Input.js_scenario]
+
+            if js_factor == 0:
+                st.info("Jüchen Süd ist deaktiviert.")
+            else:
+                st.info(
+                    f"""
+                    **Jüchen Süd aktiv:**  
+                    Szenario: **{Input.js_scenario}**  
+                    Skalierungsfaktor Lastgang: **x{js_factor}**
+                    """
+                )
+
+                # 👉 Plot
+                js_csv_path = os.path.join(
+                    script_dir,
+                    "functions",
+                    "inputs",
+                    "Strombezug_Stadtentwicklung_15min.csv"
+                )
+
+                st.write("### Beispielhafte Wochenlastprofile Jüchen Süd")
+
+                fig_js = plot_js_weekly_profile(
+                    js_csv_path,
+                    scale_factor=js_factor,
+                    start="2022-03-05"
+                )
+
+                st.pyplot(fig_js)
+
+
 st.write("### Batterie Eingabewerte")
 
 with st.container(key="Batterie", width=1500, height=500):
@@ -537,7 +588,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
     st.pyplot(fig)
 
     with st.expander("Lastgang Infos anzeigen", expanded=False):
-        desc_stats = sim_output.res_df.drop(columns=["Bilanz mit Batterie [kW]","SOC Batterie [kWh]","Batteriefluss [kW]"])
+        desc_stats = sim_output.res_df
         desc = desc_stats.describe().loc[["mean", "min", "max"]].round(2)
         desc.loc["sum [kWh]"] = desc_stats.sum()/4
         desc.loc["sum [kWh]"] = desc.loc["sum [kWh]"].round(1)

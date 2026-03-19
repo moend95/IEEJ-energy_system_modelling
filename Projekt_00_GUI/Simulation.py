@@ -253,11 +253,71 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     print('Green Energy Hub \t- abgeschlossen')
 
-
     # ------------------------------------------------------------
     # 5) Stadtentwicklung Jüchen Süd
     # ------------------------------------------------------------
+    out.res_df["Last_Juechen_Sued [kW]"] = 0.0
+    out.js_max_power_kw = 0.0
+    out.js_sum_energy_kwh = 0.0
+    out.js_error_text = ""
 
+    js_scale_map = {
+        "Aus": 0,
+        "1000 Bewohner": 1,
+        "2000 Bewohner": 2,
+        "3000 Bewohner": 3,
+    }
+
+    js_factor = js_scale_map.get(inp.js_scenario, 0)
+
+    if js_factor > 0:
+        js_path = os.path.join(
+            script_dir,
+            "functions",
+            "inputs",
+            "Strombezug_Stadtentwicklung_15min.csv"
+        )
+
+        if os.path.exists(js_path):
+            try:
+                df_js = pd.read_csv(js_path, sep=";")
+                df_js.columns = df_js.columns.str.strip()
+
+                if "Zeit" not in df_js.columns or "Strombezug (kW)" not in df_js.columns:
+                    raise ValueError(
+                        f"Unerwartete Spalten in Jüchen-Süd-Datei: {list(df_js.columns)}"
+                    )
+
+                df_js["timestamp"] = pd.to_datetime(
+                    "2022 " + df_js["Zeit"].astype(str).str.strip(),
+                    format="%Y %d.%m. %H:%M",
+                    errors="coerce"
+                )
+
+                df_js["Strombezug (kW)"] = pd.to_numeric(
+                    df_js["Strombezug (kW)"].astype(str).str.replace(",", ".", regex=False),
+                    errors="coerce"
+                ).fillna(0)
+
+                df_js = df_js.set_index("timestamp").sort_index()
+
+                js_series = df_js["Strombezug (kW)"].clip(lower=0) * js_factor
+
+                if len(js_series) == len(out.res_df.index):
+                    js_series = pd.Series(js_series.to_numpy(), index=out.res_df.index)
+                else:
+                    js_series = js_series.reset_index(drop=True)
+                    js_series.index = out.res_df.index[:len(js_series)]
+                    js_series = js_series.reindex(out.res_df.index, fill_value=0.0)
+
+                out.res_df["Last_Juechen_Sued [kW]"] = js_series
+                out.js_max_power_kw = out.res_df["Last_Juechen_Sued [kW]"].max()
+                out.js_sum_energy_kwh = (out.res_df["Last_Juechen_Sued [kW]"] * 0.25).sum()
+
+            except Exception as e:
+                out.js_error_text = f"JÜCHEN SÜD --- Fehler beim Laden: {e}"
+        else:
+            out.js_error_text = f"JÜCHEN SÜD --- Datei nicht gefunden: {js_path}"
 
 
 
@@ -270,6 +330,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         "Erzeugung_Energielandschaft [kW]": 1,
         "Last_Industrie [kW]": -1,
         "Last_Green_Energy_Hub [kW]": -1,
+        "Last_Juechen_Sued [kW]": -1,
     }
 
     balance = 0
@@ -283,11 +344,13 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     el_energy = out.el_sum_energy_kwh or 0
     geh_energy = out.geh_sum_energy_kwh or 0
     i_energy = out.i_sum_energy_kwh or 0
-    out.bal_energy_kwh = h_energy + el_energy - geh_energy - i_energy
+    js_energy = out.js_sum_energy_kwh or 0
+
+    out.bal_energy_kwh = h_energy + el_energy - geh_energy - i_energy - js_energy
 
     # für coverage_rate
     total_generation = h_energy + el_energy
-    total_demand = geh_energy + i_energy
+    total_demand = geh_energy + i_energy + js_energy
 
     if total_demand > 0:
         out.bal_coverage_rate = min(total_generation / total_demand, 1.0)
@@ -320,20 +383,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.bs_df = storage.simulate(out.res_df["Bilanz [kW]"], timestep_hours=0.25)
         out.bs_stats = storage.get_stats(out.bs_df, timestep_hours=0.25)
 
-        out.res_df["Batteriefluss [kW]"] = out.bs_df["battery_power_kw"]
-        out.res_df["SOC Batterie [kWh]"] = out.bs_df["soc_kwh"]
-        out.res_df["Bilanz mit Batterie [kW]"] = out.bs_df["new_balance_kw"]
-
         out.bal_power_max_kw = out.bs_df["new_balance_kw"].max()
         out.bal_power_min_kw = out.bs_df["new_balance_kw"].min()
-
-    else:
-        out.res_df["Batteriefluss [kW]"] = 0.0
-        out.res_df["SOC Batterie [kWh]"] = 0.0
-        out.res_df["Bilanz mit Batterie [kW]"] = out.res_df["Bilanz [kW]"]
-
-
-
 
     print('Batterie \t\t\t- abgeschlossen')
 
