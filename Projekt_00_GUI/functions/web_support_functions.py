@@ -865,7 +865,7 @@ def build_synergy_diagram(inp, sim_output):
         y=0.8,
         xref="paper",
         yref="paper",
-        text="<b><u>Energiefluss:</u></b>",
+        text="<b><u>Energiebilanz:</u></b>",
         showarrow=False,
         font=dict(size=20, color="#2F3445"),
         align="left",
