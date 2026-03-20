@@ -68,6 +68,22 @@ st.set_page_config(layout="centered")
 Input = GuiInput()
 Output = SimOutput()
 
+#kleines logo
+th_logo_path = os.path.join(icon_dir, "logo.png")
+st.logo(
+    image=th_logo_path,
+    #icon_image=logo_path,
+    size='large'
+)
+iee_logo_path = os.path.join(icon_dir, "IEE_Logo.png")
+st.logo(
+    image=iee_logo_path,
+    #icon_image=logo_path,
+    size='large'
+)
+
+
+
 if "simulation_ran" not in st.session_state:
     st.session_state.simulation_ran = False
 
