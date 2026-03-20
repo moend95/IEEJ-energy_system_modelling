@@ -154,7 +154,7 @@ def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, la
             bgcolor="rgba(255,255,255,0.85)"
         )
 
-def scale_arrow_width(flow_value, max_flow, min_width=1.5, max_width=5.0):
+def scale_arrow_width(flow_value, max_flow, min_width=2.0, max_width=5.8):
     """
     Skaliert die Pfeildicke linear auf Basis des größten dargestellten Flusses.
     """
@@ -217,14 +217,14 @@ def add_physical_connection(
         )
 
 def add_legend(fig):
-    legend_y1 = 0.06
+    legend_y1 = 0.04
     legend_y2 = 0.035
 
     # Zeile 1: durchgezogene Linien
     items_row1 = [
         ("Erneuerbare Energie", "#10B35A", 0.1, "solid"),
         ("Batterie Energiefluss", "#1DA1F2", 0.4, "solid"),
-        ("Netzstrombezug", "#B9B9B9", 0.75, "solid"),
+        ("Netzstrombezug", "#B9B9B9", 0.7, "solid"),
     ]
 
     # Zeile 2: gestrichelte Linien
@@ -534,7 +534,7 @@ def build_synergy_diagram(inp, sim_output):
             "icon": "landscape"
         },
         "grid": {
-            "x": 0.57, "y": 0.78,
+            "x": 0.50, "y": 0.78,
             "label": "Power Grid",
             "info": grid_text,
             "icon": "grid"
@@ -546,27 +546,27 @@ def build_synergy_diagram(inp, sim_output):
             "icon": None
         },
         "battery": {
-            "x": 0.51, "y": 0.22,
+            "x": 0.50, "y": 0.22,
             "label": "Battery Storage",
             "info": battery_text,
             "icon": "battery"
         },
         "industry": {
-            "x": 0.98, "y": 0.75,
+            "x": 0.98, "y": 0.76,
             "label": "Industrial Area",
             "info": industry_text,
             "icon": "industry"
 
         },
         "js": {
-            "x": 0.98, "y": 0.55,
+            "x": 0.98, "y": 0.50,
             "label": "Stadtentwicklung",
             "info": js_text,
             "icon": "js"
 
         },
         "hub": {
-            "x": 0.98, "y": 0.32,
+            "x": 0.98, "y": 0.24,
             "label": "Green Energy Hub",
             "info": hub_text,
             "icon": "hub"
@@ -582,11 +582,11 @@ def build_synergy_diagram(inp, sim_output):
     fig.update_yaxes(visible=False, range=[0.00, 1.10])
 
     box_w = 0.22
-    box_h = 0.16
+    box_h = 0.15
 
     COLOR_RENEWABLE = "#10B35A"
     COLOR_GRID = "#B9B9B9"
-    COLOR_OPTIONAL = "#10B35A"
+    COLOR_OPTIONAL = "#11c2bc"
 
     flow_values = [
         solar_energy,
@@ -601,26 +601,33 @@ def build_synergy_diagram(inp, sim_output):
     max_flow = max(flow_values) if max(flow_values) > 0 else 1.0
 
     # KPI-Karten oben
-    kpi_y = 1.04
+    kpi_y = 1.05
     kpis = [
-        ("Jahreserzeugung", format_energy(total_generation), "#EAF4FF"),
-        ("Jahresbedarf", format_energy(total_demand), "#F8F8F8"),
+        ("Jahreserzeugung", format_energy(total_generation), '#a6e8a2'),
+        ("Jahresbedarf", format_energy(total_demand), '#eba865'),
+        ("Jahresbilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
         ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
-        ("Jahresbilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", "#FFF4E8"),
-        ("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
-        ("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
-        ("Batterie-Ladung", format_energy(battery_charge_kwh), "#FFF0E6"),
-        ("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
-        ("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
+        #("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
+        #("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
+        ("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
+        #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
+        #("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
 
     ]
-    kpi_xs = [0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
+    x_min = 0.08
+    x_max = 1.0
+
+    if len(kpis) == 1:
+        kpi_xs = [(x_min + x_max) / 2]
+    else:
+        step = (x_max - x_min) / (len(kpis) - 1)
+        kpi_xs = [x_min + i * step for i in range(len(kpis))] #[0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
 
     for (title, value_text, fill), x in zip(kpis, kpi_xs):
         fig.add_shape(
             type="rect",
-            x0=x - 0.08, x1=x + 0.08,
-            y0=kpi_y - 0.045, y1=kpi_y + 0.045,
+            x0=x - 0.09, x1=x + 0.09, #x0=x - 0.08, x1=x + 0.08,
+            y0=kpi_y - 0.05, y1=kpi_y + 0.05, #y0=kpi_y - 0.045, y1=kpi_y + 0.045,
             line=dict(color="rgba(80,80,80,0.45)", width=1.1),
             fillcolor=fill,
             layer="below"
@@ -630,7 +637,7 @@ def build_synergy_diagram(inp, sim_output):
             y=kpi_y,
             text=f"<b>{title}</b><br>{value_text}",
             showarrow=False,
-            font=dict(size=10, color="#2F3445"),
+            font=dict(size=12, color="#2F3445"),
             align="center"
         )
 
@@ -656,7 +663,7 @@ def build_synergy_diagram(inp, sim_output):
             layer="below"
         )
 
-        label_pos = "above" if key in ["solar", "grid", "industry"] else "below"
+        label_pos = "below" if key in ["battery"] else "above"
 
         add_node_with_icon(
             fig=fig,
@@ -705,8 +712,8 @@ def build_synergy_diagram(inp, sim_output):
     system_center = (nodes["system"]["x"], nodes["system"]["y"])
     js_left = (nodes["js"]["x"] - box_w / 2, nodes["js"]["y"])
 
-    x_left_join = (system_center[0]+solar_right[0])/2
-    x_right_split = (system_center[0]+industry_left[0])/2
+    x_left_join = (system_center[0]+solar_right[0])/2 -0.07
+    x_right_split = (system_center[0]+industry_left[0])/2 +0.03
 
     half_y_grid =  (grid_bottom[1]+system_center[1])/2
     half_y_bat =  (battery_top[1]+system_center[1])/2
@@ -765,13 +772,13 @@ def build_synergy_diagram(inp, sim_output):
             fig,
             points=[system_center, (system_center[0], half_y_bat),(battery_top[0], half_y_bat), battery_top],
             color=COLOR_OPTIONAL,
-            width=1.6
+            width=scale_arrow_width(battery_charge_kwh, max_flow)
         )
         add_routed_arrow(
             fig,
             points=[battery_top,(battery_top[0], half_y_bat), (system_center[0], half_y_bat),system_center],
             color=COLOR_OPTIONAL,
-            width=1.6
+            width=scale_arrow_width(battery_charge_kwh, max_flow)
         )
 
     # =========================================================
@@ -786,7 +793,7 @@ def build_synergy_diagram(inp, sim_output):
             color=COLOR_RENEWABLE,
             width=scale_arrow_width(grid_export, max_flow),
             label="Überschuss",
-            label_x=system_center[0]-0.025,
+            label_x=system_center[0]+0.025,
             label_y=half_y_grid+0.025
         )
 
@@ -797,44 +804,73 @@ def build_synergy_diagram(inp, sim_output):
             color=COLOR_GRID,
             width=scale_arrow_width(grid_import_total, max_flow),
             label="Netzbezug",
-            label_x=system_center[0]-0.025,
+            label_x=system_center[0]+0.02,
             label_y=half_y_grid+0.025
         )
 
-    if grid_import_total > 0:
-        add_optional_connection(
-            fig,
-            points=[system_center, (x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
-            color=COLOR_GRID,
-            width=1.4,
-            dash="dot",
-        )
+        #graue dot pfeile für overlay bei Netzbezug
+        if industry_energy > 0:
+            add_optional_connection(
+                fig,
+                points=[system_center, (x_right_split, system_center[1]), (x_right_split, industry_left[1]), industry_left],
+                color=COLOR_GRID,
+                width=scale_arrow_width(industry_energy, max_flow)-0.5,
+                dash="dot",
+            )
 
-        add_optional_connection(
-            fig,
-            points=[system_center, (x_right_split, system_center[1]), (x_right_split, js_left[1]), js_left],
-            color=COLOR_GRID,
-            width=1.4,
-            dash="dot",
-        )
+        if juechen_sued_energy > 0:
+            add_optional_connection(
+                fig,
+                points=[system_center, (x_right_split, system_center[1]), (x_right_split, js_left[1]), js_left],
+                color=COLOR_GRID,
+                width=scale_arrow_width(juechen_sued_energy, max_flow)-0.5,
+                dash="dot",
+            )
 
-        add_optional_connection(
-            fig,
-            points=[system_center, (x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
-            color=COLOR_GRID,
-            width=1.4,
-            dash="dot",
-        )
+        if green_hub_energy > 0:
+            add_optional_connection(
+                fig,
+                points=[system_center, (x_right_split, system_center[1]), (x_right_split, hub_left[1]), hub_left],
+                color=COLOR_GRID,
+                width=scale_arrow_width(green_hub_energy, max_flow)-0.5,
+                dash="dot",
+            )
 
     # =========================================================
     # 12) Layout
     # =========================================================
+
+
+
     fig.update_layout(
-        title="Annual Energy Balance",
-        height=820,
         margin=dict(l=20, r=20, t=100, b=20),
-        plot_bgcolor="white",
-        paper_bgcolor="white"
+        height=820,
+    )
+
+    fig.add_annotation(
+        x=0.045,
+        y=1.01,
+        xref="paper",
+        yref="paper",
+        text="<b><u>KPIs:</u></b>",
+        showarrow=False,
+        font=dict(size=20, color="#2F3445"),
+        align="left",
+        xanchor="center",
+        yanchor="bottom"
+    )
+
+    fig.add_annotation(
+        x=0.095,
+        y=0.8,
+        xref="paper",
+        yref="paper",
+        text="<b><u>Energiefluss:</u></b>",
+        showarrow=False,
+        font=dict(size=20, color="#2F3445"),
+        align="left",
+        xanchor="center",
+        yanchor="bottom"
     )
 
     return fig
