@@ -537,6 +537,22 @@ with st.spinner("Visualisierung wird erstellt..."):
 # =========================================================
 if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
+    sim_output = st.session_state.sim_output
+
+
+    #NUll spalten entfernen
+    protected_cols = ["Bilanz [kW]"]
+
+    zero_cols = [
+        col for col in sim_output.res_df.columns
+        if col not in protected_cols and sim_output.res_df[col].fillna(0).eq(0).all()
+    ]
+
+    sim_output.res_df = sim_output.res_df.drop(columns=zero_cols)
+
+
+
+
     st.write("### Bilanzverlauf")
 
     import pandas as pd
@@ -546,7 +562,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
 
 
-    sim_output = st.session_state.sim_output
+
 
 
     if hasattr(sim_output, "bs_df") and sim_output.bs_df is not None and not sim_output.bs_df.empty:
