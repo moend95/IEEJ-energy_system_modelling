@@ -192,7 +192,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 },
             }
 
-            if Input.el_build_state != 0:
+            if Input.el_build_state != 0 and Input.el_build_state is not None:
                 selected_file = pv_geojson_mapping_col2_tab2[el_selected_names][Input.el_build_state]
                 geojson_path = os.path.join(script_dir, "geometry", selected_file)
 
@@ -201,7 +201,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
 
             m = folium.Map(location=[51.07596, 6.48599], zoom_start=14)
 
-            if Input.el_build_state != 0:
+            if Input.el_build_state != 0 and Input.el_build_state is not None:
                 folium.GeoJson(
                     geojson_data,
                     name=f"{Input.el_pv_type}{Input.el_tractor_width}"
