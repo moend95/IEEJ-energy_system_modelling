@@ -68,20 +68,21 @@ st.set_page_config(layout="centered")
 Input = GuiInput()
 Output = SimOutput()
 
-#kleines logo
-th_logo_path = os.path.join(icon_dir, "logo.png")
-st.logo(
-    image=th_logo_path,
-    #icon_image=logo_path,
-    size='large'
-)
-iee_logo_path = os.path.join(icon_dir, "IEE_Logo.png")
-st.logo(
-    image=iee_logo_path,
-    #icon_image=logo_path,
-    size='large'
-)
 
+#Logo als base64
+th_logo_path = os.path.join(icon_dir, "logo.png")
+iee_logo_path = os.path.join(icon_dir, "IEE_Logo.png")
+th_logo_b64 = image_to_base64(th_logo_path)
+iee_logo_b64 = image_to_base64(iee_logo_path)
+st.markdown(
+    f"""
+    <div style="display:flex; justify-content:center; align-items:center; gap:70px;">
+        <img src="data:image/png;base64,{iee_logo_b64}" style="height:50px; border-radius:0;">
+        <img src="data:image/png;base64,{th_logo_b64}" style="height:50px; border-radius:0;">
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 
 if "simulation_ran" not in st.session_state:
@@ -91,6 +92,7 @@ if "sim_output" not in st.session_state:
     st.session_state.sim_output = Output
 
 # Überschrift
+st.write("\n")
 st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 

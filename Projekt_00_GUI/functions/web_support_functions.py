@@ -4,6 +4,16 @@ from PIL import Image
 import os
 
 
+
+import base64
+
+def image_to_base64(image_path: str) -> str:
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+
+
+
 script_dir = os.path.dirname(os.path.abspath(__file__))   # .../functions
 project_dir = os.path.dirname(script_dir)
 
