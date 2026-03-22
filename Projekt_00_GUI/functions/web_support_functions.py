@@ -55,6 +55,14 @@ def format_energy(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh/a"
 
+def format_power(value_kw):
+    if value_kw is None:
+        value_kw = 0
+
+    if abs(value_kw) >= 1000:
+        return f"{value_kw / 1000:.2f} MW"
+    return f"{value_kw:.1f} kW"
+
 def format_capacity(value_kwh):
     """
     Formatiert Energie (kWh) für Kapazität / SOC.
@@ -381,6 +389,9 @@ def build_synergy_diagram(inp, sim_output):
     battery_grid_export_kwh = 0.0
     juechen_sued_energy = 0.0
 
+    max_power_from_grid = 0.0
+    max_power_to_grid = 0.0
+
 
     if sim_output is not None:
         solar_energy = max(float(getattr(sim_output, "h_sum_energy_kwh", 0) or 0), 0.0)
@@ -397,6 +408,15 @@ def build_synergy_diagram(inp, sim_output):
 
         total_generation = solar_energy + landscape_energy
         total_demand = industry_energy + green_hub_energy + juechen_sued_energy
+
+        if not sim_output.bs_df.empty:
+
+            max_power_from_grid = sim_output.bs_df['new_balance_kw'].min()
+            max_power_to_grid = sim_output.bs_df['new_balance_kw'].max()
+
+        else:
+            max_power_from_grid = sim_output.res_df['Bilanz [kW]'].min()
+            max_power_to_grid = sim_output.res_df['Bilanz [kW]'].max()
 
         coverage = float(getattr(sim_output, "bal_coverage_rate", 0) or 0)
         coverage_percent = max(0.0, min(coverage * 100.0, 100.0))
@@ -613,16 +633,19 @@ def build_synergy_diagram(inp, sim_output):
     # KPI-Karten oben
     kpi_y = 1.05
     kpis = [
-        ("Jahreserzeugung", format_energy(total_generation), '#a6e8a2'),
-        ("Jahresbedarf", format_energy(total_demand), '#eba865'),
-        ("Jahresbilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
+        ("Erzeugung", format_energy(total_generation), '#a6e8a2'),
+        ("Bedarf", format_energy(total_demand), '#eba865'),
+        ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
         ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
         #("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
         #("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
-        ("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
+
+        #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
+
         #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
         #("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
-
+        ("Maximaler <br>Netzbezug", format_power(max_power_from_grid), "#E8F7FF"),
+        ("Maximale <br>Netzeinspeisung", format_power(max_power_to_grid), "#E8F7FF"),
     ]
     x_min = 0.08
     x_max = 1.0
@@ -636,7 +659,7 @@ def build_synergy_diagram(inp, sim_output):
     for (title, value_text, fill), x in zip(kpis, kpi_xs):
         fig.add_shape(
             type="rect",
-            x0=x - 0.09, x1=x + 0.09, #x0=x - 0.08, x1=x + 0.08,
+            x0=x - 0.08, x1=x + 0.08, #x0=x - 0.08, x1=x + 0.08,
             y0=kpi_y - 0.05, y1=kpi_y + 0.05, #y0=kpi_y - 0.045, y1=kpi_y + 0.045,
             line=dict(color="rgba(80,80,80,0.45)", width=1.1),
             fillcolor=fill,
