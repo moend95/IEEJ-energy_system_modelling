@@ -97,7 +97,7 @@ st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
 # Fester Container für Darstellung der Erzeugungseingabe
-with st.container(key="Erzeugung", width=1000, height=500):
+with st.container(key="Erzeugung", width=1000, height=520):
 
     tab1, tab2 = st.tabs(["Solarautobahn", "Energielandschaft"])
 
@@ -111,6 +111,12 @@ with st.container(key="Erzeugung", width=1000, height=500):
             Input.h_highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
             h_selected_names = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
             Input.h_pv_types = [pv_name_to_id[name] for name in h_selected_names]
+
+            st.write('\n')
+            if not Input.h_highways or not Input.h_pv_types:
+                st.info("Solarautobahn deaktiviert.")
+            else:
+                st.info("Solarautobahn aktiv.")
 
         with col2_tab1:
             pv_geojson_mapping_col2_tab1 = {
@@ -147,6 +153,7 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 format_func=lambda x: f"{x:.0f}%"
             )
 
+
             el_selected_names = st.selectbox(
                 "PV-Typ",
                 [
@@ -177,6 +184,12 @@ with st.container(key="Erzeugung", width=1000, height=500):
                 default=9.0,
                 format_func=lambda x: f"{x:.0f}m"
             )
+
+            Input.el_build_state = 0 if Input.el_build_state is None else Input.el_build_state
+            if Input.el_build_state == 0:
+                st.info("Energielandschaft deaktiviert.")
+            else:
+                st.info("Energielandschaft aktiv.")
 
         with col2_tab2:
             pv_geojson_mapping_col2_tab2 = {
@@ -255,6 +268,12 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
     Bei Auswahl "mit Wärme/Kälte Stromverbrauch" werden reversible Luftwärmepumpen und Geothermie-Sonden verwendet
             ''')
+
+            st.write('\n')
+            if not Input.i_companies:
+                st.info("Industriegebiet deaktiviert.")
+            else:
+                st.info("Industriegebiet aktiv.")
 
         preview_csv_path = os.path.join(
             script_dir,
@@ -373,12 +392,14 @@ with st.container(key="Verbrauch", width=1500, height=1000):
             options=scenario_options,
             default="Keine",
         )
+        Input.geh_h2_load_scenario = "Keine" if Input.geh_h2_load_scenario is None else Input.geh_h2_load_scenario
 
         Input.geh_e_load_scenario = st.segmented_control(
             "Elektro-Bedarf Szenario",
             options=scenario_options,
             default="Keine",
         )
+        Input.geh_e_load_scenario = "Keine" if Input.geh_e_load_scenario is None else Input.geh_e_load_scenario
 
         geh_h2_active = Input.geh_h2_load_scenario != "Keine"
         geh_e_active = Input.geh_e_load_scenario != "Keine"
@@ -414,6 +435,8 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                 options=list(js_options.keys()),
                 default="Aus"
             )
+
+            Input.js_scenario = "Aus" if Input.js_scenario is None else Input.js_scenario
 
             js_factor = js_options[Input.js_scenario]
 
@@ -473,9 +496,12 @@ with st.container(key="Batterie", width=1500, height=500):
             "Eigene Kapazität [MWh]",
             min_value=0.0,
             value=42.0,
-            step=1.0
+            step=1.0,
+            max_value = 100000.0
         )
         Input.bs_energy_kwh = int(custom_mwh * 1000)
+
+    Input.bs_energy_kwh = 0 if Input.bs_energy_kwh is None else Input.bs_energy_kwh
 
     st.write("\n")
 
