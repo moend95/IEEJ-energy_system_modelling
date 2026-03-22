@@ -18,7 +18,7 @@ industrie_heating_choice_mapping = {True: "2", False: "1"}
 el_pv_type_number_text_mapping = {4:"horizontal_tracking", 5:"vertical", 6:"horizontal"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
-weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2022_15min.csv")
+weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2021_15min.csv")
 base_input = os.path.join(script_dir, "functions", "inputs")
 output_dir = os.path.join(base_input, "punkte")
 os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
