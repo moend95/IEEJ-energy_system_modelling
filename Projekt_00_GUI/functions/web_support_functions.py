@@ -410,11 +410,10 @@ def build_synergy_diagram(inp, sim_output):
         total_demand = industry_energy + green_hub_energy + juechen_sued_energy
 
         if not sim_output.bs_df.empty:
-
             max_power_from_grid = sim_output.bs_df['new_balance_kw'].min()
             max_power_to_grid = sim_output.bs_df['new_balance_kw'].max()
 
-        else:
+        elif not sim_output.res_df.empty:
             max_power_from_grid = sim_output.res_df['Bilanz [kW]'].min()
             max_power_to_grid = sim_output.res_df['Bilanz [kW]'].max()
 
@@ -637,8 +636,7 @@ def build_synergy_diagram(inp, sim_output):
         ("Bedarf", format_energy(total_demand), '#eba865'),
         ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
         ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
-        #("Netzbezug", format_energy(grid_import_total), "#FFF0E6"),
-        #("Netzeinspeisung", format_energy(grid_export), "#F3E8FF"),
+
 
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
 

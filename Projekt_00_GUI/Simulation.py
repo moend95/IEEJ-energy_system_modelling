@@ -340,6 +340,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             balance = balance + out.res_df[col] * sign
 
     out.res_df["Bilanz [kW]"] = balance
+
     h_energy = out.h_sum_energy_kwh or 0
     el_energy = out.el_sum_energy_kwh or 0
     geh_energy = out.geh_sum_energy_kwh or 0
