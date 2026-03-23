@@ -534,16 +534,20 @@ def build_synergy_diagram(inp, sim_output):
 
 
 
-    system_text = (
-        f"Gesamterzeugung: {format_energy(total_generation)}"
-        f"<br>Gesamtbedarf: {format_energy(total_demand)}"
-        f"<br>Versorgungsgrad: {coverage_percent:.1f} %"
-        f"<br>Bilanz: + {format_energy(surplus)}" if surplus > 0
-        else f"Gesamterzeugung: {format_energy(total_generation)}"
-             f"<br>Gesamtbedarf: {format_energy(total_demand)}"
-             f"<br>Versorgungsgrad: {coverage_percent:.1f} %"
-             f"<br>Bilanz: - {format_energy(deficit)}"
-    )
+    if surplus > 0:
+        system_text = (
+            f"Gesamterzeugung: {format_energy(total_generation)}"
+            f"<br>Gesamtbedarf: {format_energy(total_demand)}"
+            f"<br>Bilanz: + {format_energy(surplus)}"
+            f"<br>Bilanzielle Autarkie: {coverage_percent:.1f} %"
+        )
+    else:
+        system_text = (
+            f"Gesamterzeugung: {format_energy(total_generation)}"
+            f"<br>Gesamtbedarf: {format_energy(total_demand)}"
+            f"<br>Bilanz: - {format_energy(deficit)}"
+            f"<br>Bilanzielle Autarkie: {coverage_percent:.1f} %"
+        )
 
     # =========================================================
     # 4) Knotenpositionen
@@ -552,19 +556,19 @@ def build_synergy_diagram(inp, sim_output):
     nodes = {
         "solar": {
             "x": 0.1, "y": 0.65,
-            "label": "Solar Highway",
+            "label": "Solarautobahn",
             "info": solar_text,
             "icon": "solar"
         },
         "landscape": {
             "x": 0.1, "y": 0.35,
-            "label": "Energy Landscape",
+            "label": "Energielandschaft",
             "info": landscape_text,
             "icon": "landscape"
         },
         "grid": {
             "x": 0.50, "y": 0.78,
-            "label": "Power Grid",
+            "label": "Stromnetz",
             "info": grid_text,
             "icon": "grid"
         },
@@ -576,20 +580,20 @@ def build_synergy_diagram(inp, sim_output):
         },
         "battery": {
             "x": 0.50, "y": 0.22,
-            "label": "Battery Storage",
+            "label": "Batterie Speicher",
             "info": battery_text,
             "icon": "battery"
         },
         "industry": {
             "x": 0.98, "y": 0.76,
-            "label": "Industrial Area",
+            "label": "Industriegebiet",
             "info": industry_text,
             "icon": "industry"
 
         },
         "js": {
             "x": 0.98, "y": 0.50,
-            "label": "Stadtentwicklung",
+            "label": "Stadtteil Jüchen Süd",
             "info": js_text,
             "icon": "js"
 
@@ -635,7 +639,7 @@ def build_synergy_diagram(inp, sim_output):
         ("Erzeugung", format_energy(total_generation), '#a6e8a2'),
         ("Bedarf", format_energy(total_demand), '#eba865'),
         ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
-        ("Versorgungsgrad", f"{coverage_percent:.1f} %", "#EEF9EE"),
+        ("Bilanzielle<br>Autarkie", f"{coverage_percent:.1f} %", "#EEF9EE"),
 
 
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
