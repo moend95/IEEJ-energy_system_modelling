@@ -648,6 +648,8 @@ def build_synergy_diagram(inp, sim_output):
     x_min = 0.08
     x_max = 1.0
 
+
+
     if len(kpis) == 1:
         kpi_xs = [(x_min + x_max) / 2]
     else:

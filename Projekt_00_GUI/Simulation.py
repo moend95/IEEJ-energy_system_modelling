@@ -9,7 +9,7 @@ from core.io_types import GuiInput, SimOutput
 from functions.Industriegebiet import IndustryLoadAggregator
 from functions.pv_baukasten import PV_System, PV_TYPEN
 from functions.Energielandschaft import main
-from functions.battery_storage_eff import BatteryStorage
+from functions.battery_storage import BatteryStorage
 
 
 #TYPE MAPPING

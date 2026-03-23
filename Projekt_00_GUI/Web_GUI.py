@@ -97,7 +97,7 @@ st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
 # Fester Container für Darstellung der Erzeugungseingabe
-with st.container(key="Erzeugung", width=1000, height=520):
+with st.container(key="Erzeugung", width=1000, height='content'):
 
     tab1, tab2 = st.tabs(["Solarautobahn", "Energielandschaft"])
 
@@ -225,9 +225,15 @@ with st.container(key="Erzeugung", width=1000, height=520):
             folium.LayerControl().add_to(m)
             st_data = st_folium(m, width=400, height=400)
 
+
+col1, col2, col3 = st.columns([0.05, 0.9, 0.05])
+with col2:
+    st.divider()
+
+
 st.write("### Verbrauch Eingabewerte")
 
-with st.container(key="Verbrauch", width=1500, height=1000):
+with st.container(key="Verbrauch", width=1500, height='content'):
 
     tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
 
@@ -284,18 +290,22 @@ with st.container(key="Verbrauch", width=1500, height=1000):
 
         expander = st.expander("Erklärung Unternehmen")
         with expander:
-            st.write('''
+            #einzelne markdowns??
+            st.markdown('''
     1. Entsorgung:  
-    5 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an Schönmackers Umweltdienste
+    5 1/2 Tage Woche, Kein Schichtbetrieb, &nbsp; Anlehnung an Schönmackers Umweltdienste
 
     2. Stahl:  
-    5 Tage Woche, 3-Schicht-Betrieb, Anlehnung an TecPro
+    5 Tage Woche, 3-Schicht-Betrieb, &emsp; Anlehnung an TecPro
 
     3. Logistik und Lagerung:  
-    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
+    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, 
+    Anlehnung an CTJ Janssen
 
     4. Schrott- und Metallhandel:  
-    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Willi Jenner
+    5 Tage Woche, Kein Schichtbetrieb, 
+    
+    Anlehnung an Willi Jenner
 
     5. Lagerung:  
     5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik
@@ -321,7 +331,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         selected_columns = list(dict.fromkeys(selected_columns))
 
         if selected_columns:
-            st.write("### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen")
+            st.write("#### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen")
 
             fig_preview = plot_industry_preview(
                 preview_csv_path,
@@ -406,7 +416,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
         green_hub_active = geh_h2_active or geh_e_active
 
         if green_hub_active:
-            st.write("### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
+            st.write("#### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
 
             fig_green_hub_week = plot_green_hub_weekly_profiles(
                 green_hub_base_dir,
@@ -459,7 +469,7 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                     "Strombezug_Stadtentwicklung_15min.csv"
                 )
 
-                st.write("### Beispielhafte Wochenlastprofile Jüchen Süd")
+                st.write("#### Beispielhafte Wochenlastprofile Jüchen Süd")
 
                 fig_js = plot_js_weekly_profile(
                     js_csv_path,
@@ -470,9 +480,14 @@ with st.container(key="Verbrauch", width=1500, height=1000):
                 st.pyplot(fig_js)
 
 
+col1, col2, col3 = st.columns([0.05, 0.9, 0.05])
+with col2:
+    st.divider()
+
+
 st.write("### Batterie Eingabewerte")
 
-with st.container(key="Batterie", width=1500, height=500):
+with st.container(key="Batterie", width=1500, height='content'):
 
     #tab7 = st.tabs(["Batterie"])
     # Batterie
@@ -539,6 +554,7 @@ with st.container(key="Batterie", width=1500, height=500):
 
 
 
+st.space(size='small')
 col1, col2, col3 = st.columns([0.15, 0.7, 0.15])
 
 with col2:
@@ -547,6 +563,7 @@ with col2:
         type="primary",
         use_container_width=True
     )
+st.space(size='small')
 
 
 if run:
@@ -567,7 +584,8 @@ if run:
 # Neue Visualisierung: Synergie-Diagramm
 # =========================================================
 
-st.title("Ergebnisse")          #, text_alignment="center") klppt nicht     #:rainbow[Simulationsergebnisse]")
+st.write("### Ergebnisse")
+#, text_alignment="center") klppt nicht     #:rainbow[Simulationsergebnisse]")
 #sim_output = st.session_state.sim_output if st.session_state.simulation_ran else Output
 
 with st.spinner("Visualisierung wird erstellt..."):
@@ -622,7 +640,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
     if not isinstance(y.index, pd.DatetimeIndex):
         y.index = pd.date_range(
-            start="2022-01-01 00:00:00",
+            start="2021-01-01 00:00:00",
             periods=len(y),
             freq="15min"
         )
@@ -664,7 +682,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         generation = sim_output.res_df[generation_cols].sum(axis=1)
         if not isinstance(generation.index, pd.DatetimeIndex):
             generation.index = pd.date_range(
-                start="2022-01-01 00:00:00",
+                start="2021-01-01 00:00:00",
                 periods=len(generation),
                 freq="15min"
             )
@@ -697,7 +715,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         demand = sim_output.res_df[demand_cols].sum(axis=1)
         if not isinstance(demand.index, pd.DatetimeIndex):
             demand.index = pd.date_range(
-                start="2022-01-01 00:00:00",
+                start="2021-01-01 00:00:00",
                 periods=len(demand),
                 freq="15min"
             )
@@ -744,7 +762,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             balance_with_battery = sim_output.bs_df["new_balance_kw"].copy()
             if not isinstance(balance_with_battery.index, pd.DatetimeIndex):
                 balance_with_battery.index = pd.date_range(
-                    start="2022-01-01 00:00:00",
+                    start="2021-01-01 00:00:00",
                     periods=len(balance_with_battery),
                     freq="15min"
                 )
@@ -776,7 +794,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             balance_without_battery = sim_output.bs_df["balance_kw"].copy()
             if not isinstance(balance_without_battery.index, pd.DatetimeIndex):
                 balance_without_battery.index = pd.date_range(
-                    start="2022-01-01 00:00:00",
+                    start="2021-01-01 00:00:00",
                     periods=len(balance_without_battery),
                     freq="15min"
                 )
@@ -805,11 +823,26 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
 
             # Plot 2: SOC
+            bs_soc = sim_output.bs_df["soc_kwh"].copy()
+            bs_soc_percent = bs_soc / Input.bs_energy_kwh
+            if not isinstance(bs_soc_percent.index, pd.DatetimeIndex):
+                bs_soc_percent.index = pd.date_range(
+                    start="2021-01-01 00:00:00",
+                    periods=len(bs_soc_percent),
+                    freq="15min"
+                )
+            
             fig3, ax3 = plt.subplots(figsize=(12, 4))
-            ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
-            ax3.set_title("State of Charge der Batterie")
+            ax3.plot(
+                bs_soc_percent.index,
+                bs_soc_percent.values,
+                label="State of charge"
+            )
+            #fig3, ax3 = plt.subplots(figsize=(12, 4))
+            #ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
+            ax3.set_title(f"State of Charge der Batterie (Kapazität: {Input.bs_energy_kwh/1000} MWh)")
             ax3.set_xlabel("Zeit")
-            ax3.set_ylabel("Energie [kWh]")
+            ax3.set_ylabel("SOC [%]  Energie [kWh]")
             ax3.grid(True)
             st.pyplot(fig3)
 
