@@ -294,41 +294,41 @@ with st.container(key="Verbrauch", width=1500, height='content'):
             st.markdown('''
     1. **Entsorgung:**  
     5 1/2 Tage Woche, Kein Schichtbetrieb  
-                        Jahresverbrauch: 7,1 GWh, Anlehnung an Schönmackers Umweltdienste
+                        Jahresbedarf: 7,1 GWh, Anlehnung an Schönmackers Umweltdienste
 
     2. **Stahl 1:**  
     5 Tage Woche, 3-Schicht-Betrieb  
-                        Jahresverbrauch: 4,5 GWh, Anlehnung an TecPro
+                        Jahresbedarf: 4,5 GWh, Anlehnung an TecPro
 
     3. **Logistik und Lagerung:**  
     5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb  
-                        Jahresverbrauch: 1,2 GWh, Anlehnung an CTJ Janssen
+                        Jahresbedarf: 1,2 GWh, Anlehnung an CTJ Janssen
 
     4. **Schrott- und Metallhandel:**  
     5 Tage Woche, Kein Schichtbetrieb  
-                        Jahresverbrauch: 1,5 GWh, Anlehnung an Willi Jenner
+                        Jahresbedarf: 1,5 GWh, Anlehnung an Willi Jenner
 
     5. **Lagerung:**  
     5 Tage Woche, Kein Schichtbetrieb  
-                        Jahresverbrauch: 0,6 GWh, Anlehnung an Kleine Logistik
+                        Jahresbedarf: 0,6 GWh, Anlehnung an Kleine Logistik
 
     6. **Büro:**  
     5 Tage Woche, Kein Schichtbetrieb  
-                        Jahresverbrauch: 0,6 GWh, Anlehnung an Marvin Wickenhäuser
+                        Jahresbedarf: 0,6 GWh, Anlehnung an Marvin Wickenhäuser
 
     7. **Logistik Lebensmittel:**  
     6 1/2 Tage Woche, Kein Schichtbetrieb  
-                        Jahresverbrauch: 1,2 GWh, Anlehnung an CTJ Janssen
+                        Jahresbedarf: 1,2 GWh, Anlehnung an CTJ Janssen
 
     8. **Stahl 2:**  
     7 Tage Woche, 2-Schicht-Betrieb  
-                        Jahresverbrauch: 4,5 GWh, Anlehnung an TecPro
+                        Jahresbedarf: 4,5 GWh, Anlehnung an TecPro
             ''')
 
             fig_annual_all = plot_industry_annual_energy(
                 preview_csv_path,
                 ordered_columns=industry_order_all,
-                title="Jahresenergie aller Unternehmensprofile"
+                title="Jahresenergiebedarf aller Unternehmensprofile"
             )
             st.pyplot(fig_annual_all)
 
@@ -676,9 +676,9 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
     with st.expander("Lastgang Infos anzeigen", expanded=False):
         desc_stats = sim_output.res_df
-        desc = desc_stats.describe().loc[["mean", "min", "max"]].round(2)
+        desc = desc_stats.describe().loc[["mean", "min", "max"]].round(0)
         desc.loc["sum [kWh]"] = desc_stats.sum()/4
-        desc.loc["sum [kWh]"] = desc.loc["sum [kWh]"].round(1)
+        desc.loc["sum [kWh]"] = desc.loc["sum [kWh]"].round(0)
         desc = desc.loc[["sum [kWh]", "mean", "min", "max"]]
         st.dataframe(desc)
 
@@ -756,10 +756,16 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
             #Stats
             bs_desc_stats = sim_output.bs_df.drop(columns=['soc_kwh'])
-            bs_desc = bs_desc_stats.describe().loc[["mean", "min", "max"]].round(2)
+            bs_desc = bs_desc_stats.describe().loc[["mean", "min", "max"]].round(0)
             bs_desc.loc["sum [kWh]"] = bs_desc_stats.sum()/4
-            bs_desc.loc["sum [kWh]"] = bs_desc.loc["sum [kWh]"].round(2)
+            bs_desc.loc["sum [kWh]"] = bs_desc.loc["sum [kWh]"].round(0)
             bs_desc = bs_desc.loc[["sum [kWh]", "mean", "min", "max"]]
+
+            bs_desc = bs_desc.rename(columns={
+                "balance_kw": "Bilanz ohne Batterie [kW]",
+                "new_balance_kw": "Bilanz mit Batterie [kW]",
+                "battery_power_kw": "Batterieleistung [kW]",
+            })
             st.dataframe(bs_desc)
 
 
@@ -829,7 +835,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
             # Plot 2: SOC
             bs_soc = sim_output.bs_df["soc_kwh"].copy()
-            bs_soc_percent = bs_soc / Input.bs_energy_kwh
+            bs_soc_percent = bs_soc / Input.bs_energy_kwh * 100
             if not isinstance(bs_soc_percent.index, pd.DatetimeIndex):
                 bs_soc_percent.index = pd.date_range(
                     start="2021-01-01 00:00:00",
@@ -845,9 +851,13 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             )
             #fig3, ax3 = plt.subplots(figsize=(12, 4))
             #ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
+            ax3.xaxis.set_major_locator(mdates.MonthLocator())
+            ax3.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+            ax3.set_xlabel("Monat")
             ax3.set_title(f"State of Charge der Batterie (Kapazität: {Input.bs_energy_kwh/1000} MWh)")
-            ax3.set_xlabel("Zeit")
-            ax3.set_ylabel("SOC [%]  Energie [kWh]")
+            ax3.set_ylabel("SOC [%]")
             ax3.grid(True)
+            ax3.legend()
+            fig3.autofmt_xdate()
             st.pyplot(fig3)
 

@@ -43,7 +43,7 @@ def plot_industry_annual_energy(csv_path, ordered_columns=None, title="Jahresene
     if ordered_columns is not None:
         df = df[ordered_columns]
 
-    annual_energy = df.sum() * 0.25  # 15-min Raster -> kWh
+    annual_energy = df.sum() * 0.25 /1000000  # 15-min Raster -> kWh -> GWh
 
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
@@ -56,7 +56,7 @@ def plot_industry_annual_energy(csv_path, ordered_columns=None, title="Jahresene
     )
 
     ax.set_title(title)
-    ax.set_ylabel("Energie [kWh]")
+    ax.set_ylabel("Energiebedarf [GWh]")
     ax.set_xlabel("Unternehmen")
     ax.grid(axis="y")
     ax.legend(bars, annual_energy.index)
