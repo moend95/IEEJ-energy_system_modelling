@@ -292,32 +292,37 @@ with st.container(key="Verbrauch", width=1500, height='content'):
         with expander:
             #einzelne markdowns??
             st.markdown('''
-    1. Entsorgung:  
-    5 1/2 Tage Woche, Kein Schichtbetrieb, &nbsp; Anlehnung an Schönmackers Umweltdienste
+    1. **Entsorgung:**  
+    5 1/2 Tage Woche, Kein Schichtbetrieb  
+                        Jahresverbrauch: 7,1 GWh, Anlehnung an Schönmackers Umweltdienste
 
-    2. Stahl:  
-    5 Tage Woche, 3-Schicht-Betrieb, &emsp; Anlehnung an TecPro
+    2. **Stahl 1:**  
+    5 Tage Woche, 3-Schicht-Betrieb  
+                        Jahresverbrauch: 4,5 GWh, Anlehnung an TecPro
 
-    3. Logistik und Lagerung:  
-    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb, 
-    Anlehnung an CTJ Janssen
+    3. **Logistik und Lagerung:**  
+    5 Tage Woche, Teilweise Samstag und Sonntag Betrieb, Kein Schichtbetrieb  
+                        Jahresverbrauch: 1,2 GWh, Anlehnung an CTJ Janssen
 
-    4. Schrott- und Metallhandel:  
-    5 Tage Woche, Kein Schichtbetrieb, 
-    
-    Anlehnung an Willi Jenner
+    4. **Schrott- und Metallhandel:**  
+    5 Tage Woche, Kein Schichtbetrieb  
+                        Jahresverbrauch: 1,5 GWh, Anlehnung an Willi Jenner
 
-    5. Lagerung:  
-    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Kleine Logistik
+    5. **Lagerung:**  
+    5 Tage Woche, Kein Schichtbetrieb  
+                        Jahresverbrauch: 0,6 GWh, Anlehnung an Kleine Logistik
 
-    6. Büro:  
-    5 Tage Woche, Kein Schichtbetrieb, Anlehnung an Marvin Wickenhäuser
+    6. **Büro:**  
+    5 Tage Woche, Kein Schichtbetrieb  
+                        Jahresverbrauch: 0,6 GWh, Anlehnung an Marvin Wickenhäuser
 
-    7. Logistik Lebensmittel:  
-    6 1/2 Tage Woche, Kein Schichtbetrieb, Anlehnung an CTJ Janssen
+    7. **Logistik Lebensmittel:**  
+    6 1/2 Tage Woche, Kein Schichtbetrieb  
+                        Jahresverbrauch: 1,2 GWh, Anlehnung an CTJ Janssen
 
-    8. Stahl:  
-    7 Tage Woche, 2-Schicht-Betrieb, Anlehnung an TecPro
+    8. **Stahl 2:**  
+    7 Tage Woche, 2-Schicht-Betrieb  
+                        Jahresverbrauch: 4,5 GWh, Anlehnung an TecPro
             ''')
 
             fig_annual_all = plot_industry_annual_energy(
