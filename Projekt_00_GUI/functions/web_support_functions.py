@@ -649,7 +649,7 @@ def build_synergy_diagram(inp, sim_output):
 
 
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
-        ("Autarkie", f"{autarky*100:.2f} %", "#EEF9EE"),
+        ("Autarkie", f"{autarky*100:.1f} %", "#EEF9EE"),
         ("Eigenenergie-<br>nutzung", f"{ee_self_consumption*100:.1f} %", "#EEF9EE"),
 
         #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
