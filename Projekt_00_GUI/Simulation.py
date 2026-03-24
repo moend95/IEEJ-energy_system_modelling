@@ -361,6 +361,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     out.bal_power_max_kw = out.res_df["Bilanz [kW]"].max()
     out.bal_power_min_kw = out.res_df["Bilanz [kW]"].min()
 
+    feed_in_kwh = out.res_df["Bilanz [kW]"].clip(lower=0).sum() / 4
+
     print('Bilanzierung \t\t- abgeschlossen')
 
 
@@ -389,9 +391,15 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.bal_power_max_kw = out.bs_df["new_balance_kw"].max()
         out.bal_power_min_kw = out.bs_df["new_balance_kw"].min()
 
-    print('Batterie \t\t\t- abgeschlossen')
+        feed_in_kwh = out.bs_df["new_balance_kw"].clip(lower=0).sum() / 4
 
 
+
+    print('Batterie \t\t- abgeschlossen')
+
+
+    out.ee_self_consumption = (total_generation - feed_in_kwh) / total_generation
+    out.autarky = (total_generation - feed_in_kwh) / total_demand
 
 
     print('\nInput Daten:\n',inp)

@@ -80,9 +80,13 @@ class SimOutput:
 
     # System balance
     bal_energy_kwh: float | None = None
-    bal_coverage_rate: float | None = None
+    bal_coverage_rate: float | None = None                          # Balanced Autarky (incl. back and forth with grid)
     bal_power_max_kw: float | None = None
     bal_power_min_kw: float | None = None
+
+    # Internal Generation KPIs
+    ee_self_consumption: float | None = None                        # Direct self consumption of generated energy in relation to total generation
+    autarky: float | None = None                                    # Direct self consumption of generated energy in relation to demand
 
     # Error texts
     h_error_text: str | None = None

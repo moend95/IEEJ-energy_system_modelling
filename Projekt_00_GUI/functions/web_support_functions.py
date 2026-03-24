@@ -389,6 +389,9 @@ def build_synergy_diagram(inp, sim_output):
     battery_grid_export_kwh = 0.0
     juechen_sued_energy = 0.0
 
+    ee_self_consumption = 0.0
+    autarky = 0.0
+
     max_power_from_grid = 0.0
     max_power_to_grid = 0.0
 
@@ -405,6 +408,9 @@ def build_synergy_diagram(inp, sim_output):
         battery_grid_import_kwh = float(bs_stats.get("grid_import_kwh", 0) or 0)
         battery_grid_export_kwh = float(bs_stats.get("grid_export_kwh", 0) or 0)
         juechen_sued_energy = max(float(getattr(sim_output, "js_sum_energy_kwh", 0) or 0), 0.0)
+
+        ee_self_consumption = max(float(getattr(sim_output, "ee_self_consumption", 0) or 0), 0.0)
+        autarky  = max(float(getattr(sim_output, "autarky", 0) or 0), 0.0)
 
         total_generation = solar_energy + landscape_energy
         total_demand = industry_energy + green_hub_energy + juechen_sued_energy
@@ -643,6 +649,8 @@ def build_synergy_diagram(inp, sim_output):
 
 
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
+        ("Autarkie", f"{autarky*100:.2f} %", "#EEF9EE"),
+        ("Eigenenergie-<br>nutzung", f"{ee_self_consumption*100:.1f} %", "#EEF9EE"),
 
         #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
         #("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
