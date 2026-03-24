@@ -58,19 +58,37 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     # 3) Generate points + azimuth for all selected PV types
     # ------------------------------------------------------------
+    # ------------------------------------------------------------
+    # 3) Generate points + azimuth for all selected PV types
+    # ------------------------------------------------------------
     results = pv_system.generate_pv_points()
 
     print("Berechnete PV-Typen:")
     for pv_type in pv_system.pvtypes:
         print(" -", pv_type)
 
+    print("\n=== CSV-Test ===")
+    for pv_type in pv_system.pvtypes:
+        geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
+        csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+        csv_path = os.path.join(output_dir, csv_name)
+
+        print(f"\nPV-Typ: {pv_type.name}")
+        print(f"CSV erwartet unter: {csv_path}")
+        print(f"Existiert: {os.path.exists(csv_path)}")
+
+        if os.path.exists(csv_path):
+            df_test = pd.read_csv(csv_path)
+            print("Spalten:", df_test.columns.tolist())
+            print("Zeilen:", len(df_test))
+            print(df_test.head(3))
     # ------------------------------------------------------------
     # 4) Simulate yearly energy per PV type + plot time series
     # ------------------------------------------------------------
     print("\nJahresenergie je PV-Typ:")
     for pv_type in pv_system.pvtypes:
-        # CSV name, they way generate_pv_points saved it
-        csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+        geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
+        csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
         csv_path = os.path.join(output_dir, csv_name)
 
         energy_kwh_pv_type, total_ac_w = pv_system.simulate_pv_type_energy(pv_type, csv_path)
@@ -115,3 +133,5 @@ if __name__ == "__main__":
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
+
+
