@@ -1,4 +1,4 @@
-#Übergabefertig JB
+#Übergabefertig kommentiert JB
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any
 import pandas as pd
