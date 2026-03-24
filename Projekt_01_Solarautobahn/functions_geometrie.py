@@ -1,17 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 28 09:11:07 2025
-@author: Jannis Brinkmann, Sarah Maxara
-Ziel: Automatische Auswahl und Zusammenführung vordefinierter Autobahnabschnitte
-als aufrufbare Funktion für das Hauptskript.
-"""
-
 import os
 import osmnx as ox
 import geopandas as gpd
-import numpy as np
 from shapely.geometry import LineString, box
-from shapely.ops import unary_union
 import math
 import folium
 import webbrowser

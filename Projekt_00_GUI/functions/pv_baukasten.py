@@ -1,3 +1,4 @@
+# Übergabefertig kommentiert JB
 import pvlib
 import geopandas as gpd
 from shapely.ops import unary_union
@@ -407,7 +408,7 @@ class PV_System:
         self.geojson_path = geojson_path                    # Path to the GeoJSON file
         self.pvtypes = pvtypes                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
         self.step_size = step_size                          # PV Type from PV Type dataclass list
-        self.weather_df = weather_df                        # Wetterdaten aus DWD-Skript
+        self.weather_df = weather_df                        # Weather data from DWD-script
         self.base_output_dir = base_output_dir              # z. B. "./Input/punkte"
 
     # ------------Punkte + Azimut generieren--------------------
