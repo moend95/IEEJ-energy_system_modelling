@@ -235,7 +235,7 @@ def add_physical_connection(
         )
 
 def add_legend(fig):
-    legend_y1 = 0.04
+    legend_y1 = -0.15
     legend_y2 = 0.035
 
     # Zeile 1: durchgezogene Linien
@@ -561,51 +561,51 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     nodes = {
         "solar": {
-            "x": 0.1, "y": 0.65,
+            "x": 0.1, "y": 0.48,
             "label": "Solarautobahn",
             "info": solar_text,
             "icon": "solar"
         },
         "landscape": {
-            "x": 0.1, "y": 0.35,
+            "x": 0.1, "y": 0.18,
             "label": "Energielandschaft",
             "info": landscape_text,
             "icon": "landscape"
         },
         "grid": {
-            "x": 0.50, "y": 0.78,
+            "x": 0.50, "y": 0.65,
             "label": "Stromnetz",
             "info": grid_text,
             "icon": "grid"
         },
         "system": {
-            "x": 0.54, "y": 0.50,
+            "x": 0.54, "y": 0.33,
             "label": "",
             "info": system_text,
             "icon": None
         },
         "battery": {
-            "x": 0.50, "y": 0.22,
+            "x": 0.50, "y": 0.03,
             "label": "Batterie Speicher",
             "info": battery_text,
             "icon": "battery"
         },
         "industry": {
-            "x": 0.98, "y": 0.76,
+            "x": 0.98, "y": 0.59,
             "label": "Industriegebiet",
             "info": industry_text,
             "icon": "industry"
 
         },
         "js": {
-            "x": 0.98, "y": 0.50,
+            "x": 0.98, "y": 0.33,
             "label": "Stadtteil Jüchen Süd",
             "info": js_text,
             "icon": "js"
 
         },
         "hub": {
-            "x": 0.98, "y": 0.24,
+            "x": 0.98, "y": 0.07,
             "label": "Green Energy Hub",
             "info": hub_text,
             "icon": "hub"
@@ -618,9 +618,9 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     fig = go.Figure()
     fig.update_xaxes(visible=False, range=[-0.02, 1.10])
-    fig.update_yaxes(visible=False, range=[0.00, 1.10])
+    fig.update_yaxes(visible=False, range=[-0.15, 1.10])
 
-    box_w = 0.22
+    box_w = 0.2
     box_h = 0.15
 
     COLOR_RENEWABLE = "#10B35A"
@@ -639,15 +639,36 @@ def build_synergy_diagram(inp, sim_output):
 
     max_flow = max(flow_values) if max(flow_values) > 0 else 1.0
 
+
+    # --------------------- KPIs -------------------------
+    fig.add_annotation(
+        x=0.03,
+        y=0.95,
+        xref="paper",
+        yref="paper",
+        text="<b>KPIs:</b>",
+        showarrow=False,
+        font=dict(size=20, color="#2F3445"),
+        align="left",
+        xanchor="center",
+        yanchor="bottom"
+    )
+
     # KPI-Karten oben
-    kpi_y = 1.05
-    kpis = [
+    kpi_y_first = 1.05
+    x_min_first = 0.22
+    x_max_first = 0.98
+    kpis_first_line = [
         ("Erzeugung", format_energy(total_generation), '#a6e8a2'),
         ("Bedarf", format_energy(total_demand), '#eba865'),
         ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
         ("Bilanzielle<br>Autarkie", f"{coverage_percent:.1f} %", "#EEF9EE"),
+    ]
 
-
+    kpi_y_second = 0.92
+    x_min_second = 0.17
+    x_max_second = 0.93
+    kpis_second_line = [
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
         ("Autarkie", f"{autarky*100:.1f} %", "#EEF9EE"),
         ("Eigenenergie-<br>nutzung", f"{ee_self_consumption*100:.1f} %", "#EEF9EE"),
@@ -655,31 +676,54 @@ def build_synergy_diagram(inp, sim_output):
         #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
         #("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
         ("Maximaler <br>Netzbezug", format_power(max_power_from_grid), "#E8F7FF"),
-        ("Maximale <br>Netzeinspeisung", format_power(max_power_to_grid), "#E8F7FF"),
+        ("Maximale <br>Einspeisung", format_power(max_power_to_grid), "#E8F7FF"),
     ]
-    x_min = 0.08
-    x_max = 1.0
 
-
-
-    if len(kpis) == 1:
-        kpi_xs = [(x_min + x_max) / 2]
+    # Create first line KPIs
+    if len(kpis_first_line) == 1:
+        kpi_xs_first = [(x_min_first + x_max_first) / 2]
     else:
-        step = (x_max - x_min) / (len(kpis) - 1)
-        kpi_xs = [x_min + i * step for i in range(len(kpis))] #[0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
+        step = (x_max_first - x_min_first) / (len(kpis_first_line) - 1)
+        kpi_xs_first = [x_min_first + i * step for i in range(len(kpis_first_line))] #[0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
 
-    for (title, value_text, fill), x in zip(kpis, kpi_xs):
+    for (title, value_text, fill), x in zip(kpis_first_line, kpi_xs_first):
         fig.add_shape(
             type="rect",
             x0=x - 0.08, x1=x + 0.08, #x0=x - 0.08, x1=x + 0.08,
-            y0=kpi_y - 0.05, y1=kpi_y + 0.05, #y0=kpi_y - 0.045, y1=kpi_y + 0.045,
+            y0=kpi_y_first - 0.05, y1=kpi_y_first + 0.05, #y0=kpi_y - 0.045, y1=kpi_y + 0.045,
             line=dict(color="rgba(80,80,80,0.45)", width=1.1),
             fillcolor=fill,
             layer="below"
         )
         fig.add_annotation(
             x=x,
-            y=kpi_y,
+            y=kpi_y_first,
+            text=f"<b>{title}</b><br>{value_text}",
+            showarrow=False,
+            font=dict(size=12, color="#2F3445"),
+            align="center"
+        )
+
+
+    # Create second line KPIs
+    if len(kpis_second_line) == 1:
+        kpi_xs_second = [(x_min_second + x_max_second) / 2]
+    else:
+        step = (x_max_second - x_min_second) / (len(kpis_second_line) - 1)
+        kpi_xs_second = [x_min_second + i * step for i in range(len(kpis_second_line))] #[0.06, 0.25, 0.44, 0.63, 0.82, 1.01]
+
+    for (title, value_text, fill), x in zip(kpis_second_line, kpi_xs_second):
+        fig.add_shape(
+            type="rect",
+            x0=x - 0.08, x1=x + 0.08, #x0=x - 0.08, x1=x + 0.08,
+            y0=kpi_y_second - 0.05, y1=kpi_y_second + 0.05, #y0=kpi_y - 0.045, y1=kpi_y + 0.045,
+            line=dict(color="rgba(80,80,80,0.45)", width=1.1),
+            fillcolor=fill,
+            layer="below"
+        )
+        fig.add_annotation(
+            x=x,
+            y=kpi_y_second,
             text=f"<b>{title}</b><br>{value_text}",
             showarrow=False,
             font=dict(size=12, color="#2F3445"),
@@ -689,6 +733,20 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     # 6) Boxen und Knoten
     # =========================================================
+
+    fig.add_annotation(
+        x=0.095,
+        y=0.7,
+        xref="paper",
+        yref="paper",
+        text="<b>Energiebilanz:</b>",
+        showarrow=False,
+        font=dict(size=20, color="#2F3445"),
+        align="left",
+        xanchor="center",
+        yanchor="bottom"
+    )
+
     add_legend(fig)
 
     # Rechteckige Knoten mit Icons
@@ -812,19 +870,34 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     # 10) Batterie nur schematisch anbinden
     # =========================================================
-    if sim_output.bs_df.empty is False:
-        add_routed_arrow(
-            fig,
-            points=[system_center, (system_center[0], half_y_bat),(battery_top[0], half_y_bat), battery_top],
-            color=COLOR_OPTIONAL,
-            width=scale_arrow_width(battery_charge_kwh, max_flow)
-        )
-        add_routed_arrow(
-            fig,
-            points=[battery_top,(battery_top[0], half_y_bat), (system_center[0], half_y_bat),system_center],
-            color=COLOR_OPTIONAL,
-            width=scale_arrow_width(battery_charge_kwh, max_flow)
-        )
+
+    # =========================================================
+
+    # 10) Batterie nur darstellen, wenn sie tatsächlich genutzt wurde
+
+    # =========================================================
+
+    battery_used = (battery_charge_kwh > 0) or (battery_discharge_kwh > 0)
+
+    if battery_used:
+
+        if battery_charge_kwh > 0:
+            add_routed_arrow(
+                fig,
+                points=[system_center, (system_center[0], half_y_bat), (battery_top[0], half_y_bat), battery_top],
+                color=COLOR_OPTIONAL,
+                width=scale_arrow_width(battery_charge_kwh, max_flow)
+            )
+
+        if battery_discharge_kwh > 0:
+            add_routed_arrow(
+                fig,
+                points=[battery_top, (battery_top[0], half_y_bat), (system_center[0], half_y_bat), system_center],
+                color=COLOR_OPTIONAL,
+                width=scale_arrow_width(battery_discharge_kwh, max_flow)
+            )
+
+
 
     # =========================================================
     # 11) Netzlogik:
@@ -885,38 +958,18 @@ def build_synergy_diagram(inp, sim_output):
     # 12) Layout
     # =========================================================
 
-
+    fig.add_shape(
+        type="line",
+        x0=0.1, x1=1.0,
+        y0=0.815, y1=0.815,
+        line=dict(color="gray", width=1)#, dash="dash")
+    )
 
     fig.update_layout(
-        margin=dict(l=20, r=20, t=100, b=20),
+        margin=dict(l=20, r=20, t=50, b=20),
         height=820,
     )
 
-    fig.add_annotation(
-        x=0.045,
-        y=1.01,
-        xref="paper",
-        yref="paper",
-        text="<b><u>KPIs:</u></b>",
-        showarrow=False,
-        font=dict(size=20, color="#2F3445"),
-        align="left",
-        xanchor="center",
-        yanchor="bottom"
-    )
-
-    fig.add_annotation(
-        x=0.095,
-        y=0.8,
-        xref="paper",
-        yref="paper",
-        text="<b><u>Energiebilanz:</u></b>",
-        showarrow=False,
-        font=dict(size=20, color="#2F3445"),
-        align="left",
-        xanchor="center",
-        yanchor="bottom"
-    )
 
     return fig
 
