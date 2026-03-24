@@ -159,9 +159,9 @@ PV_TYPEN = [
     # 5. Freifläche_bzw_Agri_geneigt
     PVType(
         id=5,
-        name="Freifläche_bzw_Agri_geneigt",
-        azimut=180,
-        tilt=30,
+        name="Freifläche_bzw_Agri_tracking",
+        azimut=None,
+        tilt=None,
 
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
@@ -358,9 +358,9 @@ class AzimutVisualizer:
             Only plot every nth arrow for clarity (default is 10).
         """
         # Extract data from the calculator
-        gdf = self.calc.gdf  # Original geometry of PV lines/polygons
-        points = self.calc.point_list  # Interpolated PV points
-        azimuts = self.calc.azimut_list  # Corresponding azimuths in degrees
+        gdf = self.calc.gdf                                             # Original geometry of PV lines/polygons
+        points = [p for p, _ in self.calc.point_azimut_list]
+        azimuts = [a for _, a in self.calc.point_azimut_list]           # Corresponding azimuths in degrees
         pv_typ = getattr(self.calc.pv_type, "name", "Unknown PV Type")  # PV type name
 
         # Create figure and axis
@@ -431,7 +431,7 @@ class PV_System:
                 pv_type=pv_type,
                 output_csv_path=output_csv,
             )
-            gdf_points = calc.calculate_azimut()
+            gdf_points = calc.run()
             results[pv_type.id] = gdf_points
 
         return results
