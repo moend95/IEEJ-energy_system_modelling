@@ -659,24 +659,24 @@ def build_synergy_diagram(inp, sim_output):
     x_min_first = 0.22
     x_max_first = 0.98
     kpis_first_line = [
-        ("Erzeugung", format_energy(total_generation), '#a6e8a2'),
-        ("Bedarf", format_energy(total_demand), '#eba865'),
-        ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#a6e8a2' if surplus > 0 else '#eba865'),# "#FFF4E8"),
+        ("Erzeugung", format_energy(total_generation), '#4fe091'),
+        ("Bedarf", format_energy(total_demand), '#f0af46'),#f08e46'),
+        ("Bilanz", f"+ {format_energy(surplus)}" if surplus > 0 else f"- {format_energy(deficit)}", '#c5f5db' if surplus > 0 else '#fae5c2'),# "#FFF4E8"),
         ("Bilanzielle<br>Autarkie", f"{coverage_percent:.1f} %", "#EEF9EE"),
     ]
 
-    kpi_y_second = 0.92
+    kpi_y_second = 0.91
     x_min_second = 0.17
     x_max_second = 0.93
     kpis_second_line = [
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
-        ("Autarkie", f"{autarky*100:.1f} %", "#EEF9EE"),
-        ("Eigenenergie-<br>nutzung", f"{ee_self_consumption*100:.1f} %", "#EEF9EE"),
+        ("Autarkie", f"{autarky*100:.1f} %", "#e8f2ff"),
+        ("Eigenenergie-<br>nutzung", f"{ee_self_consumption*100:.1f} %", "#e8e8ff"),
 
         #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
         #("Netzeinspeisung nach Batterie", format_energy(battery_grid_export_kwh), "#F3E8FF"),
-        ("Maximaler <br>Netzbezug", format_power(max_power_from_grid), "#E8F7FF"),
-        ("Maximale <br>Einspeisung", format_power(max_power_to_grid), "#E8F7FF"),
+        ("Maximaler <br>Netzbezug", format_power(max_power_from_grid), "#c7c7c7"),#dfdfdf"),
+        ("Maximale <br>Einspeisung", format_power(max_power_to_grid), "#f0f0f0"), #e6e6e6"),
     ]
 
     # Create first line KPIs
