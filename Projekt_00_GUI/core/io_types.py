@@ -27,6 +27,7 @@ class GuiInput:
     el_tractor_length: Optional[float] = None           # [m]
     el_tractor_turn_radius: Optional[float] = None      # [m]
 
+    # Energy consumption
     # Industry area
     i_heat_cooling_electric: Optional[bool] = None     # Electric Heating/Cooling active
     i_companies: Optional[List[int]] = None            # Company typ list

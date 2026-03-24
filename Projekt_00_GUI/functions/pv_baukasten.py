@@ -13,41 +13,51 @@ from pvlib.bifacial.pvfactors import pvfactors_timeseries
 from pvlib import pvsystem
 from dataclasses import dataclass
 
-
+# Global pvlib imports
 sandia_modules = pvlib.pvsystem.retrieve_sam('SandiaMod')
 cec_inverters = pvlib.pvsystem.retrieve_sam('CECInverter')
 temp_models_sapm = pvlib.temperature.TEMPERATURE_MODEL_PARAMETERS['sapm']
 
+
 @dataclass(frozen=True)
 class PVType:
-    # 1. Identifikation / Position
+    """
+    Dataclass representing a photovoltaic (PV) system configuration.
+    It bundles all relevant parameters of a PV installation, including:
+    - Identification and geometric orientation (azimuth, tilt)
+    - Module and inverter configuration as well as system layout
+    - Optional bifacial properties (rear-side gain, albedo, ground coverage)
+    - Mounting type and tracking behavior (fixed or single-axis tracking)
+    The structure allows consistent definition and comparison of different PV system types.
+    """
+    # 1. Identification / Position
     id: int
     name: str
-    azimut: float | str | None = None    # Ausrichtung (°) oder "variabel"
-    tilt: float | None = None            # Neigungswinkel (°)
+    azimut: float | str | None = None               # Orientation in degrees (0–360) or "variable"
+    tilt: float | None = None                       # Tilt angle in degrees (0 = horizontal, 90 = vertical)
 
-    # 2. Modul- und Systemtechnik
-    module: str | None = None
-    inverter: str | None = None
-    temp_model: str | None = None
-    modules_per_string: int | None = None
-    strings_per_inverter: int | None = None
-    row_height: float | None = None      # m
-    row_width: float | None = None       # m
+    # 2. Module and system configuration
+    module: str | None = None                       # PV module model name (e.g., from database)
+    inverter: str | None = None                     # Inverter model name
+    temp_model: str | None = None                   # Temperature model used for cell temperature calculation
+    modules_per_string: int | None = None           # Number of modules connected in series (per string)
+    strings_per_inverter: int | None = None         # Number of strings connected to one inverter
+    row_height: float | None = None                 # Height of the module row in meters
+    row_width: float | None = None                  # Width of the module row in meters
 
-    # 3. Bifaziale Eigenschaften
-    bifazial: bool = False               # True = bifaziale Berechnung aktiv
-    is_bifacial_detailed: bool = False   # (optional, z. B. pvlib/pvfactors)
-    bifaciality: float | None = None     # Rückseitenwirkungsgrad (0–1)
-    gcr: float | None = None             # Bodenbedeckungsgrad
-    albedo: float | None = None          # Bodenreflexion (0.2–0.3 typ.)
+    # 3. Bifacial properties
+    bifazial: float | None = None                   # Bifaciality factor (0-1)
+    is_bifacial_detailed: bool = False              # Use detailed bifacial model (e.g., pvlib/pvfactors)
+    bifaciality: float | None = None                # Rear-side efficiency factor (0–1)
+    gcr: float | None = None                        # Ground coverage ratio (module area / ground area)
+    albedo: float | None = None                     # Ground reflectivity (typically 0.2–0.3)
 
-    # 4. Tracking / Nachführung
-    mount_type: str = "fixed"            # "fixed" oder "singleaxis"
-    axis_tilt: float = 0.0               # Achsenneigung
-    axis_azimuth: float = 0.0            # Achsenrichtung (0 = N-S, 90 = E-W)
-    max_angle: float = 60.0              # maximale Drehung (°)
-    backtrack: bool = True               # Rückführung bei Verschattung aktiv
+    # 4. Mounting / Tracking
+    mount_type: str = "fixed"                       # Mount type: "fixed" or "singleaxis"
+    axis_tilt: float = 0.0                          # Tilt of the rotation axis in degrees
+    axis_azimuth: float = 0.0                       # Axis direction (0 = north-south, 90 = east-west)
+    max_angle: float = 60.0                         # Maximum rotation angle in degrees
+    backtrack: bool = True                          # Enables backtracking to reduce shading
 
 PV_TYPEN = [
     # 1. Windschutzwand
@@ -68,7 +78,7 @@ PV_TYPEN = [
         row_width=4.0,
 
         # 3. Bifaziale Eigenschaften
-        bifazial=True,  # aktiviert, weil es bifazial ist
+        bifazial=0,  # aktiviert, weil es bifazial ist
         bifaciality=0.75,  # Rückseitenwirkungsgrad
         gcr=0.35,  # Bodenbedeckungsgrad
         albedo=0.2,  # Bodenreflexion
@@ -92,7 +102,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -115,7 +125,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -138,7 +148,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -161,7 +171,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=1.0,
 
-        bifazial=False,
+        bifazial=0.1,
         bifaciality=0.75,
         gcr=0.35,
         albedo=0.2,
@@ -187,7 +197,7 @@ PV_TYPEN = [
         strings_per_inverter=1,
         row_width=1.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=None,
         gcr=None,
         albedo=None,
@@ -209,7 +219,7 @@ PV_TYPEN = [
         strings_per_inverter=1,
         row_width=1.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=None,
         gcr=None,
         albedo=None,
@@ -224,15 +234,15 @@ class AzimutCalculator:
     and exports the results to a CSV file.
     """
     def __init__(self, geojson_path: str, step_size: float, pv_type: PVType, output_csv_path: str):
-        self.geojson_path = geojson_path
-        self.step_size = step_size
-        self.pv_type = pv_type
-        self.output_csv_path = output_csv_path
+        self.geojson_path = geojson_path                        # Path to the GeoJSON file
+        self.step_size = step_size                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
+        self.pv_type = pv_type                                  # PV Type from PV Type dataclass list
+        self.output_csv_path = output_csv_path                  # (DEBUG??)Path for the CSV-Export of calculated point coordinates
 
-        self.gdf = None
-        self.merged_line: LineString | Point | None = None
-        self.number_of_points: List[Point] = []
-        self.point_azimut_list: List[tuple[Point, float]] = []
+        self.gdf = None                                         # GeoDataFrame red from the GeoJSON path
+        self.merged_line: LineString | Point | None = None      # For the case of multiple lines in the geometry, lines are merged
+        self.number_of_points: List[Point] = []                 # Number of calculated Points
+        self.point_azimut_list: List[tuple[Point, float]] = []  # List of calculated points with their azimuth
 
     # ---------------- Geometry ----------------
     def load_geometry(self) -> LineString | Point:
@@ -386,10 +396,6 @@ class AzimutVisualizer:
         plt.show()
 
 
-# -----------------------------------------------------
-# PV-System
-# -----------------------------------------------------
-
 class PV_System:
     """
     PV-System-Wrapper:
@@ -398,15 +404,13 @@ class PV_System:
     """
 
     def __init__(self, geojson_path, pvtypes, step_size, weather_df, base_output_dir):
-        self.geojson_path = geojson_path
-        self.pvtypes = pvtypes
-        self.step_size = step_size
-        self.weather_df = weather_df      # Wetterdaten aus DWD-Skript
-        self.base_output_dir = base_output_dir  # z. B. "./Input/punkte"
+        self.geojson_path = geojson_path                    # Path to the GeoJSON file
+        self.pvtypes = pvtypes                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
+        self.step_size = step_size                          # PV Type from PV Type dataclass list
+        self.weather_df = weather_df                        # Wetterdaten aus DWD-Skript
+        self.base_output_dir = base_output_dir              # z. B. "./Input/punkte"
 
-    # -------------------------------------------------
-    # 1) Punkte + Azimut generieren
-    # -------------------------------------------------
+    # ------------Punkte + Azimut generieren--------------------
     def generate_pv_points(self):
         """
         Für jeden PV-Typ werden Punkte + Azimut berechnet und
@@ -432,11 +436,11 @@ class PV_System:
 
         return results
 
-    # -------------------------------------------------
-    # 2) PV Simulation der Punkte
-    # -------------------------------------------------
-
+    # -------------PV Simulation der Punkte-------------------------
     def _build_mount(self, pv_type: PVType, row):
+        """
+        Builds PV system mount in regards to pvtype configuration
+        """
         if getattr(pv_type, "mount_type", "fixed") == "singleaxis":
             if pv_type.backtrack and pv_type.gcr is None:
                 raise ValueError("Tracking mit backtrack=True braucht pv_type.gcr.")
@@ -454,6 +458,9 @@ class PV_System:
             )
 
     def _simulate_monofacial_point(self, pv_type: PVType, row):
+        """
+        Simulates one monofacial point in regards to pvtype configuration
+        """
         module_params = sandia_modules[pv_type.module]
         inverter_params = cec_inverters[pv_type.inverter]
         temp_params = temp_models_sapm[pv_type.temp_model]
@@ -481,6 +488,9 @@ class PV_System:
         return mc.results.ac
 
     def _simulate_bifacial_point(self, pv_type: PVType, row):
+        """
+        Simulates one bifacial point in regards to pvtype configuration
+        """
         loc = Location(row["latitude"], row["longitude"], tz="Europe/Berlin")
         times = self.weather_df.index
         solar_position = loc.get_solarposition(times)
@@ -559,9 +569,7 @@ class PV_System:
 
         return mc.results.ac
 
-    # -------------------------------------------------
-    # 3) Energiesimulation für PV-Typ
-    # -------------------------------------------------
+    # --------------------Energiesimulation für PV-Typ-------------------
     def simulate_pv_type_energy(self, pv_type: PVType, points_csv_path: str):
         """
         Liest die Punkte-CSV eines PV-Typs ein, simuliert alle Punkte
