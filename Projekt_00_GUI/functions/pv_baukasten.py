@@ -1,3 +1,4 @@
+# Übergabefertig kommentiert JB
 import pvlib
 import geopandas as gpd
 from shapely.ops import unary_union
@@ -159,9 +160,9 @@ PV_TYPEN = [
     # 5. Freifläche_bzw_Agri_geneigt
     PVType(
         id=5,
-        name="Freifläche_bzw_Agri_geneigt",
-        azimut=180,
-        tilt=30,
+        name="Freifläche_bzw_Agri_tracking",
+        azimut=None,
+        tilt=None,
 
         module="Canadian_Solar_CS6X_300M__2013_",
         inverter="ABB__PVI_3_0_OUTD_S_US__208V_",
@@ -237,7 +238,7 @@ class AzimutCalculator:
         self.geojson_path = geojson_path                        # Path to the GeoJSON file
         self.step_size = step_size                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
         self.pv_type = pv_type                                  # PV Type from PV Type dataclass list
-        self.output_csv_path = output_csv_path                  # (DEBUG??)Path for the CSV-Export of calculated point coordinates
+        self.output_csv_path = output_csv_path                  # Path for the CSV-Export of calculated point coordinates
 
         self.gdf = None                                         # GeoDataFrame red from the GeoJSON path
         self.merged_line: LineString | Point | None = None      # For the case of multiple lines in the geometry, lines are merged
@@ -358,9 +359,9 @@ class AzimutVisualizer:
             Only plot every nth arrow for clarity (default is 10).
         """
         # Extract data from the calculator
-        gdf = self.calc.gdf  # Original geometry of PV lines/polygons
-        points = self.calc.point_list  # Interpolated PV points
-        azimuts = self.calc.azimut_list  # Corresponding azimuths in degrees
+        gdf = self.calc.gdf                                             # Original geometry of PV lines/polygons
+        points = [p for p, _ in self.calc.point_azimut_list]
+        azimuts = [a for _, a in self.calc.point_azimut_list]           # Corresponding azimuths in degrees
         pv_typ = getattr(self.calc.pv_type, "name", "Unknown PV Type")  # PV type name
 
         # Create figure and axis
@@ -407,7 +408,7 @@ class PV_System:
         self.geojson_path = geojson_path                    # Path to the GeoJSON file
         self.pvtypes = pvtypes                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
         self.step_size = step_size                          # PV Type from PV Type dataclass list
-        self.weather_df = weather_df                        # Wetterdaten aus DWD-Skript
+        self.weather_df = weather_df                        # Weather data from DWD-script
         self.base_output_dir = base_output_dir              # z. B. "./Input/punkte"
 
     # ------------Punkte + Azimut generieren--------------------
@@ -431,7 +432,7 @@ class PV_System:
                 pv_type=pv_type,
                 output_csv_path=output_csv,
             )
-            gdf_points = calc.calculate_azimut()
+            gdf_points = calc.run()
             results[pv_type.id] = gdf_points
 
         return results

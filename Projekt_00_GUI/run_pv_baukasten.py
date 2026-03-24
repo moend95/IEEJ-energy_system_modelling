@@ -1,3 +1,4 @@
+#Übergabefertig kommentiert JB
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -5,21 +6,21 @@ import pandas as pd
 from functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
 from functions.pv_baukasten import PV_System, PV_TYPEN
 
-# Ausgabe Punkte die man auf der linienbasierten Karte sehen kann
-
 USE_EXISTING_WEATHER = True
-#weather_csv = "./functions/inputs/wetter_daten_15min.csv"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 base_input = os.path.join(SCRIPT_DIR, "functions", "inputs")
 weather_csv = os.path.join(base_input, "wetter_daten_15min.csv")
 
 
-
-
 if __name__ == "__main__":
+    """
+    Direct run of PV Baukasten without modulation and balancing of other modules.
+    Modulation of separate PV systems.
+    Backend exclusive.
+    """
     # ------------------------------------------------------------
-    # 1) Wetterdaten laden (CSV ODER DWD)
+    # 1) Load weatherdate (CSV or DWD)
     # ------------------------------------------------------------
     if USE_EXISTING_WEATHER:
         print("→ Verwende vorhandene Wetterdaten-CSV")
@@ -39,24 +40,26 @@ if __name__ == "__main__":
         weather_df = DWDWeatherFetcher(cfg).run()
 
     # ------------------------------------------------------------
-    # 2) PV-System anlegen (Geometrie + PV-Typen + Schrittweite)
+    # 2) Create PV system (Geometry + PV type + step size)
     # ------------------------------------------------------------
-    #base_input = "./functions/inputs"
     geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
     output_dir = os.path.join(base_input, "punkte")
     os.makedirs(output_dir, exist_ok=True)
 
-    # hier kannst du auch mehrere Typen übergeben, z.B. [PV_TYPEN[0], PV_TYPEN[3], ...]
+    # Choose input variables here. Multiselect of PV types possible e.g. [PV_TYPEN[0], PV_TYPEN[3], ...]
     pv_system = PV_System(
-        geojson_path=geojson_path,
-        pvtypes=[PV_TYPEN[2]],   # 0 = Windschutzwand
-        step_size=50,             # Punktabstand in m
-        weather_df=weather_df,
-        base_output_dir=output_dir,
+        geojson_path=geojson_path,              # Path to the GeoJSON file
+        pvtypes=[PV_TYPEN[2]],                  # PV Type from PV Type dataclass list
+        step_size=50,                           # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
+        weather_df=weather_df,                  # Weather data from DWD-script
+        base_output_dir=output_dir,             # Path for the CSV-Export of calculated point coordinates
     )
 
     # ------------------------------------------------------------
-    # 3) Punkte + Azimut für alle gewählten PV-Typen generieren
+    # 3) Generate points + azimuth for all selected PV types
+    # ------------------------------------------------------------
+    # ------------------------------------------------------------
+    # 3) Generate points + azimuth for all selected PV types
     # ------------------------------------------------------------
     results = pv_system.generate_pv_points()
 
@@ -64,29 +67,44 @@ if __name__ == "__main__":
     for pv_type in pv_system.pvtypes:
         print(" -", pv_type)
 
+    print("\n=== CSV-Test ===")
+    for pv_type in pv_system.pvtypes:
+        geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
+        csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+        csv_path = os.path.join(output_dir, csv_name)
+
+        print(f"\nPV-Typ: {pv_type.name}")
+        print(f"CSV erwartet unter: {csv_path}")
+        print(f"Existiert: {os.path.exists(csv_path)}")
+
+        if os.path.exists(csv_path):
+            df_test = pd.read_csv(csv_path)
+            print("Spalten:", df_test.columns.tolist())
+            print("Zeilen:", len(df_test))
+            print(df_test.head(3))
     # ------------------------------------------------------------
-    # 4) Jahresenergie je PV-Typ simulieren + Zeitreihe plotten
+    # 4) Simulate yearly energy per PV type + plot time series
     # ------------------------------------------------------------
     print("\nJahresenergie je PV-Typ:")
     for pv_type in pv_system.pvtypes:
-        # CSV-Name so, wie ihn generate_pv_points gespeicher hat
-        csv_name = f"punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
+        geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
+        csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
         csv_path = os.path.join(output_dir, csv_name)
 
         energy_kwh_pv_type, total_ac_w = pv_system.simulate_pv_type_energy(pv_type, csv_path)
         print(f"  {pv_type.name}: {energy_kwh_pv_type:.1f} kWh")
 
-        # Funktion zur Skalierung der Energie und Leistung entsprechend der Schrittweite
+        # Function for energy and power scaling according to step size
         scaled_energy_kwh_pv_type = 0
         if pv_system.step_size >= pv_type.row_width:
-            scaling_factor = pv_system.step_size // pv_type.row_width  # Ganzzahldivision -> keine halben Elemente
+            scaling_factor = pv_system.step_size // pv_type.row_width  # Whole number division -> no half elements
             print("Scaling Faktor", f"{pv_type.name}", scaling_factor)
             scaled_energy_kwh_pv_type = energy_kwh_pv_type * scaling_factor
             print(f"Skalierte Energie {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
         else:
             print("Skalierte Gesamtenergie wurde nicht berechnet da Schrittweite kleiner als PV-Typ-Modulweite")
 
-        # Plot der AC-Leistung über das Jahr
+        # Plot AC power for year
         plt.figure(figsize=(15, 4))
         plt.plot(total_ac_w.index, total_ac_w.values, linewidth=0.6)
         plt.title(f"Jahresverlauf AC-Leistung – {pv_type.name}")
@@ -97,18 +115,15 @@ if __name__ == "__main__":
         plt.show()
 
         # ------------------------------------------------------------
-        # Zusatz: Tagesplot für einen Sommertag (z. B. 21. Juni)
+        # Add-on: Single day plot for a representative summer day (e.g. 21. June)
         # ------------------------------------------------------------
         summer_day_start = "2022-06-21"
         summer_day_end = "2022-06-24"
         day_ac = total_ac_w.loc[summer_day_start:summer_day_end].copy()
 
-        # Aufräumen für Plot:
+        # Clean-up for plotting
         day_ac = day_ac.dropna()
-        day_ac = day_ac.clip(lower=0)  # negative Werte (z.B. -0.1) auf 0 setzen
-
-        # Optional: nur Tagesstunden anzeigen (sieht meist besser aus)
-        #day_ac = day_ac.between_time("06:00", "22:00")
+        day_ac = day_ac.clip(lower=0)  # set negative values zero
 
         plt.figure(figsize=(10, 4))
         plt.plot(day_ac.index, day_ac.values, linewidth=1.2)
@@ -118,3 +133,5 @@ if __name__ == "__main__":
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
+
+
