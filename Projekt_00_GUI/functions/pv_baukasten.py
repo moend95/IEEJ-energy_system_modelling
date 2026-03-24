@@ -237,7 +237,7 @@ class AzimutCalculator:
         self.geojson_path = geojson_path                        # Path to the GeoJSON file
         self.step_size = step_size                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
         self.pv_type = pv_type                                  # PV Type from PV Type dataclass list
-        self.output_csv_path = output_csv_path                  # (DEBUG??)Path for the CSV-Export of calculated point coordinates
+        self.output_csv_path = output_csv_path                  # Path for the CSV-Export of calculated point coordinates
 
         self.gdf = None                                         # GeoDataFrame red from the GeoJSON path
         self.merged_line: LineString | Point | None = None      # For the case of multiple lines in the geometry, lines are merged
