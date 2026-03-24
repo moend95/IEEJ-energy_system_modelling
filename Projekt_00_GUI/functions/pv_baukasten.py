@@ -46,7 +46,7 @@ class PVType:
     row_width: float | None = None                  # Width of the module row in meters
 
     # 3. Bifacial properties
-    bifazial: bool = False                          # Enables bifacial calculation if True
+    bifazial: float | None = None                   # Bifaciality factor (0-1)
     is_bifacial_detailed: bool = False              # Use detailed bifacial model (e.g., pvlib/pvfactors)
     bifaciality: float | None = None                # Rear-side efficiency factor (0–1)
     gcr: float | None = None                        # Ground coverage ratio (module area / ground area)
@@ -78,7 +78,7 @@ PV_TYPEN = [
         row_width=4.0,
 
         # 3. Bifaziale Eigenschaften
-        bifazial=True,  # aktiviert, weil es bifazial ist
+        bifazial=0,  # aktiviert, weil es bifazial ist
         bifaciality=0.75,  # Rückseitenwirkungsgrad
         gcr=0.35,  # Bodenbedeckungsgrad
         albedo=0.2,  # Bodenreflexion
@@ -102,7 +102,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -125,7 +125,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -148,7 +148,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -171,7 +171,7 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=1.0,
 
-        bifazial=False,
+        bifazial=0.1,
         bifaciality=0.75,
         gcr=0.35,
         albedo=0.2,
@@ -197,7 +197,7 @@ PV_TYPEN = [
         strings_per_inverter=1,
         row_width=1.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=None,
         gcr=None,
         albedo=None,
@@ -219,7 +219,7 @@ PV_TYPEN = [
         strings_per_inverter=1,
         row_width=1.0,
 
-        bifazial=False,
+        bifazial=0,
         bifaciality=None,
         gcr=None,
         albedo=None,
