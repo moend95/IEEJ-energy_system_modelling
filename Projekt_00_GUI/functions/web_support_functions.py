@@ -413,6 +413,8 @@ def build_synergy_diagram(inp, sim_output):
         autarky  = max(float(getattr(sim_output, "autarky", 0) or 0), 0.0)
 
 
+        if autarky > 1:
+            autarky = 1
 
         total_generation = solar_energy + landscape_energy
         total_demand = industry_energy + green_hub_energy + juechen_sued_energy
@@ -668,11 +670,11 @@ def build_synergy_diagram(inp, sim_output):
     ]
 
     kpi_y_second = 0.91
-    x_min_second = 0.17
-    x_max_second = 0.93
+    x_min_second = 0.4#0.17
+    x_max_second = 0.9#0.93
     kpis_second_line = [
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
-        ("Autarkie", f"{autarky*100:.1f} %", "#e8f2ff"),
+        #("Autarkie", f"{autarky*100:.1f} %", "#e8f2ff"),
         ("Eigenenergie-<br>nutzung", f"{ee_self_consumption*100:.1f} %", "#e8e8ff"),
 
         #("Netzbezug nach Batterie", format_energy(battery_grid_import_kwh), "#E8F7FF"),
