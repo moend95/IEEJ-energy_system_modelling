@@ -423,6 +423,9 @@ def build_synergy_diagram(inp, sim_output):
             max_power_from_grid = sim_output.res_df['Bilanz [kW]'].min()
             max_power_to_grid = sim_output.res_df['Bilanz [kW]'].max()
 
+        if max_power_to_grid < 0:
+            max_power_to_grid = 0
+
         coverage = float(getattr(sim_output, "bal_coverage_rate", 0) or 0)
         coverage_percent = max(0.0, min(coverage * 100.0, 100.0))
 
