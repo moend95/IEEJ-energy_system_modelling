@@ -1198,7 +1198,7 @@ def main(
 
 if __name__ == "__main__":
 	try:
-		result = main(interactive=True, output_dir="./outputs")
+		result = main(interactive=True, output_dir="../data/outputs")
 		if result.get("success"):
 			print()#"✓ Verarbeitung erfolgreich abgeschlossen!")
 		else:

@@ -6,17 +6,15 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
-import os
 import folium
 from streamlit_folium import st_folium
 import json
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
-from functions.plot_functions import (
+from Projekt_00_GUI.core.plot_functions import (
     plot_industry_preview,
     plot_industry_annual_energy,
     plot_green_hub_weekly_profiles,
@@ -24,7 +22,7 @@ from functions.plot_functions import (
     plot_js_weekly_profile,
 )
 
-from functions.web_support_functions import *
+from Projekt_00_GUI.core.web_support_functions import *
 
 
 pv_name_to_id = {

@@ -8,17 +8,17 @@ from pathlib import Path
 # Import
 
 #HILFSFUNKTIONEN
-from functions.hilfsfunktionen import *
+from Projekt_00_GUI.core.hilfsfunktionen import *
 
 #PV IMPORTS
-from functions.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
-from functions.pv_baukasten import PV_System, PV_TYPEN
+from Projekt_00_GUI.core.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
+from Projekt_00_GUI.core.pv_baukasten import PV_System, PV_TYPEN
 
 #INDUSTRIE IMPORT
-from functions.Industriegebiet import IndustryLoadAggregator
+from Projekt_00_GUI.core.Industriegebiet import IndustryLoadAggregator
 
 #ENERGIELANDSCHAFT IMPORT
-from functions.Energielandschaft import main
+from Projekt_00_GUI.core.Energielandschaft import main
 
 # ------------------------------------------------------------
 # 1) Wetterdaten laden (CSV ODER DWD)
