@@ -151,8 +151,11 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             base_output_dir=output_dir,
         )
 
+        el_pv_system.generate_pv_points()
+
         # CSV-Name so, wie ihn generate_pv_points gespeicher hat
-        el_csv_name = f"punkte_{el_selected_pv_type.id}_{el_selected_pv_type.name}.csv".replace(" ", "_")
+        geo_name = os.path.splitext(os.path.basename(geojson_path_2))[0]
+        el_csv_name = f"{geo_name}_punkte_{el_selected_pv_type.id}_{el_selected_pv_type.name}.csv".replace(" ", "_")
         el_csv_path = os.path.join(output_dir, el_csv_name)
         #print(el_csv_path)
 
