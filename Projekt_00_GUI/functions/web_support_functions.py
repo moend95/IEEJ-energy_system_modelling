@@ -670,8 +670,8 @@ def build_synergy_diagram(inp, sim_output):
     ]
 
     kpi_y_second = 0.91
-    x_min_second = 0.4#0.17
-    x_max_second = 0.9#0.93
+    x_min_second = 0.35#0.17
+    x_max_second = 0.85#0.93
     kpis_second_line = [
         #("Batterie-Ladung", format_energy(battery_charge_kwh), "#E8F7FF"),
         #("Autarkie", f"{autarky*100:.1f} %", "#e8f2ff"),
