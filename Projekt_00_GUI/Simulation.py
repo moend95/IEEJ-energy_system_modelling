@@ -18,9 +18,9 @@ industrie_heating_choice_mapping = {True: "2", False: "1"}
 el_pv_type_number_text_mapping = {4:"horizontal_tracking", 5:"vertical", 6:"horizontal"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
-weather_csv = os.path.join(script_dir,"functions", "inputs","wetter_daten_2021_15min.csv")
-base_input = os.path.join(script_dir, "functions", "inputs")
-output_dir = os.path.join(base_input, "punkte")
+base_input = os.path.join(script_dir, "data", "inputs")
+weather_csv = os.path.join(base_input,"wetter_daten_2021_15min.csv")
+output_dir = os.path.join(script_dir, "calculated_points", "points")
 os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
 
 
@@ -127,7 +127,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     if inp.el_pv_type is not None:
         agri_result = main(
             interactive=False,
-            output_dir="./outputs",
+            output_dir="data/outputs",
             pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
             tractor_width_m=inp.el_tractor_width,
             tractor_length_m=inp.el_tractor_length,
@@ -210,7 +210,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # 4) Green Energy Hub
     # ------------------------------------------------------------
 
-    hub_dir = os.path.join(script_dir, "functions", "inputs", "green_energy_hub")
+    hub_dir = os.path.join(base_input, "green_energy_hub")
 
     # Default: nichts aktiv -> Nullprofil
     out.res_df["Last_Green_Energy_Hub [kW]"] = 0.0
@@ -275,9 +275,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     if js_factor > 0:
         js_path = os.path.join(
-            script_dir,
-            "functions",
-            "inputs",
+            base_input,
             "Strombezug_Stadtentwicklung_15min.csv"
         )
 

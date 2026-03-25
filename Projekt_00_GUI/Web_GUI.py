@@ -283,7 +283,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
         preview_csv_path = os.path.join(
             script_dir,
-            "functions",
+            "data",
             "inputs",
             "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv"
         )
@@ -349,7 +349,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
     with tab5:
         green_hub_base_dir = os.path.join(
             script_dir,
-            "functions",
+            "data",
             "inputs",
             "green_energy_hub"
         )
@@ -469,7 +469,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
                 # 👉 Plot
                 js_csv_path = os.path.join(
                     script_dir,
-                    "functions",
+                    "data",
                     "inputs",
                     "Strombezug_Stadtentwicklung_15min.csv"
                 )

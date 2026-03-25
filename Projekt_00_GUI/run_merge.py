@@ -200,7 +200,7 @@ tractor_turn_radius_m = 9.0         #JBtemp: Input aus IOTypes: tractor_turn_rad
 #agri PV code für geojson und agri pv länge
 agri_result = main(
 	interactive=True,
-	output_dir="./outputs",
+	output_dir="data/outputs",
 	pv_ausrichtung=pv_ausrichtung,
 	ausbau_status=ausbau_status,
 	tractor_width_m=tractor_width_m,

@@ -52,9 +52,9 @@ class IndustryLoadAggregator:
 
     def __init__(self, base_dir: Optional[str] = None) -> None:
         self.script_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
-        self.path_standard = os.path.join(self.script_dir,'inputs', "Projekt_04_Lastgaenge_Industriegebiet.csv")
+        self.path_standard = os.path.join(self.script_dir,"..","data","inputs", "Projekt_04_Lastgaenge_Industriegebiet.csv")
         self.path_waerme_kaelte = os.path.join(
-            self.script_dir,'inputs',
+            self.script_dir,"..","data","inputs",
             "Projekt_04_Lastgaenge_Industriegebiet_und_nPro_Waerme_Kaelte.csv",
         )
         self.mode_choice: str = "1"
@@ -195,7 +195,7 @@ class IndustryLoadAggregator:
         combined_df_csv = combined_df.copy()
         combined_df_csv["Time stamp"] = combined_df_csv["Time stamp"].dt.strftime("%d.%m %H:%M")
         import os
-        output_dir = "../outputs"
+        output_dir = "../data/outputs"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(self.script_dir,output_dir, f"{self.BASISNAME_AUSGABE}.csv")

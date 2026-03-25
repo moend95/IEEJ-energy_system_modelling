@@ -9,7 +9,7 @@ from functions.pv_baukasten import PV_System, PV_TYPEN
 USE_EXISTING_WEATHER = True
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-base_input = os.path.join(SCRIPT_DIR, "functions", "inputs")
+base_input = os.path.join(SCRIPT_DIR, "data", "inputs")
 weather_csv = os.path.join(base_input, "wetter_daten_15min.csv")
 
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # 2) Create PV system (Geometry + PV type + step size)
     # ------------------------------------------------------------
     geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
-    output_dir = os.path.join(base_input, "punkte")
+    output_dir = os.path.join(SCRIPT_DIR, "points")
     os.makedirs(output_dir, exist_ok=True)
 
     # Choose input variables here. Multiselect of PV types possible e.g. [PV_TYPEN[0], PV_TYPEN[3], ...]

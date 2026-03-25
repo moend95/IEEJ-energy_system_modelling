@@ -259,7 +259,7 @@ def main():
                             (f"EL{el_case}", f"H{h_case}")
                         ] = 100 * np.minimum(prod, cons).sum() / prod.sum()
 
-                        heatmap_df_selfcons.to_excel("outputs/sensi_res_dfs/balance_self_consumption_rate.xlsx")
+                        heatmap_df_selfcons.to_excel("data/outputs/sensi_res_dfs/balance_self_consumption_rate.xlsx")
                         '''
 
 
@@ -275,11 +275,11 @@ def main():
                             ] = out.bs_df['new_balance_kw'].sum() / 4  # out.res_df['Bilanz [kW]'].sum()/4 #
 
                         print(heatmap_df)
-                        heatmap_df.to_excel("outputs/sensi_res_dfs/bat_balance.xlsx")
+                        heatmap_df.to_excel("data/outputs/sensi_res_dfs/bat_balance.xlsx")
 
                         #Output Lastgang speichern
                         if not out.res_df.empty:
-                            filename = f"outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
+                            filename = f"data/outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
                             out.res_df.to_csv(
                                 filename,
                                 sep=",",
@@ -314,7 +314,7 @@ def main():
     )
     plt.title("Balance Avg. Neg. Power Sensitivity")
     plt.tight_layout()
-    plt.savefig("outputs/sensi_res_dfs/balance_self_consumption_rate.png", dpi=300)
+    plt.savefig("data/outputs/sensi_res_dfs/balance_self_consumption_rate.png", dpi=300)
     plt.show()
 
 
@@ -323,7 +323,7 @@ def main():
 
     plot_scientific_heatmap(
         heatmap_df,
-        save_path="outputs/sensi_res_dfs/balance_self_consumption_rate.png"
+        save_path="data/outputs/sensi_res_dfs/balance_self_consumption_rate.png"
     )
 
 
