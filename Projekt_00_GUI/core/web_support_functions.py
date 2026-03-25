@@ -19,7 +19,7 @@ project_dir = os.path.dirname(script_dir)
 
 #script_dir = os.path.dirname(os.path.abspath(__file__))
 #proj_dir = script_dir.parent
-icon_dir = os.path.join(project_dir, "icon")
+icon_dir = os.path.join(project_dir, "data", "inputs", "icon")
 
 ICON_PATHS = {
     "solar": os.path.join(icon_dir, "solar_highway.png"),
