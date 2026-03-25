@@ -402,6 +402,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     out.ee_self_consumption = (total_generation - feed_in_kwh) / total_generation
+    if total_demand == 0:
+        out.ee_self_consumption = 0
     out.autarky = (total_generation - feed_in_kwh) / total_demand
 
 

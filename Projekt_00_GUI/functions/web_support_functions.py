@@ -412,6 +412,8 @@ def build_synergy_diagram(inp, sim_output):
         ee_self_consumption = max(float(getattr(sim_output, "ee_self_consumption", 0) or 0), 0.0)
         autarky  = max(float(getattr(sim_output, "autarky", 0) or 0), 0.0)
 
+
+
         total_generation = solar_energy + landscape_energy
         total_demand = industry_energy + green_hub_energy + juechen_sued_energy
 
