@@ -202,8 +202,8 @@ with st.container(key="Erzeugung", width=1000, height='content'):
                     100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
                 },
                 "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": {
-                    50: "Geometry_Horizontal_50_Prozent_20m.geojson",
-                    100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
+                    50: "Geometry_Vertikal_50_Prozent_20m.geojson",
+                    100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
                 },
             }
 
