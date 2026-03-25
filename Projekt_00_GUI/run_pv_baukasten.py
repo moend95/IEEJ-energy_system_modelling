@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # 2) Create PV system (Geometry + PV type + step size)
     # ------------------------------------------------------------
     geojson_path = os.path.join(base_input, "geometry", "a44_beide.geojson")
-    output_dir = os.path.join(SCRIPT_DIR, "points")
+    output_dir = os.path.join(SCRIPT_DIR, "data", "outputs", "highway")
     os.makedirs(output_dir, exist_ok=True)
 
     # Choose input variables here. Multiselect of PV types possible e.g. [PV_TYPEN[0], PV_TYPEN[3], ...]
