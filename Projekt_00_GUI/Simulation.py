@@ -19,7 +19,7 @@ el_pv_type_number_text_mapping = {4:"horizontal_tracking", 5:"vertical", 6:"hori
 script_dir = os.path.dirname(os.path.abspath(__file__))
 base_input = os.path.join(script_dir, "data", "inputs")
 weather_csv = os.path.join(base_input,"wetter_daten_2021_15min.csv")
-output_dir = os.path.join(script_dir, "calculated_points", "points")
+output_dir = os.path.join(script_dir,"data", "outputs")
 os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
 
 
@@ -53,14 +53,14 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         for highway in inp.h_highways:
             selected_file = highway_geojson_mapping[highway]
-            geojson_path = os.path.join(script_dir, "geometry", selected_file)
+            geojson_path = os.path.join(base_input, "geometry", selected_file)
 
             h_pv_system = PV_System(
                 geojson_path=geojson_path,
                 pvtypes=h_selected_pv_types,
                 step_size=800,
                 weather_df=weather_df,
-                base_output_dir=output_dir,
+                base_output_dir=os.path.join(output_dir,"highway"),
             )
 
             results = h_pv_system.generate_pv_points()
@@ -74,7 +74,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             for pv_type in h_pv_system.pvtypes:
                 geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
                 csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
-                csv_path = os.path.join(output_dir, csv_name)
+                csv_path = os.path.join(output_dir,"highway", csv_name)
 
                 if not os.path.exists(csv_path):
                     print(f"Datei nicht gefunden: {csv_path}")
@@ -126,7 +126,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     if inp.el_pv_type is not None:
         agri_result = main(
             interactive=False,
-            output_dir="data/outputs",
+            output_dir=os.path.join(output_dir,"energy_landscape"),
             pv_ausrichtung=el_pv_type_number_text_mapping[inp.el_pv_type],
             tractor_width_m=inp.el_tractor_width,
             tractor_length_m=inp.el_tractor_length,
@@ -139,7 +139,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         # INPUT für PV Baukasten - ENERGIELANDSCHAFT
         geojson_file_2 = "Agri_PV_Centroid.geojson"
-        geojson_path_2 = os.path.join(base_input, "geometrien", geojson_file_2)
+        geojson_path_2 = os.path.join(base_input, "geometry", geojson_file_2)
         step_size_default = 1000
 
         el_pv_system = PV_System(
@@ -147,7 +147,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             pvtypes=[el_selected_pv_type],  # [PV_TYPEN[0],PV_TYPEN[3]],
             step_size=step_size_default,  # Punktabstand in m
             weather_df=weather_df,
-            base_output_dir=output_dir,
+            base_output_dir=os.path.join(output_dir,"energy_landscape"),
         )
 
         el_pv_system.generate_pv_points()
@@ -155,7 +155,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         # CSV-Name so, wie ihn generate_pv_points gespeicher hat
         geo_name = os.path.splitext(os.path.basename(geojson_path_2))[0]
         el_csv_name = f"{geo_name}_punkte_{el_selected_pv_type.id}_{el_selected_pv_type.name}.csv".replace(" ", "_")
-        el_csv_path = os.path.join(output_dir, el_csv_name)
+        el_csv_path = os.path.join(output_dir,"energy_landscape", el_csv_name)
         #print(el_csv_path)
 
         # UNBEDINGT ÜBERPRÜFEN

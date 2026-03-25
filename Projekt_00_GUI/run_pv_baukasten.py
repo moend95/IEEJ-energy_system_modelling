@@ -42,7 +42,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------
     # 2) Create PV system (Geometry + PV type + step size)
     # ------------------------------------------------------------
-    geojson_path = os.path.join(base_input, "geometrien", "a44_beide.geojson")
+    geojson_path = os.path.join(base_input, "geometry", "a44_beide.geojson")
     output_dir = os.path.join(SCRIPT_DIR, "points")
     os.makedirs(output_dir, exist_ok=True)
 

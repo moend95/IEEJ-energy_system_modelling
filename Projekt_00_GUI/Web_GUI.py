@@ -126,7 +126,7 @@ with st.container(key="Erzeugung", width=1000, height='content'):
 
             for highway in Input.h_highways:
                 selected_file = pv_geojson_mapping_col2_tab1[highway]
-                geojson_path = os.path.join(script_dir, "geometry", selected_file)
+                geojson_path = os.path.join(script_dir,"data", "inputs", "geometry", selected_file)
 
                 with open(geojson_path, "r", encoding="utf-8") as f:
                     geojson_data = json.load(f)
@@ -207,7 +207,7 @@ with st.container(key="Erzeugung", width=1000, height='content'):
 
             if Input.el_build_state != 0 and Input.el_build_state is not None:
                 selected_file = pv_geojson_mapping_col2_tab2[el_selected_names][Input.el_build_state]
-                geojson_path = os.path.join(script_dir, "geometry", selected_file)
+                geojson_path = os.path.join(script_dir,"data", "inputs", "geometry", selected_file)
 
                 with open(geojson_path, "r", encoding="utf-8") as f:
                     geojson_data = json.load(f)

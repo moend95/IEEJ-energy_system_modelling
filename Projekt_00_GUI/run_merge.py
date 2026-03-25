@@ -73,7 +73,7 @@ os.makedirs(output_dir, exist_ok=True)
 # ------------------------------------------------------------
 #INPUT für PV SOLARAUTOBAHN
 geojson_file_1 = "a44_beide.geojson"
-geojson_path_1 = os.path.join(base_input, "geometrien", geojson_file_1)
+geojson_path_1 = os.path.join(base_input, "geometry", geojson_file_1)
 step_size_default = 2000
 
 #step_size = hf.get_float_input(f'Schrittweite für PV Berechnung [default: {step_size_default}m]: ', step_size_default)
@@ -239,7 +239,7 @@ else:
 
 #INPUT für PV Baukasten - ENERGIELANDSCHAFT
 geojson_file_2 = "Agri_PV_Centroid.geojson"
-geojson_path_2 = os.path.join(base_input, "geometrien", geojson_file_2)
+geojson_path_2 = os.path.join(base_input, "geometry", geojson_file_2)
 step_size_default = 1000
 
 #step_size = hf.get_float_input(f'Schrittweite für PV Berechnung [default: {step_size_default}m]: ', step_size_default)
