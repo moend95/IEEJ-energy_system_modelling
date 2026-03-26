@@ -372,18 +372,27 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     # ------------------------------------------------------------
 
 
-    # Mit Effizienz von 95% beim Laden und Entladen
+    # When Battery input is given (capacity), battery class is called and storage object created
     if inp.bs_energy_kwh is not None and inp.bs_energy_kwh > 0:
         storage = BatteryStorage(
-            capacity_kwh=inp.bs_energy_kwh,
-            initial_soc_kwh=0,
-            charge_efficiency=np.sqrt(inp.bs_efficiency),
-            discharge_efficiency=np.sqrt(inp.bs_efficiency),
-            max_charge_c=inp.bs_c_rate,
-            max_discharge_c=inp.bs_c_rate,
+            capacity_kwh=inp.bs_energy_kwh,                     # Battery capacity [kWh]
+            initial_soc_kwh=0,                                  # Initial State of Charge [kWh]
+            charge_efficiency=np.sqrt(inp.bs_efficiency),       # Charging Efficiency
+            discharge_efficiency=np.sqrt(inp.bs_efficiency),    # Discharging Efficiency
+            max_charge_c=inp.bs_c_rate,                         # Maximum C-Rate Charging
+            max_discharge_c=inp.bs_c_rate,                      # Maximum C-Rate Discharging
+            # Calculates max Charging/Discharging Power through capacity and C-Rate
         )
 
+        # Calculate new energy balance (Data Frame['new_balance_kw'])
+        # Input: Balance Data Frame and give timestep information, 0.25 equals 15 min
+        # Output: Data Frame including: balance_kw(Input), battery_power_kw, soc_kwh, new_balance_kw
         out.bs_df = storage.simulate(out.res_df["Bilanz [kW]"], timestep_hours=0.25)
+
+        # Calculate battery stats (dict)
+        # Input: result Battery Data Frame and give timestep information, 0.25 equals 15 min
+        # Output: Stats Dictionary: grid_import_kwh, grid_export_kwh, battery_charge_kwh, battery_discharge_kwh,
+        #  ...final_soc_kwh, final_soc_percent, max_charge_kw, max_discharge_kw
         out.bs_stats = storage.get_stats(out.bs_df, timestep_hours=0.25)
 
         out.bal_energy_kwh =  out.bal_energy_kwh + out.bs_stats['battery_discharge_kwh'] - out.bs_stats['battery_charge_kwh']

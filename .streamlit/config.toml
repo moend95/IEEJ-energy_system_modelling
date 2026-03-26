@@ -1,0 +1,13 @@
+#[client]
+#showErrorDetails = "none"
+#toolbarMode = "viewer"
+#showErrorLinks = false
+
+#[server]
+#runOnSave = true
+
+[logger]
+level = "error"
+
+[theme]
+base = "light"
