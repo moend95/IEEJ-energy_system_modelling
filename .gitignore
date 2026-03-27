@@ -15,5 +15,4 @@ env/
 # Log-Dateien
 *.log
 
-# CSV-files
-*.csv
+
