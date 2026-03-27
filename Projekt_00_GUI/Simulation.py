@@ -5,10 +5,10 @@ import pandas as pd
 
 #Functions
 from core.io_types import GuiInput, SimOutput
-from Projekt_00_GUI.core.Industriegebiet import IndustryLoadAggregator
-from Projekt_00_GUI.core.pv_baukasten import PV_System, PV_TYPEN
-from Projekt_00_GUI.core.Energielandschaft import main
-from Projekt_00_GUI.core.battery_storage import BatteryStorage
+from Projekt_00_GUI.core.module_industrial_are import IndustryLoadAggregator
+from Projekt_00_GUI.core.module_pv_modulator import PV_System, PV_TYPEN
+from Projekt_00_GUI.core.module_energy_landscape import main
+from Projekt_00_GUI.core.module_battery_storage import BatteryStorage
 
 
 #TYPE MAPPING

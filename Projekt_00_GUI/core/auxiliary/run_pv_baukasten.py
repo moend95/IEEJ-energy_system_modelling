@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from Projekt_00_GUI.core.auxiliary.functions_weather_data import DWDWeatherConfig, DWDWeatherFetcher
-from Projekt_00_GUI.core.pv_baukasten import PV_System, PV_TYPEN
+from Projekt_00_GUI.core.module_pv_modulator import PV_System, PV_TYPEN
 
 USE_EXISTING_WEATHER = True
 
