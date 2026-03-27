@@ -14,7 +14,7 @@ import numpy as np
 
 from core.io_types import GuiInput, SimOutput
 from Simulation import run_simulation
-from Projekt_00_GUI.core.plot_functions import (
+from Projekt_00_GUI.core.functions_plot import (
     plot_industry_preview,
     plot_industry_annual_energy,
     plot_green_hub_weekly_profiles,
@@ -22,7 +22,7 @@ from Projekt_00_GUI.core.plot_functions import (
     plot_js_weekly_profile,
 )
 
-from Projekt_00_GUI.core.web_support_functions import *
+from Projekt_00_GUI.core.functions_web_support import *
 
 
 pv_name_to_id = {
