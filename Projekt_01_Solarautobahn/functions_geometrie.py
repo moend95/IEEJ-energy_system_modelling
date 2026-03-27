@@ -53,6 +53,9 @@ class HighwayExtractor:
             self.edges = self.edges[self.edges['ref'].isin(highway_refs)]
 
     def highway_gdf_in_bb(self, list_indiv_bb):
+        """
+        Input list of geographical boundary boxes (examples in section predefined sections ), receive geo data frame of highways
+        """
         highway_edges_cut = []
 
         for bbox in list_indiv_bb:
