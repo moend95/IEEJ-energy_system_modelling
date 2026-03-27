@@ -323,7 +323,7 @@ def main():
 
     plot_scientific_heatmap(
         heatmap_df,
-        save_path="data/outputs/sensi_res_dfs/balance_self_consumption_rate.png"
+        save_path="../../data/outputs/sensi_res_dfs/balance_self_consumption_rate.png"
     )
 
 
