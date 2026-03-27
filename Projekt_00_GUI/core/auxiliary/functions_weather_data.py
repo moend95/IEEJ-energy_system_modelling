@@ -298,7 +298,7 @@ if __name__ == "__main__":
         start="2018-01-01 00:00",
         end="2018-12-31 23:50",
         auto_select=True,
-        save_path="../data/inputs/Wetterdaten_10min_DWD/wetter_daten_2018_10min.csv",
+        save_path="../../data/inputs/Wetterdaten_10min_DWD/wetter_daten_2018_10min.csv",
         plot_date="2018-07-20",
         plot_range=("2018-01-01", "2018-12-31"),
         use_dirint= True,
