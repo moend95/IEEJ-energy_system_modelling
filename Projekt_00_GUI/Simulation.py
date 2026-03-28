@@ -10,7 +10,6 @@ from Projekt_00_GUI.core.module_pv_modulator import PV_System, PV_TYPEN
 from Projekt_00_GUI.core.module_energy_landscape import main
 from Projekt_00_GUI.core.module_battery_storage import BatteryStorage
 
-
 #TYPE MAPPING
 highway_geojson_mapping= {"A44": "a44_beide.geojson", "A46": "a46_beide.geojson"}
 industrie_heating_choice_mapping = {True: "2", False: "1"}
@@ -20,8 +19,7 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 base_input = os.path.join(script_dir, "data", "inputs")
 weather_csv = os.path.join(base_input,"wetter_daten_2021_15min.csv")
 output_dir = os.path.join(script_dir,"data", "outputs")
-os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
-
+os.makedirs(output_dir, exist_ok=True)
 
 def weather_prep():
     weather_df = pd.read_csv(weather_csv, index_col=0, parse_dates=True)
