@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from Projekt_00_GUI.app import industry_csv_mapping
+
 #Functions
 from core.io_types import GuiInput, SimOutput
 from Projekt_00_GUI.core.module_industrial_are import IndustryLoadAggregator
@@ -12,6 +12,19 @@ from Projekt_00_GUI.core.module_energy_landscape import main
 from Projekt_00_GUI.core.module_battery_storage import BatteryStorage
 
 #TYPE MAPPING
+
+# Mapping: csv id to industry name
+industry_csv_mapping = {
+    0: "Entsorgung",
+    1: "Stahl_1",
+    2: "Logistik und Lagerung",
+    3: "Schrott Metallhandel",
+    4: "Lagerung",
+    5: "Buero",
+    6: "Logistik Lebensmittel",
+    7: "Stahl_2"
+}
+
 highway_geojson_mapping= {"A44": "a44_beide.geojson", "A46": "a46_beide.geojson"}
 industry_heating_choice_mapping = {True: "2", False: "1"}
 el_pv_type_number_text_mapping = {4:"horizontal_tracking", 5:"vertical", 6:"horizontal"}
@@ -29,20 +42,27 @@ def weather_prep():
     return weather_df
 
 def run_simulation(inp: GuiInput) -> SimOutput:
+    """
+    Main simuation function
+    Each of the five modules are implemented (PV-modulator, energy landscape, industrial area, green energy hub and battery storage)
+    The function gets the Input Object and returns the output object defined in io_types.py.
+    During standard procedure the Input object is filled via website user inputs and the outputs are visualized on the website.
+    """
 
     out = SimOutput()
     out.h_number_of_points = 0
     out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
     weather_df = weather_prep()         #Wetterdaten aus csv lesen
-    h_selected_pv_types =  [PV_TYPEN[i] for i in inp.h_pv_types] if inp.h_pv_types else []#[next(pv for pv in PV_TYPEN if pv.id == i) for i in inp.h_pv_types] if inp.h_pv_types else []
 
     # ------------------------------------------------------------
-    # 1) Solarautobahn
+    # 1) PV modulator
     # ------------------------------------------------------------
+    h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types] if inp.h_pv_types else []
     out.h_sum_energy_kwh = 0
     out.h_number_of_points = 0
     all_ac_series = []
 
+    # Errortext conditions
     if not inp.h_highways:
         out.h_error_text = "SOLARAUTOBAHN --- Keine Autobahnen ausgewählt."
     elif not inp.h_pv_types:
@@ -50,6 +70,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     else:
         out.h_error_text = ""
 
+    # highways are simulated
         for highway in inp.h_highways:
             selected_file = highway_geojson_mapping[highway]
             geojson_path = os.path.join(base_input, "geometry", selected_file)
@@ -64,12 +85,12 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
             results = h_pv_system.generate_pv_points()
 
-            # Punkte aller PV-Typen dieser Autobahn aufsummieren
+            # Add up all points of all pv types of the highway
             for pv_type in h_pv_system.pvtypes:
                 if pv_type.id in results:
                     out.h_number_of_points += len(results[pv_type.id])
 
-            # Energie je PV-Typ berechnen und aufaddieren
+            # Calcuate energy per pv type and add up
             for pv_type in h_pv_system.pvtypes:
                 geo_name = os.path.splitext(os.path.basename(geojson_path))[0]
                 csv_name = f"{geo_name}_punkte_{pv_type.id}_{pv_type.name}.csv".replace(" ", "_")
@@ -80,19 +101,15 @@ def run_simulation(inp: GuiInput) -> SimOutput:
                     continue
 
                 energy_type_kWh, total_type_ac_w = h_pv_system.simulate_pv_type_energy(pv_type, csv_path)
-                #print(f"Energie {highway} | {pv_type.name}: {energy_type_kWh:.1f} kWh (nur berechnete Punkte vor Skalierung)")
 
                 scaled_energy_kwh_pv_type = 0
                 scaled_total_type_ac_w = 0
 
                 if h_pv_system.step_size >= pv_type.row_width:
                     scaling_factor = h_pv_system.step_size // pv_type.row_width
-                    #print(f"Scaling Faktor {highway} | {pv_type.name}: {scaling_factor}")
-
                     scaled_energy_kwh_pv_type = energy_type_kWh * scaling_factor
                     scaled_total_type_ac_w = total_type_ac_w * scaling_factor
 
-                    #print(f"Skalierte Energie {highway} | {pv_type.name}: {scaled_energy_kwh_pv_type:.1f} kWh")
                 else:
                     print(f"Keine Skalierung für {highway} | {pv_type.name}, da Schrittweite kleiner als Modulbreite")
 
@@ -101,7 +118,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
                 ac_kw = scaled_total_type_ac_w / 1000
                 all_ac_series.append(ac_kw)
 
-        # Alle Zeitreihen addieren
+        # Add up all time series
         if all_ac_series:
             total_sys_ac_kw = all_ac_series[0].copy()
             for s in all_ac_series[1:]:
@@ -118,10 +135,10 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     # ------------------------------------------------------------
-    # 2) Energielandschaft
+    # 2) Energy landscape
     # ------------------------------------------------------------
 
-    # agri PV code für geojson und agri pv länge
+    # Agri PV code for geojson and agri pv length
     if inp.el_pv_type is not None:
         agri_result = main(
             interactive=False,
@@ -136,7 +153,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         el_selected_pv_type = PV_TYPEN[inp.el_pv_type]
 
-        # INPUT für PV Baukasten - ENERGIELANDSCHAFT
+        # Input for PV Modulator
         geojson_file_2 = "Agri_PV_Centroid.geojson"
         geojson_path_2 = os.path.join(base_input, "geometry", geojson_file_2)
         step_size_default = 1000
@@ -151,13 +168,12 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
         el_pv_system.generate_pv_points()
 
-        # CSV-Name so, wie ihn generate_pv_points gespeicher hat
+        # CSV-Name the way generate_pv_points saved it
         geo_name = os.path.splitext(os.path.basename(geojson_path_2))[0]
         el_csv_name = f"{geo_name}_punkte_{el_selected_pv_type.id}_{el_selected_pv_type.name}.csv".replace(" ", "_")
         el_csv_path = os.path.join(output_dir,"energy_landscape", el_csv_name)
-        #print(el_csv_path)
 
-        # UNBEDINGT ÜBERPRÜFEN
+        # Simulate pv and write time series
         el_energy_type_kWh, el_total_type_ac_w = el_pv_system.simulate_pv_type_energy(el_selected_pv_type, el_csv_path)
 
         el_energy_sys_kWh = el_energy_type_kWh * out.el_pv_length  * (inp.el_build_state/100)
@@ -177,9 +193,8 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     # ------------------------------------------------------------
-    # 3) Industriegebiet
+    # 3) Industrial area
     # ------------------------------------------------------------
-    #df_industrie = pd.DataFrame()
     industry_aggregator = IndustryLoadAggregator()
 
     if inp.i_companies is []:
@@ -187,11 +202,12 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     elif inp.i_companies:
         out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
 
+    # Run industry_aggregator with user inputs
         df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
             mode_choice=industry_heating_choice_mapping[inp.i_heat_cooling_electric],
             selection_indices=inp.i_companies,
-
         )
+    # Write timeseries
         if df_industrie is None or df_industrie.empty:
             out.res_df['Last_Industrie [kW]'] = 0
         else:
@@ -210,7 +226,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     hub_dir = os.path.join(base_input, "green_energy_hub")
 
-    # Default: nichts aktiv -> Nullprofil
+    # Default: not active -> Null profile
     out.res_df["Last_Green_Energy_Hub [kW]"] = 0.0
     out.geh_max_power_kw = 0.0
     out.geh_sum_energy_kwh = 0.0
@@ -218,7 +234,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     if inp.geh_h2_load_scenario not in [None, "Keine"] or inp.geh_e_load_scenario not in [None, "Keine"]:
         geh_series = pd.Series(0.0, index=out.res_df.index)
 
-        # H2-Last separat laden, falls gewählt
+        # Load H2 separately if selected
         if inp.geh_h2_load_scenario not in [None, "Keine"]:
             h2_load_path = os.path.join(hub_dir, inp.geh_h2_load_scenario, "Electrolyzer_output.csv")
             df_h2_load = pd.read_csv(h2_load_path)
@@ -233,7 +249,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
             h2_series.index = out.res_df.index[:len(h2_series)]
             geh_series = geh_series.add(h2_series.reindex(out.res_df.index, fill_value=0.0), fill_value=0.0)
 
-        # Elektro-Last separat laden, falls gewählt
+        # Load H2 separately if selected
         if inp.geh_e_load_scenario not in [None, "Keine"]:
             el_load_path = os.path.join(hub_dir, inp.geh_e_load_scenario, "BEV_load_el_15min.csv")
             df_el_load = pd.read_csv(el_load_path)
@@ -255,7 +271,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
     print('Green Energy Hub \t- abgeschlossen')
 
     # ------------------------------------------------------------
-    # 5) Stadtentwicklung Jüchen Süd
+    # 5) Jüchen Süd
     # ------------------------------------------------------------
     out.res_df["Last_Juechen_Sued [kW]"] = 0.0
     out.js_max_power_kw = 0.0
@@ -321,7 +337,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
     # ------------------------------------------------------------
-    # 6) Bilanz
+    # 6) Balance
     # ------------------------------------------------------------
 
     sign_map = {
@@ -348,7 +364,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
     out.bal_energy_kwh = h_energy + el_energy - geh_energy - i_energy - js_energy
 
-    # für coverage_rate
+    # For coverage_rate
     total_generation = h_energy + el_energy
     total_demand = geh_energy + i_energy + js_energy
 
@@ -356,7 +372,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.bal_coverage_rate = min(total_generation / total_demand, 1.0)
     else:
         out.bal_coverage_rate = 0.0
-
+    #write time series
     out.bal_power_max_kw = out.res_df["Bilanz [kW]"].max()
     out.bal_power_min_kw = out.res_df["Bilanz [kW]"].min()
 
