@@ -1,3 +1,4 @@
+#Übergabefertig kommentiertJB
 import os
 import numpy as np
 import pandas as pd
@@ -36,6 +37,9 @@ class Simulator:
         self.weather_df = self.weather_prep() #Read weather data from csv
 
     def weather_prep(self):
+        """
+        Prepares the weather data used for all PV simulations.
+        """
         weather_df = pd.read_csv(weather_csv, index_col=0, parse_dates=True)
         weather_df.index = pd.to_datetime(weather_df.index, utc=True).tz_convert(None)
 
@@ -43,7 +47,11 @@ class Simulator:
 
     def run_pv_modulator(self, inp: GuiInput, out: SimOutput) -> SimOutput:
         """
-        PV Modulator simulation
+        This function generates PV points along selected geometry, simulates the
+        photovoltaic generation for each selected PV type, and aggregates the
+        resulting time series and energy values.
+        The results are written to the output object and added to the overall
+        simulation result DataFrame.
         """
         h_selected_pv_types = [PV_TYPEN[i] for i in inp.h_pv_types] if inp.h_pv_types else []
         out.h_error_text = "Hier könnte ihre Autobahn Fehlermeldung stehen!"
@@ -123,10 +131,13 @@ class Simulator:
         return out
 
     def run_energy_landscape(self, inp: GuiInput, out: SimOutput) -> SimOutput:
-        # ------------------------------------------------------------
-        # 2) Energy landscape
-        # ------------------------------------------------------------
-
+        """
+        Energy landscape (Agri-PV) simulation module.
+        This function generates Agri-PV layouts based on tractor parameters and
+        selected PV type, simulates the resulting photovoltaic generation, and
+        scales the results according to the selected build state.
+        The resulting time series and energy values are written to the output object.
+        """
         # Agri PV code for geojson and agri pv length
         if inp.el_pv_type is not None:
             agri_result = main(
@@ -180,9 +191,13 @@ class Simulator:
         return out
 
     def run_industry_area(self, inp: GuiInput, out: SimOutput) -> SimOutput:
-        # ------------------------------------------------------------
-        # 3) Industrial area
-        # ------------------------------------------------------------
+        """
+        Industrial area load simulation module.
+        This function aggregates load profiles of selected companies, applies the
+        selected heating/cooling electrification scenario, and generates the
+        combined industrial load time series.
+        The resulting demand profile and energy statistics are written to the output object.
+        """
         industry_aggregator = IndustryLoadAggregator()
 
         if inp.i_companies is []:
@@ -208,9 +223,13 @@ class Simulator:
         return out
 
     def run_green_energy_hub(self, inp: GuiInput, out: SimOutput) -> SimOutput:
-        # ------------------------------------------------------------
-        # 4) Green Energy Hub
-        # ------------------------------------------------------------
+        """
+        Green Energy Hub load simulation module.
+        This function loads selected hydrogen and electric mobility demand scenarios,
+        combines them into a single load profile, and writes the resulting time series
+        and energy values to the output object.
+        If no scenario is selected, a zero load profile is used.
+        """
 
         hub_dir = os.path.join(base_input, "green_energy_hub")
 
@@ -259,10 +278,13 @@ class Simulator:
         return out
 
     def run_juechen_sued(self, inp: GuiInput, out: SimOutput) -> SimOutput:
-
-        # ------------------------------------------------------------
-        # 5) Jüchen Süd
-        # ------------------------------------------------------------
+        """
+        Jüchen-Süd development area load simulation module.
+        This function loads the predefined residential demand profile and scales it
+        according to the selected population scenario.
+        The resulting load time series and energy statistics are written to the
+        output object and added to the overall simulation results.
+        """
         out.res_df["Last_Juechen_Sued [kW]"] = 0.0
         out.js_max_power_kw = 0.0
         out.js_sum_energy_kwh = 0.0
@@ -327,10 +349,14 @@ class Simulator:
         return out
 
     def run_balance(self, out: SimOutput):
-
-        # ------------------------------------------------------------
-        # Balance
-        # ------------------------------------------------------------
+        """
+        System balance calculation module.
+        This function combines all generation and demand time series, calculates the
+        overall power balance, and determines total generation, total demand, and
+        coverage rate.
+        The resulting balance time series and energy statistics are written to the
+        output object and returned for further processing.
+        """
 
         sign_map = {
             "Erzeugung_Solarautobahn [kW]": 1,
@@ -372,10 +398,14 @@ class Simulator:
         return total_demand, total_generation, feed_in_kwh
 
     def run_battery(self, inp: GuiInput, out: SimOutput) -> SimOutput:
-
-        # ------------------------------------------------------------
-        # Battery
-        # ------------------------------------------------------------
+        """
+        Battery storage simulation module.
+        This function simulates battery operation based on the system balance,
+        including charging and discharging behavior, state of charge, and grid
+        exchange.
+        The resulting adjusted balance, battery statistics, and updated energy values
+        are written to the output object.
+        """
 
         # When Battery input is given (capacity), battery class is called and storage object created
         if inp.bs_energy_kwh is not None and inp.bs_energy_kwh > 0:
