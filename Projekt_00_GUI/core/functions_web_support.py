@@ -370,9 +370,9 @@ def build_synergy_diagram(inp, sim_output):
             deficit = abs(balance)
 
     # =========================================================
-    # 2) Bilanzlogik für Darstellung
+    # 2) Balance for Visualization
     # =========================================================
-    # Lokale Deckung insgesamt
+    # Local coverage
     total_generation = solar_energy + landscape_energy
     total_demand = industry_energy + green_hub_energy + juechen_sued_energy
 
@@ -405,8 +405,10 @@ def build_synergy_diagram(inp, sim_output):
     battery_active = bool(getattr(inp, "bs_energy_kwh", 0) and getattr(inp, "bs_energy_kwh", 0) > 0)
 
     # =========================================================
-    # 3) Texte für Hover
+    # 3) Texts for Hover
     # =========================================================
+
+    # Solar highway Hover
     solar_text = "nicht aktiv"
     if inp.h_highways and inp.h_pv_types:
         solar_text = (
@@ -425,7 +427,7 @@ def build_synergy_diagram(inp, sim_output):
 
     n_companies = len([c for c in inp.i_companies if c is not None]) if inp.i_companies else 0
 
-    # Industrie Hover
+    # Industrial area Hover
     industry_active = industry_energy > 0
 
     industry_text = (
@@ -458,7 +460,7 @@ def build_synergy_diagram(inp, sim_output):
         f"<br>Jahresbedarf: {format_energy(juechen_sued_energy)}"
     )
 
-    # Batterie Hover
+    # Battery Hover
     battery_text = (
         f"Status: {'aktiv' if battery_active else 'nicht aktiv'}"
         f"<br>Kapazität: {format_capacity(float(getattr(inp, 'bs_energy_kwh', 0) or 0))}"
@@ -467,13 +469,11 @@ def build_synergy_diagram(inp, sim_output):
         f"<br>Max. Leistung: {battery_max_charge_kw:.0f} kW"
     )
 
-    # Netzbezug Hover
+    # Grid Hover
     grid_text = (
         f"Import: {format_energy(grid_import_total)}"
         f"<br>Export: {format_energy(grid_export)}"
     )
-
-
 
     if surplus > 0:
         system_text = (
@@ -491,7 +491,7 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     # =========================================================
-    # 4) Knotenpositionen
+    # 4) Node/Item positions
     # =========================================================
     nodes = {
         "solar": {
@@ -588,7 +588,7 @@ def build_synergy_diagram(inp, sim_output):
         yanchor="bottom"
     )
 
-    # KPI-Karten oben
+    # KPIs first line
     kpi_y_first = 1.05
     x_min_first = 0.22
     x_max_first = 0.98
@@ -599,6 +599,7 @@ def build_synergy_diagram(inp, sim_output):
         ("Bilanzielle<br>Autarkie", f"{coverage_percent:.1f} %", "#EEF9EE"),
     ]
 
+    # KPIs second line
     kpi_y_second = 0.91
     x_min_second = 0.35#0.17
     x_max_second = 0.85#0.93
@@ -665,7 +666,7 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     # =========================================================
-    # 6) Boxen und Knoten
+    # 6) Boxes and Nodes
     # =========================================================
 
     fig.add_annotation(
@@ -683,7 +684,7 @@ def build_synergy_diagram(inp, sim_output):
 
     add_legend(fig)
 
-    # Rechteckige Knoten mit Icons
+    # Rectangular shapes with icons
     for key in ["solar", "landscape", "grid", "battery", "industry", "hub", "js"]:
         node = nodes[key]
         x = node["x"]
@@ -713,7 +714,7 @@ def build_synergy_diagram(inp, sim_output):
             label_pos=label_pos
         )
 
-    # Zentraler Systemknoten
+    # Central system knot
     system = nodes["system"]
     fig.add_shape(
         type="circle",
@@ -723,7 +724,7 @@ def build_synergy_diagram(inp, sim_output):
         fillcolor="white"
     )
 
-    # Hoverpunkte
+    # Hover points
     for key, node in nodes.items():
         marker_size = 26 if key == "system" else 60
         fig.add_trace(
@@ -738,7 +739,7 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     # =========================================================
-    # 7) Hilfspunkte für Pfeile
+    # 7) Support points for arrows
     # =========================================================
     solar_right = (nodes["solar"]["x"] + box_w / 2, nodes["solar"]["y"])
     landscape_right = (nodes["landscape"]["x"] + box_w / 2, nodes["landscape"]["y"])
@@ -756,7 +757,7 @@ def build_synergy_diagram(inp, sim_output):
     half_y_bat =  (battery_top[1]+system_center[1])/2
 
     # =========================================================
-    # 8) Erzeuger -> System
+    # 8) Generation -> System
     # =========================================================
     if solar_to_system > 0:
         add_routed_arrow(
@@ -775,7 +776,7 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     # =========================================================
-    # 9) System -> Verbraucher
+    # 9) System -> Consumption
     # =========================================================
     if industry_energy > 0:
         add_routed_arrow(
@@ -802,13 +803,7 @@ def build_synergy_diagram(inp, sim_output):
         )
 
     # =========================================================
-    # 10) Batterie nur schematisch anbinden
-    # =========================================================
-
-    # =========================================================
-
-    # 10) Batterie nur darstellen, wenn sie tatsächlich genutzt wurde
-
+    # 10) Battery connection (only when in use)
     # =========================================================
 
     battery_used = (battery_charge_kwh > 0) or (battery_discharge_kwh > 0)
@@ -834,9 +829,9 @@ def build_synergy_diagram(inp, sim_output):
 
 
     # =========================================================
-    # 11) Netzlogik:
-    #     Überschuss => System -> Grid
-    #     Defizit    => Grid -> System
+    # 11) Grid logic:
+    #     Surplus => System -> Grid
+    #     Deficit    => Grid -> System
     # =========================================================
     if grid_export > 0:
         add_routed_arrow(
