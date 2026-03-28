@@ -47,7 +47,10 @@ class PVType:
     row_width: float | None = None                  # Width of the module row in meters
 
     # 3. Bifacial properties
-    bifazial: float | None = None                   # Bifaciality factor (0-1)
+    # --- Simplified bifacial model ---             # Simplified bifacial gain factor.
+    bifazial: float | None = None                   # This value is ONLY used if is_bifacial_detailed = False.
+                                                    # Bifaciality factor (0-1)
+    # --- Detailed bifacial model ---
     is_bifacial_detailed: bool = False              # Use detailed bifacial model (e.g., pvlib/pvfactors)
     bifaciality: float | None = None                # Rear-side efficiency factor (0–1)
     gcr: float | None = None                        # Ground coverage ratio (module area / ground area)
@@ -79,10 +82,13 @@ PV_TYPEN = [
         row_width=4.0,
 
         # 3. Bifaziale Eigenschaften
-        bifazial=0,  # aktiviert, weil es bifazial ist
-        bifaciality=0.75,  # Rückseitenwirkungsgrad
-        gcr=0.35,  # Bodenbedeckungsgrad
-        albedo=0.2,  # Bodenreflexion
+        # --- Simplified bifacial model --
+        bifazial=0.2,                       # 20% annual energy yield if simplified bifacial modelling is used
+        # --- Detailed bifacial model ---
+        is_bifacial_detailed=False,         # False -> detailed bifacial parameters below are ignored
+        bifaciality=0.75,                   # Rückseitenwirkungsgrad
+        gcr=0.35,                           # Bodenbedeckungsgrad
+        albedo=0.2,                         # Bodenreflexion
 
         # 4. Tracking / Nachführung (fixe Wand, kein Tracking nötig)
         mount_type="fixed"
@@ -103,7 +109,8 @@ PV_TYPEN = [
         row_height=3.0,
         row_width=4.0,
 
-        bifazial=0,
+        bifazial=0,                             # monofacial PV system
+        is_bifacial_detailed=False,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -127,6 +134,7 @@ PV_TYPEN = [
         row_width=4.0,
 
         bifazial=0,
+        is_bifacial_detailed=False,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -150,6 +158,7 @@ PV_TYPEN = [
         row_width=4.0,
 
         bifazial=0,
+        is_bifacial_detailed=False,
         bifaciality=0.80,
         gcr=0.35,
         albedo=0.2,
@@ -173,7 +182,8 @@ PV_TYPEN = [
         row_width=1.0,
 
         bifazial=0.1,
-        bifaciality=0.75,
+        is_bifacial_detailed=False,
+        bifaciality=0.7,
         gcr=0.35,
         albedo=0.2,
 
@@ -199,6 +209,7 @@ PV_TYPEN = [
         row_width=1.0,
 
         bifazial=0,
+        is_bifacial_detailed=False,
         bifaciality=None,
         gcr=None,
         albedo=None,
@@ -221,6 +232,7 @@ PV_TYPEN = [
         row_width=1.0,
 
         bifazial=0,
+        is_bifacial_detailed=False,
         bifaciality=None,
         gcr=None,
         albedo=None,
@@ -236,7 +248,8 @@ class AzimutCalculator:
     """
     def __init__(self, geojson_path: str, step_size: float, pv_type: PVType, output_csv_path: str):
         self.geojson_path = geojson_path                        # Path to the GeoJSON file
-        self.step_size = step_size                              # Step size [m] in which the geometry will be equipped with individual PV Systems (Significant on Performance)
+        self.step_size = step_size                              # Step size [m] in which the geometry will be equipped
+                                                                # with individual PV Systems (Significant on Performance)
         self.pv_type = pv_type                                  # PV Type from PV Type dataclass list
         self.output_csv_path = output_csv_path                  # Path for the CSV-Export of calculated point coordinates
 
@@ -335,6 +348,8 @@ class AzimutCalculator:
         self.calculate_azimut()
         self.export_to_csv()
         return self.to_gdf()
+
+
 
 class AzimutVisualizer:
     """
