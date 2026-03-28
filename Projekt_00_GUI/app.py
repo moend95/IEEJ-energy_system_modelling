@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-
 # UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -24,7 +23,7 @@ from Projekt_00_GUI.core.functions_plot import (
 
 from Projekt_00_GUI.core.functions_web_support import *
 
-
+# Mapping: PV type name to id
 pv_name_to_id = {
     "Windschutzwand": 0,
     "Lärmschutzwand": 1,
@@ -35,6 +34,7 @@ pv_name_to_id = {
     "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": 4
 }
 
+# Mapping: csv id to industry name
 industry_csv_mapping = {
     0: "Entsorgung",
     1: "Stahl_1",
@@ -45,7 +45,7 @@ industry_csv_mapping = {
     6: "Logistik Lebensmittel",
     7: "Stahl_2"
 }
-
+# Industry columns order
 industry_order_all = [
     "Entsorgung",
     "Stahl_1",
@@ -59,15 +59,14 @@ industry_order_all = [
 
 
 
-
-
-st.set_page_config(layout="centered")
-
+# create data objects for in- and output
 Input = GuiInput()
 Output = SimOutput()
 
+# Streamlit layout
+st.set_page_config(layout="centered")
 
-#Logo als base64
+# Logos as base64 for accurate placement in html wrapper
 th_logo_path = os.path.join(icon_dir, "logo.png")
 iee_logo_path = os.path.join(icon_dir, "IEE_Logo.png")
 th_logo_b64 = image_to_base64(th_logo_path)
@@ -83,39 +82,43 @@ st.markdown(
 )
 
 
+# Initial st.session.state variables definition
+# Resistant to rerun of site, only changing with actual Simulation (button)
 if "simulation_ran" not in st.session_state:
     st.session_state.simulation_ran = False
-
 if "sim_output" not in st.session_state:
     st.session_state.sim_output = Output
 
-# Überschrift
+# Title
 st.write("\n")
 st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
-# Fester Container für Darstellung der Erzeugungseingabe
+# Container for Generation Input
 with st.container(key="Erzeugung", width=1000, height='content'):
 
+    # Tabs within Generation container
     tab1, tab2 = st.tabs(["Solarautobahn", "Energielandschaft"])
 
-    # SOLARAUTOBAHN
+    # Solar highway
     with tab1:
         col1_tab1, col2_tab1 = st.columns(2)
-
         script_dir = os.path.dirname(os.path.abspath(__file__))
 
+        # Input multiselects
         with col1_tab1:
             Input.h_highways = st.multiselect("Autobahn auswählen", ["A44", "A46"])
             h_selected_names = st.multiselect("PV-Typ", ["Lärmschutzwand", "Windschutzwand", "Dach", "Böschung"])
             Input.h_pv_types = [pv_name_to_id[name] for name in h_selected_names]
 
+            # dynamic info box
             st.write('\n')
             if not Input.h_highways or not Input.h_pv_types:
                 st.info("Solarautobahn deaktiviert.")
             else:
                 st.info("Solarautobahn aktiv.")
 
+        # Dynamic Input visualization via folium
         with col2_tab1:
             pv_geojson_mapping_col2_tab1 = {
                 "A44": "a44_beide.geojson",
@@ -139,10 +142,11 @@ with st.container(key="Erzeugung", width=1000, height='content'):
             folium.LayerControl().add_to(m)
             st_data = st_folium(m, width=400, height=400)
 
-    # ENERGIELANDSCHAFT
+    # Energy landscape
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
 
+        # Input segments and selectbox
         with col1_tab2:
             Input.el_build_state = st.segmented_control(
                 "Ausbaugrad der Energielandschaft in %",
@@ -150,7 +154,6 @@ with st.container(key="Erzeugung", width=1000, height='content'):
                 default=0,
                 format_func=lambda x: f"{x:.0f}%"
             )
-
 
             el_selected_names = st.selectbox(
                 "PV-Typ",
@@ -183,12 +186,15 @@ with st.container(key="Erzeugung", width=1000, height='content'):
                 format_func=lambda x: f"{x:.0f}m"
             )
 
+            # dynamic info box
             Input.el_build_state = 0 if Input.el_build_state is None else Input.el_build_state
             if Input.el_build_state == 0:
                 st.info("Energielandschaft deaktiviert.")
             else:
                 st.info("Energielandschaft aktiv.")
 
+
+        # Dynamic Input visualization via folium
         with col2_tab2:
             pv_geojson_mapping_col2_tab2 = {
                 "Vertikal (Zaun, Nord-Süd)": {
@@ -536,7 +542,7 @@ with st.container(key="Batterie", width=1500, height='content'):
 
     Input.bs_c_rate = st.select_slider(
         "C-Rate",
-        options=[0.25, 0.5, 1.0, 2.0],
+        options=[0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0],
         value=1.0,
         format_func=lambda x: f"{x:.2g} C"
     )

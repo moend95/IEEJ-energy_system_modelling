@@ -2,25 +2,14 @@ import pandas as pd
 import plotly.graph_objects as go
 from PIL import Image
 import os
-
-
-
 import base64
 
-def image_to_base64(image_path: str) -> str:
-    with open(image_path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
-
-
-
-
-script_dir = os.path.dirname(os.path.abspath(__file__))   # .../functions
+# ---------------- Directory Paths ----------------
+script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
-
-#script_dir = os.path.dirname(os.path.abspath(__file__))
-#proj_dir = script_dir.parent
 icon_dir = os.path.join(project_dir, "data", "inputs", "icon")
 
+# ---------------- Icons ----------------
 ICON_PATHS = {
     "solar": os.path.join(icon_dir, "solar_highway.png"),
     "landscape": os.path.join(icon_dir, "energy_landscape.png"),
@@ -41,10 +30,16 @@ ICON_SCALE = {
     "js": 0.8,
 }
 
+# ---------------- PNG to base64 ----------------
+def image_to_base64(image_path: str) -> str:
+    with open(image_path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
 
+
+# ---------------- Format units ----------------
 def format_energy(value_kwh):
     """
-    Formatiert Energie kompakt für die Visualisierung.
+    Formatting energy per year values do display suitable unit.
     """
     value_kwh = float(value_kwh or 0)
 
@@ -55,17 +50,9 @@ def format_energy(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh/a"
 
-def format_power(value_kw):
-    if value_kw is None:
-        value_kw = 0
-
-    if abs(value_kw) >= 1000:
-        return f"{value_kw / 1000:.2f} MW"
-    return f"{value_kw:.1f} kW"
-
 def format_capacity(value_kwh):
     """
-    Formatiert Energie (kWh) für Kapazität / SOC.
+    Formatting energy for capacity / SOC
     """
     value_kwh = float(value_kwh or 0)
 
@@ -76,11 +63,23 @@ def format_capacity(value_kwh):
     else:
         return f"{value_kwh:.0f} kWh"
 
+def format_power(value_kw):
+    """
+    Formatting power values do display suitable unit.
+    """
+    if value_kw is None:
+        value_kw = 0
 
+    if abs(value_kw) >= 1000:
+        return f"{value_kw / 1000:.2f} MW"
+    return f"{value_kw:.1f} kW"
+
+
+# ---------------- plotly functions for visualization ----------------
 def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="below"):
     """
-    Fügt ein Icon und den Knotentitel hinzu.
-    Der eigentliche weiße Hintergrundkasten wird separat gezeichnet.
+    Adds icon and annotation.
+    white background box is drawn separately
     """
     icon_path = ICON_PATHS.get(icon_key)
     scale = ICON_SCALE.get(icon_key, 0.80)
@@ -115,18 +114,15 @@ def add_node_with_icon(fig, x, y, label, icon_key, box_w, box_h, label_pos="belo
         font=dict(size=12, color="#222222")
     )
 
-
-
 def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, label_y=None):
     """
-    Zeichnet eine geroutete Verbindung aus mehreren Segmenten.
-    `points` ist eine Liste von (x, y)-Punkten.
-    Die Segmente werden als Linien gezeichnet, die Pfeilspitze sitzt nur am Ende.
+    Draws routed arrow from multiple segments, arrow heads will only be placed at the end
+    'points' is a list of (x,y)-points.
     """
     if len(points) < 2:
         return
 
-    # Alle Segmente bis auf das letzte als Linien
+    # All segments excluding the last one without arrow head
     for i in range(len(points) - 2):
         x0, y0 = points[i]
         x1, y1 = points[i + 1]
@@ -137,7 +133,7 @@ def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, la
             line=dict(color=color, width=width)
         )
 
-    # Letztes Segment mit Pfeilspitze
+    # Last segment with arrow head
     x0, y0 = points[-2]
     x1, y1 = points[-1]
     fig.add_annotation(
@@ -157,7 +153,7 @@ def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, la
         text=""
     )
 
-    # Optionales Label
+    # Optional label
     if label:
         if label_x is None or label_y is None:
             label_x = (x0 + x1) / 2
@@ -174,7 +170,8 @@ def add_routed_arrow(fig, points, color, width=2.5, label=None, label_x=None, la
 
 def scale_arrow_width(flow_value, max_flow, min_width=2.0, max_width=5.8):
     """
-    Skaliert die Pfeildicke linear auf Basis des größten dargestellten Flusses.
+    Linear scaling of arrow width based on energy flow.
+    max / min values as range for width.
     """
     flow_value = float(flow_value or 0)
     max_flow = float(max_flow or 1)
@@ -185,67 +182,22 @@ def scale_arrow_width(flow_value, max_flow, min_width=2.0, max_width=5.8):
     return min_width + (flow_value / max_flow) * (max_width - min_width)
 
 
-def add_physical_connection(
-    fig,
-    points,
-    color="#A8A8A8",
-    width=1.3,
-    dash="dot",
-    add_arrow=False
-):
-    """
-    Zeichnet eine physische, dauerhaft vorhandene Verbindung.
-    Optional mit kleiner Pfeilspitze am Ende.
-    """
-    if len(points) < 2:
-        return
-
-    for i in range(len(points) - 1):
-        x0, y0 = points[i]
-        x1, y1 = points[i + 1]
-        fig.add_shape(
-            type="line",
-            x0=x0, y0=y0,
-            x1=x1, y1=y1,
-            line=dict(color=color, width=width, dash=dash)
-        )
-
-    if add_arrow:
-        x0, y0 = points[-2]
-        x1, y1 = points[-1]
-
-        dx = x1 - x0
-        dy = y1 - y0
-
-        fig.add_annotation(
-            x=x1,
-            y=y1,
-            ax=x1 - dx * 0.12,
-            ay=y1 - dy * 0.12,
-            xref="x",
-            yref="y",
-            axref="x",
-            ayref="y",
-            showarrow=True,
-            arrowhead=3,
-            arrowsize=0.9,
-            arrowwidth=max(width, 1.4),
-            arrowcolor=color,
-            text=""
-        )
-
 def add_legend(fig):
-    legend_y1 = -0.15
-    legend_y2 = 0.035
+    """
+    Legend at the bottom of energy flow visualization
+    """
 
-    # Zeile 1: durchgezogene Linien
+    legend_y1 = -0.15
+    #legend_y2 = 0.035
+
+    # Line 1:
     items_row1 = [
         ("Erneuerbare Energie", "#10B35A", 0.1, "solid"),
         ("Batterie Energiefluss", "#1DA1F2", 0.4, "solid"),
         ("Netzstrombezug", "#B9B9B9", 0.7, "solid"),
     ]
 
-    # Zeile 2: gestrichelte Linien
+    # Line 2: dotted lines
     #items_row2 = [        ("Optionale Nutzung", "#1DA1F2", 0.1, "dot"),        ("Netzanbindung", "#A8A8A8", 0.4, "dot"),]
 
     for text, color, x, dash in items_row1:
@@ -267,31 +219,10 @@ def add_legend(fig):
             font=dict(size=11, color="#333333")
         )
 
-'''
-    for text, color, x, dash in items_row2:
-        fig.add_shape(
-            type="line",
-            x0=x,
-            y0=legend_y2,
-            x1=x + 0.05,
-            y1=legend_y2,
-            line=dict(color=color, width=3, dash=dash)
-        )
-        fig.add_annotation(
-            x=x + 0.06,
-            y=legend_y2,
-            text=text,
-            showarrow=False,
-            xanchor="left",
-            yanchor="middle",
-            font=dict(size=11, color="#333333")
-        )
-'''
 
 def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot", label=None, label_x=None, label_y=None):
     """
-    Zeichnet eine optionale / konzeptionelle Verbindung.
-    Nicht als simulierten Energiefluss interpretieren.
+    Draws optional connection. Used to display dotted lines showing grid power usage.
     """
     if len(points) < 2:
         return
@@ -319,13 +250,13 @@ def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot",
     dx = x1 - x0
     dy = y1 - y0
 
-    # Mindestlänge für sichtbare Pfeilspitze
+    # Minimum length for arrow heads
     arrow_len = 0.025
 
-    if abs(dx) >= abs(dy):  # eher horizontal
+    if abs(dx) >= abs(dy):  # horizontal
         ax = x1 - arrow_len if dx >= 0 else x1 + arrow_len
         ay = y1
-    else:  # eher vertikal
+    else:  # vertikal
         ax = x1
         ay = y1 - arrow_len if dy >= 0 else y1 + arrow_len
 
@@ -360,18 +291,18 @@ def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot",
 
 def build_synergy_diagram(inp, sim_output):
     """
-    Einfache bilanzielle Systemvisualisierung.
+    System visualization of energy flow balance:
 
-    Logik:
-    - Solarautobahn + Energielandschaft speisen in einen zentralen Systemknoten
-    - Vom Systemknoten gehen Flüsse zu Industriegebiet und Green Energy Hub
-    - Bei Jahresüberschuss: Pfeil vom System zum Netz
-    - Bei Jahresdefizit: Pfeil vom Netz zum System
-    - Batterie aktuell nur als Layout-Knoten, ohne simulierten Lade-/Entladefluss
+    - Solar highway + Energy landscape feed into central system knot
+    - central system knot supplies Industrial area and Green energy hub
+
+    if annual surplus: arrow from system to grid
+    if annual deficit: arrow from grid to system
+    if battery enabled: back and forth arrow between system knot and battery
     """
 
     # =========================================================
-    # 1) Werte aus Simulation lesen
+    # 1) Import simulation values
     # =========================================================
     solar_energy = 0.0
     landscape_energy = 0.0
@@ -401,13 +332,14 @@ def build_synergy_diagram(inp, sim_output):
         landscape_energy = max(float(getattr(sim_output, "el_sum_energy_kwh", 0) or 0), 0.0)
         industry_energy = max(float(getattr(sim_output, "i_sum_energy_kwh", 0) or 0), 0.0)
         green_hub_energy = max(float(getattr(sim_output, "geh_sum_energy_kwh", 0) or 0), 0.0)
+        juechen_sued_energy = max(float(getattr(sim_output, "js_sum_energy_kwh", 0) or 0), 0.0)
+
         bs_stats = getattr(sim_output, "bs_stats", {}) or {}
         battery_charge_kwh = float(bs_stats.get("battery_charge_kwh", 0) or 0)
         battery_discharge_kwh = float(bs_stats.get("battery_discharge_kwh", 0) or 0)
         battery_max_charge_kw = float(bs_stats.get("max_charge_kw", 0) or 0)
         battery_grid_import_kwh = float(bs_stats.get("grid_import_kwh", 0) or 0)
         battery_grid_export_kwh = float(bs_stats.get("grid_export_kwh", 0) or 0)
-        juechen_sued_energy = max(float(getattr(sim_output, "js_sum_energy_kwh", 0) or 0), 0.0)
 
         ee_self_consumption = max(float(getattr(sim_output, "ee_self_consumption", 0) or 0), 0.0)
         autarky  = max(float(getattr(sim_output, "autarky", 0) or 0), 0.0)
@@ -422,7 +354,6 @@ def build_synergy_diagram(inp, sim_output):
         if not sim_output.bs_df.empty:
             max_power_from_grid = sim_output.bs_df['new_balance_kw'].min()
             max_power_to_grid = sim_output.bs_df['new_balance_kw'].max()
-
         elif not sim_output.res_df.empty:
             max_power_from_grid = sim_output.res_df['Bilanz [kW]'].min()
             max_power_to_grid = sim_output.res_df['Bilanz [kW]'].max()
@@ -561,7 +492,6 @@ def build_synergy_diagram(inp, sim_output):
 
     # =========================================================
     # 4) Knotenpositionen
-    #
     # =========================================================
     nodes = {
         "solar": {
