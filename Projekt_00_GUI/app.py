@@ -3,9 +3,6 @@
 import sys
 from pathlib import Path
 
-# UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
-# sys.path.append(str(Path(__file__).resolve().parent.parent))
-
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
