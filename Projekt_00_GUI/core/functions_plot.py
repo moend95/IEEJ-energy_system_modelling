@@ -1,10 +1,46 @@
+# Übergabefertig kommentiert SM
+
+import matplotlib.pyplot as plt
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
 
+"""
+plot_functions.py
+
+Visualization functions for selected subprojects of the
+Innovationspark Erneuerbare Energien Jüchen.
+
+Included:
+- Industrial area load profile plots
+- Green Energy Hub weekly and annual plots
+- Jüchen Süd weekly load plot
+
+The module only visualizes prepared CSV-based time series.
+No physical simulation is performed here.
+"""
+
+# --------------------------------------------------
+# Industrial area
+# --------------------------------------------------
 def plot_industry_preview(csv_path, selected_columns=None, start="2017-03-05"):
     """
-    Vorschauplot der ausgewählten Industrie-Lastgänge aus der CSV.
+    Plot one representative week of selected industrial load profiles.
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to the CSV file.
+    selected_columns : list[str] | None
+        Optional list of columns to plot.
+    start : str
+        Start date of the selected week.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure with weekly load profiles.
     """
 
     df = pd.read_csv(csv_path, sep=";")
@@ -33,7 +69,21 @@ def plot_industry_preview(csv_path, selected_columns=None, start="2017-03-05"):
 
 def plot_industry_annual_energy(csv_path, ordered_columns=None, title="Jahresenergie pro Unternehmen"):
     """
-    Balkendiagramm der Jahresenergie in vorgegebener Reihenfolge.
+    Plot annual energy demand per company as a bar chart.
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to the CSV file.
+    ordered_columns : list[str] | None
+        Optional column order for plotting.
+    title : str
+        Plot title.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure with annual energy demand.
     """
 
     df = pd.read_csv(csv_path, sep=";")
@@ -43,7 +93,8 @@ def plot_industry_annual_energy(csv_path, ordered_columns=None, title="Jahresene
     if ordered_columns is not None:
         df = df[ordered_columns]
 
-    annual_energy = df.sum() * 0.25 /1000000  # 15-min Raster -> kWh -> GWh
+    # 15 min values: kW * 0.25 h = kWh, then convert to GWh
+    annual_energy = df.sum() * 0.25 /1000000
 
     colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
@@ -66,17 +117,26 @@ def plot_industry_annual_energy(csv_path, ordered_columns=None, title="Jahresene
 
     return fig
 
-# Green energy hub
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
+# --------------------------------------------------
+# Green Energy Hub
+# --------------------------------------------------
 
 def _read_green_hub_timeseries(csv_path):
     """
-    Liest eine Green-Energy-Hub-CSV robust ein.
-    Erwartet:
-    - eine Zeitspalte
-    - eine Leistungsspalte
+    Read a Green Energy Hub CSV and return one power time series.
+
+    The function tries to detect common time and value column names
+    automatically and converts the result to a numeric pandas Series.
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to the CSV file.
+
+    Returns
+    -------
+    pandas.Series
+        Power time series with datetime index.
     """
 
     df = pd.read_csv(csv_path)
@@ -91,6 +151,7 @@ def _read_green_hub_timeseries(csv_path):
         "power_mw", "power", "load", "value"
     ]
 
+    # Detect time column
     time_col = None
     for c in time_candidates:
         if c in df.columns:
@@ -100,6 +161,7 @@ def _read_green_hub_timeseries(csv_path):
     if time_col is None:
         time_col = df.columns[0]
 
+    # Detect value column
     value_col = None
     for c in value_candidates:
         if c in df.columns:
@@ -107,14 +169,13 @@ def _read_green_hub_timeseries(csv_path):
             break
 
     if value_col is None:
-        # erste numerische Spalte außer Zeit nehmen
         numeric_cols = df.select_dtypes(include="number").columns.tolist()
         numeric_cols = [c for c in numeric_cols if c != time_col]
         if not numeric_cols:
             raise ValueError(f"Keine geeignete Leistungsspalte in {csv_path} gefunden.")
         value_col = numeric_cols[0]
 
-    # Zeitspalte parsen: z. B. "01-01 00:15" -> "2022-01-01 00:15"
+    # Parse timestamps like "03-05 00:15" as "2022-03-05 00:15"
     time_values = df[time_col].astype(str).str.strip()
     parsed_time = pd.to_datetime(
         "2022-" + time_values,
@@ -137,17 +198,32 @@ def _read_green_hub_timeseries(csv_path):
 
 def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2022-03-05"):
     """
-    Beispielwoche des Green Energy Hub:
-    - optional Elektrolyseur aus dem gewählten H2-Szenario
-    - optional BEV-Last aus dem gewählten Elektro-Szenario
-    """
+    Plot one representative week of Green Energy Hub profiles.
 
+    Optional:
+    - BEV charging load
+    - Electrolyzer load
+
+    Parameters
+    ----------
+    base_dir : str
+        Base directory containing scenario folders.
+    h2_year : str | None
+        Selected hydrogen scenario year.
+    e_year : str | None
+        Selected electric scenario year.
+    start : str
+        Start date of the selected week.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure with weekly profiles.
+    """
     fig, ax = plt.subplots(figsize=(15, 7))
     plotted_anything = False
 
-    # -------------------------------------------------
-    # BEV laden und plotten, falls gewählt
-    # -------------------------------------------------
+    # BEV load
     if e_year not in [None, "Keine"]:
         bev_path = os.path.join(base_dir, str(e_year), "BEV_load_el_15min.csv")
         bev = _read_green_hub_timeseries(bev_path)
@@ -160,9 +236,7 @@ def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2
         ax.plot(bev_week.index, bev_week.values, label=f"BEV {e_year}")
         plotted_anything = True
 
-    # -------------------------------------------------
-    # Elektrolyseur laden und plotten, falls gewählt
-    # -------------------------------------------------
+    # Electrolyzer load
     if h2_year not in [None, "Keine"]:
         ely_path = os.path.join(base_dir, str(h2_year), "Electrolyzer_output.csv")
         ely = _read_green_hub_timeseries(ely_path)
@@ -175,9 +249,7 @@ def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2
         ax.plot(ely_week.index, ely_week.values, linestyle="--", label=f"Elektrolyseur {h2_year}")
         plotted_anything = True
 
-    # -------------------------------------------------
-    # Falls gar nichts gewählt wurde
-    # -------------------------------------------------
+    # Placeholder text
     if not plotted_anything:
         ax.text(
             0.5, 0.5,
@@ -200,9 +272,23 @@ def plot_green_hub_weekly_profiles(base_dir, h2_year=None, e_year=None, start="2
 
 def plot_green_hub_annual_energy(base_dir, years=("2022", "2030", "2050")):
     """
-    Gruppiertes Balkendiagramm:
-    Jahresstromverbrauch von BEV-Ladesäulen und Elektrolyseur
-    für 2022 / 2030 / 2050.
+    Plot annual electricity demand of the Green Energy Hub.
+
+    Compares:
+    - BEV charging infrastructure
+    - Electrolyzer
+
+    Parameters
+    ----------
+    base_dir : str
+        Base directory containing scenario folders.
+    years : iterable[str]
+        Scenario years to compare.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Grouped bar chart of annual energy demand.
     """
     years = [str(y) for y in years]
 
@@ -238,10 +324,27 @@ def plot_green_hub_annual_energy(base_dir, years=("2022", "2030", "2050")):
 
     return fig
 
-# Jüchen Süd Plots Lastgang
+
+# --------------------------------------------------
+# Jüchen Süd
+# --------------------------------------------------
 def plot_js_weekly_profile(csv_path, scale_factor=1, start="2022-03-05"):
     """
-    Beispielwoche für Jüchen Süd Lastprofil
+    Plot one representative week of the Jüchen Süd load profile.
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to the CSV file.
+    scale_factor : float
+        Scaling factor applied to the load.
+    start : str
+        Start date of the selected week.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Figure with the scaled weekly load profile.
     """
 
     df = pd.read_csv(csv_path, sep=",")
