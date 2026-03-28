@@ -3,6 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from Projekt_00_GUI.app import industry_csv_mapping
 #Functions
 from core.io_types import GuiInput, SimOutput
 from Projekt_00_GUI.core.module_industrial_are import IndustryLoadAggregator
@@ -10,18 +11,16 @@ from Projekt_00_GUI.core.module_pv_modulator import PV_System, PV_TYPEN
 from Projekt_00_GUI.core.module_energy_landscape import main
 from Projekt_00_GUI.core.module_battery_storage import BatteryStorage
 
-
 #TYPE MAPPING
 highway_geojson_mapping= {"A44": "a44_beide.geojson", "A46": "a46_beide.geojson"}
-industrie_heating_choice_mapping = {True: "2", False: "1"}
+industry_heating_choice_mapping = {True: "2", False: "1"}
 el_pv_type_number_text_mapping = {4:"horizontal_tracking", 5:"vertical", 6:"horizontal"}
 #GLOBAL VARIABLES
 script_dir = os.path.dirname(os.path.abspath(__file__))
 base_input = os.path.join(script_dir, "data", "inputs")
 weather_csv = os.path.join(base_input,"wetter_daten_2021_15min.csv")
 output_dir = os.path.join(script_dir,"data", "outputs")
-os.makedirs(output_dir, exist_ok=True)  #UNBEDINGT ANPASSEN: Speicherpfad muss der gleiche wie in run_pv_baukasten sein, da in generate pv_points gespeichert wird
-
+os.makedirs(output_dir, exist_ok=True)
 
 def weather_prep():
     weather_df = pd.read_csv(weather_csv, index_col=0, parse_dates=True)
@@ -189,7 +188,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"
 
         df_industrie, csv_path_industrie, plot_path_industrie = industry_aggregator.run(
-            mode_choice=industrie_heating_choice_mapping[inp.i_heat_cooling_electric],
+            mode_choice=industry_heating_choice_mapping[inp.i_heat_cooling_electric],
             selection_indices=inp.i_companies,
 
         )
