@@ -1,3 +1,4 @@
+#Übergabe fertig Felix
 import pandas as pd
 import plotly.graph_objects as go
 from PIL import Image
@@ -855,7 +856,7 @@ def build_synergy_diagram(inp, sim_output):
             label_y=half_y_grid+0.025
         )
 
-        #graue dot pfeile für overlay bei Netzbezug
+        # Grey dotted line in case of energy deficit
         if industry_energy > 0:
             add_optional_connection(
                 fig,
@@ -887,6 +888,7 @@ def build_synergy_diagram(inp, sim_output):
     # 12) Layout
     # =========================================================
 
+    # Separation line between KPIs and energy flow visualization
     fig.add_shape(
         type="line",
         x0=0.1, x1=1.0,
@@ -894,6 +896,7 @@ def build_synergy_diagram(inp, sim_output):
         line=dict(color="gray", width=1)#, dash="dash")
     )
 
+    # Layout: height an margin
     fig.update_layout(
         margin=dict(l=20, r=20, t=50, b=20),
         height=820,
