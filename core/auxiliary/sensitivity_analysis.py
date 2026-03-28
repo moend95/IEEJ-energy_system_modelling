@@ -1,5 +1,5 @@
-from Projekt_00_GUI.core.io_types import GuiInput
-from Projekt_00_GUI.Simulation import run_simulation
+from core.io_types import GuiInput
+from Simulation import run_simulation
 
 from itertools import product
 import seaborn as sns

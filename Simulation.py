@@ -5,10 +5,10 @@ import pandas as pd
 
 #Functions
 from core.io_types import GuiInput, SimOutput
-from Projekt_00_GUI.core.module_industrial_are import IndustryLoadAggregator
-from Projekt_00_GUI.core.module_pv_modulator import PV_System, PV_TYPEN
-from Projekt_00_GUI.core.module_energy_landscape import main
-from Projekt_00_GUI.core.module_battery_storage import BatteryStorage
+from core.module_industrial_are import IndustryLoadAggregator
+from core.module_pv_modulator import PV_System, PV_TYPEN
+from core.module_energy_landscape import main
+from core.module_battery_storage import BatteryStorage
 
 #TYPE MAPPING
 industry_csv_mapping = {
@@ -393,9 +393,8 @@ class Simulator:
         # write time series
         out.bal_power_max_kw = out.res_df["Bilanz [kW]"].max()
         out.bal_power_min_kw = out.res_df["Bilanz [kW]"].min()
-        feed_in_kwh = out.bs_df["new_balance_kw"].clip(lower=0).sum() / 4
 
-        return total_demand, total_generation, feed_in_kwh
+        return total_demand, total_generation
 
     def run_battery(self, inp: GuiInput, out: SimOutput) -> SimOutput:
         """
@@ -439,7 +438,7 @@ class Simulator:
         return out
 
 
-def run_simulation(self, inp: GuiInput) -> SimOutput:
+def run_simulation(inp: GuiInput) -> SimOutput:
         """
         Main simulation function
         Each of the five modules are implemented (PV-modulator, energy landscape, industrial area, green energy hub and battery storage)
@@ -464,11 +463,12 @@ def run_simulation(self, inp: GuiInput) -> SimOutput:
         sim.run_juechen_sued(inp, out)
         print('Juechen-Sued \t- abgeschlossen')
 
-        total_demand, total_generation, feed_in_kwh = sim.run_balance(out)
+        total_demand, total_generation = sim.run_balance(out)
 
         sim.run_battery(inp,out)
         print('Batterie \t\t- abgeschlossen')
 
+        feed_in_kwh = out.bs_df["new_balance_kw"].clip(lower=0).sum() / 4
 
         out.ee_self_consumption = (total_generation - feed_in_kwh) / total_generation
         if total_demand == 0:
