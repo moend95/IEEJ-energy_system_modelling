@@ -64,9 +64,9 @@ class DWDWeatherFetcher:
         "radiation_sky_short_wave_diffuse": "dhi",
         "temperature_air_mean_200": "temp_air",
         "wind_speed": "wind_speed",
-        "temperature_dew_point_mean_200": "temp_dew",  # K Taupunkt
-        "pressure_air_site": "pressure_pa",  # Pa Luftdruck
-        "humidity": "rel_hum",  # % relative feuchte
+        "temperature_dew_point_mean_200": "temp_dew",
+        "pressure_air_site": "pressure_pa",
+        "humidity": "rel_hum",
     }
 
     def __init__(self, cfg: DWDWeatherConfig):
@@ -88,9 +88,9 @@ class DWDWeatherFetcher:
             DwdObservationParameter.MINUTE_10.SOLAR.RADIATION_SKY_SHORT_WAVE_DIFFUSE,
             DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.TEMPERATURE_AIR_MEAN_200,
             DwdObservationParameter.MINUTE_10.WIND.WIND_SPEED,
-            DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.PRESSURE_AIR_SITE,    # Luft Druck
-            DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.TEMPERATURE_DEW_POINT_MEAN_200, # Taupunkt
-            DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.HUMIDITY,  # relative Feuchte
+            DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.PRESSURE_AIR_SITE,
+            DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.TEMPERATURE_DEW_POINT_MEAN_200,
+            DwdObservationParameter.MINUTE_10.TEMPERATURE_AIR.HUMIDITY,
         ]
 
     # --------------------------------------------------------
@@ -98,7 +98,7 @@ class DWDWeatherFetcher:
     # --------------------------------------------------------
 
     def run(self) -> pd.DataFrame:
-        """Lädt und verarbeitet DWD-Daten (bleibt bei 10 min)."""
+        """Load and process DWD data (10-minute resolution)."""
         station_id = self._select_station()
         df = self._fetch_dataframe(station_id)
         df = self._postprocess(df)
@@ -119,7 +119,7 @@ class DWDWeatherFetcher:
         # Manual selection
         if not self.cfg.auto_select:
             print(df_top[["station_id", "name", "distance"]])
-            return input("Bitte station_id eingeben: ")
+            return input("Enter station_id: ")
 
         # Automatic selection based on completeness
         for sid in df_top["station_id"]:
@@ -134,7 +134,7 @@ class DWDWeatherFetcher:
                     return str(sid)
             except Exception:
                 continue
-        raise ValueError("Keine geeignete Wetterstation gefunden.")
+        raise ValueError("No suitable weather station found.")
 
 
     # --------------------------------------------------------
@@ -145,7 +145,7 @@ class DWDWeatherFetcher:
         stations_info = self._request.filter_by_station_id(station_id)
         df = stations_info.values.all().df.to_pandas()
         if df.empty:
-            raise ValueError(f"Station {station_id} lieferte keine Daten.")
+            raise ValueError(f"Station {station_id} returned no data.")
         return df
 
     # --------------------------------------------------------
@@ -215,14 +215,14 @@ class DWDWeatherFetcher:
         dni = np.minimum(dni.values, i0)
         dni = pd.Series(dni, index=df.index)
 
-        dni = dni.clip(lower=0)  # DNI ≥ 0
-        dni.loc[~daylight] = 0.0  # nachts 0
+        dni = dni.clip(lower=0)
+        dni.loc[~daylight] = 0.0
 
         # --- Interpolation ---
         dni_interp = dni.copy()
-        dni_interp[~daylight] = np.nan  # nachts NICHT interpolieren
+        dni_interp[~daylight] = np.nan
         dni_interp = dni_interp.interpolate(method="time", limit=self.cfg.dni_interp_limit)
-        dni = dni_interp.fillna(0.0)  # verbleibende NaNs (z. B. Nacht) zu 0
+        dni = dni_interp.fillna(0.0)
 
         df["dni"] = dni
 
@@ -241,7 +241,7 @@ class DWDWeatherFetcher:
     def _maybe_save(self, df: pd.DataFrame) -> None:
         if self.cfg.save_path:
             df.to_csv(self.cfg.save_path)
-            print(f"Datei gespeichert: {self.cfg.save_path}")
+            print(f"Saved to: {self.cfg.save_path}")
 
     def _maybe_plot(self, df: pd.DataFrame) -> None:
         if self.cfg.plot_date:
@@ -258,12 +258,12 @@ class DWDWeatherFetcher:
         day = pd.to_datetime(plot_date)
         df_day = df.loc[day.strftime("%Y-%m-%d")]
         fig, ax1 = plt.subplots()
-        ax1.set_ylabel("Strahlung [W/m²]")
+        ax1.set_ylabel("Irradiance [W/m²]")
         df_day[["ghi", "dhi", "dni"]].plot(ax=ax1)
         ax2 = ax1.twinx()
-        ax2.set_ylabel("Zenit [°]")
+        ax2.set_ylabel("Zenith [°]")
         df_day["zenith"].plot(ax=ax2, style="--", color="gray")
-        plt.title(f"Solarstrahlung & Sonnenstand am {plot_date}")
+        plt.title(f"Solar radiation and position on {plot_date}")
         plt.grid()
         plt.show()
 
@@ -279,8 +279,8 @@ class DWDWeatherFetcher:
         fig, ax1 = plt.subplots(figsize=(14, 6))
         cols = [c for c in ["ghi", "dhi", "dni"] if c in df_range.columns]
         df_range[cols].plot(ax=ax1)
-        ax1.set_ylabel("Strahlung [W/m²]")
-        plt.title(f"Solarstrahlung von {start_ts.date()} bis {end_ts.date()}")
+        ax1.set_ylabel("Irradiance [W/m²]")
+        plt.title(f"Solar radiation from {start_ts.date()} to {end_ts.date()}")
         plt.grid()
         plt.tight_layout()
         plt.show()
