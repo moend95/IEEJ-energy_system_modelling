@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 # UNBEDINGT RAUS DAMIT NUR EIN WORKAROUND FÜR DIE VERWENDUNG VON ÜBERGELAGERTEN MODULEN
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+# sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 import folium
@@ -16,8 +16,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from core.io_types import GuiInput, SimOutput
-from Simulation import run_simulation
+from Projekt_00_GUI.core.io_types import GuiInput, SimOutput
+from Projekt_00_GUI.Simulation import run_simulation, industry_csv_mapping
+from Projekt_00_GUI.core.functions_web_support import *
 from Projekt_00_GUI.core.functions_plot import (
     plot_industry_preview,
     plot_industry_annual_energy,
@@ -26,7 +27,7 @@ from Projekt_00_GUI.core.functions_plot import (
     plot_js_weekly_profile,
 )
 
-from Projekt_00_GUI.core.functions_web_support import *
+
 
 # Mapping: PV type name to id
 pv_name_to_id = {
@@ -39,17 +40,7 @@ pv_name_to_id = {
     "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": 4
 }
 
-# Mapping: csv id to industry name
-industry_csv_mapping = {
-    0: "Entsorgung",
-    1: "Stahl_1",
-    2: "Logistik und Lagerung",
-    3: "Schrott Metallhandel",
-    4: "Lagerung",
-    5: "Buero",
-    6: "Logistik Lebensmittel",
-    7: "Stahl_2"
-}
+
 # Industry columns order
 industry_order_all = [
     "Entsorgung",

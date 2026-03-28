@@ -1,21 +1,21 @@
+# Übergabefertig kommentiert SM
 import pandas as pd
-
 
 class BatteryStorage:
     """
-    Einfache Batteriespeicher-Simulation.
+    Simple battery storage simulation.
 
-    Idee:
-    - Eingang ist ein Lastgang / eine Bilanz in kW
-    - positive Werte  -> Überschuss, Batterie kann laden
-    - negative Werte  -> Defizit, Batterie kann entladen
-    - Ergebnis ist ein neuer Lastgang:
-        * 0, wenn Batterie alles ausgleichen kann
-        * >0, wenn trotz voller Batterie noch Überschuss ins Netz geht
-        * <0, wenn trotz leerer Batterie noch Strom aus dem Netz benötigt wird
+    Concept:
+    - Input is a load profile / power balance in kW
+    - positive values -> surplus, battery can charge
+    - negative values -> deficit, battery can discharge
+    - output is a new balance:
+        * 0   if the battery fully compensates the balance
+        * >0  if surplus still remains and is exported to the grid
+        * <0  if deficit still remains and grid import is required
 
-    Erweiterung:
-    - maximale Lade- und Entladeleistung über C-Faktor
+    Extension:
+    - maximum charge and discharge power via C-rate
     """
 
     def __init__(
@@ -33,40 +33,41 @@ class BatteryStorage:
         self.discharge_efficiency = discharge_efficiency
 
         self.max_charge_c = float(max_charge_c or 0)
-        self.max_discharge_c = float(max_discharge_c or 0) # angepasst war vorher max_charge_c
+        self.max_discharge_c = float(max_discharge_c or 0)
 
 
-        # C-Faktor -> maximale Leistung in kW
+        # C-rate -> maximum power in kW
         self.max_charge_kw = self.capacity_kwh * self.max_charge_c
         self.max_discharge_kw = self.capacity_kwh * self.max_discharge_c
 
     def simulate(self, balance_series: pd.Series, timestep_hours: float = 1.0) -> pd.DataFrame:
         """
-        Simuliert den Speicher auf Basis einer Bilanz in kW.
+        Simulate the battery storage based on a power balance in kW.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         balance_series : pd.Series
-            Bilanz in kW:
-            > 0 = Überschuss
-            < 0 = Defizit
+            Power balance in kW:
+            > 0 = surplus
+            < 0 = deficit
         timestep_hours : float
-            Länge eines Zeitschritts in Stunden, z. B.
-            1.0 für Stundenwerte
-            0.25 für 15-Minuten-Werte
+            Length of one timestep in hours, e.g.
+            1.0 for hourly values
+            0.25 for 15-minute values
 
-        Rückgabe
-        --------
-        pd.DataFrame mit:
-        - balance_kw: ursprüngliche Bilanz
-        - battery_power_kw: Lade-/Entladeleistung der Batterie
-                            > 0 = Batterie lädt
-                            < 0 = Batterie entlädt
-        - soc_kwh: Ladezustand der Batterie
-        - new_balance_kw: neue Bilanz nach Batterie
-                          > 0 = Einspeisung ins Netz
-                          < 0 = Netzbezug
-                          = 0 = Batterie konnte vollständig ausgleichen
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame with:
+            - balance_kw: original balance
+            - battery_power_kw: battery charge/discharge power
+                                > 0 = charging
+                                < 0 = discharging
+            - soc_kwh: battery state of charge
+            - new_balance_kw: new balance after storage operation
+                              > 0 = grid export
+                              < 0 = grid import
+                              = 0 = fully compensated by battery
         """
 
         soc = self.initial_soc_kwh
@@ -76,70 +77,70 @@ class BatteryStorage:
         new_balance_list = []
 
         for balance_kw in balance_series:
-            # Energie dieses Zeitschritts in kWh
+            # Convert power to energy for the current timestep
             balance_kwh = balance_kw * timestep_hours
 
-            # Leistungsgrenzen für diesen Zeitschritt als Energie
+            # Power limits per timestep as energy values
             max_charge_kwh_step = self.max_charge_kw * timestep_hours
             max_discharge_kwh_step = self.max_discharge_kw * timestep_hours
 
-            # Fall 1: Überschuss -> Batterie laden
+            # Case 1: surplus -> charge battery
             if balance_kwh > 0:
-                # Von der Bilanzseite kann nur begrenzt Energie in den Speicher fließen:
-                # 1. durch vorhandenen Überschuss
-                # 2. durch max. Ladeleistung
+                # Charging is limited by:
+                # 1. available surplus
+                # 2. maximum charging power
                 input_energy_for_charging = min(balance_kwh, max_charge_kwh_step)
 
-                # So viel davon kommt wegen Wirkungsgrad tatsächlich im Speicher an
+                # Energy actually stored after charging efficiency
                 energy_to_battery = input_energy_for_charging * self.charge_efficiency
 
-                # Freier Speicherplatz
+                # Remaining free capacity
                 free_capacity = self.capacity_kwh - soc
 
-                # Tatsächlich speicherbare Energie
+                # Energy that can actually be stored
                 charged_kwh = min(energy_to_battery, free_capacity)
 
-                # SOC erhöhen
+                # Update SOC
                 soc += charged_kwh
 
-                # Wie viel Energie musste dafür auf der Eingangsseite genutzt werden?
+                # Required input energy before efficiency losses
                 input_used_for_charging = charged_kwh / self.charge_efficiency
 
-                # Restüberschuss geht ins Netz
+                # Remaining surplus exported to the grid
                 remaining_kwh = balance_kwh - input_used_for_charging
 
-                # Batterie-Leistung positiv = laden
+                # Positive battery power = charging
                 battery_power_kw = input_used_for_charging / timestep_hours
                 new_balance_kw = remaining_kwh / timestep_hours
 
-            # Fall 2: Defizit -> Batterie entladen
+            # Case 2: deficit -> discharge battery
             elif balance_kwh < 0:
                 needed_kwh = abs(balance_kwh)
 
-                # Begrenzung der entnehmbaren Energie:
-                # 1. was gebraucht wird
-                # 2. was die Leistung zulässt
-                # 3. was im Speicher vorhanden ist
+                # Discharge is limited by:
+                # 1. required energy
+                # 2. maximum discharge power
+                # 3. available energy in storage
                 max_deliverable_kwh = min(
                     max_discharge_kwh_step,
                     soc * self.discharge_efficiency
                 )
 
-                # Tatsächlich von der Batterie gelieferte Energie
+                # Energy actually delivered by the battery
                 delivered_kwh = min(needed_kwh, max_deliverable_kwh)
 
-                # Dafür muss mehr Energie aus der Batterie entnommen werden
+                # SOC reduction including efficiency losses
                 energy_removed_from_soc = delivered_kwh / self.discharge_efficiency
                 soc -= energy_removed_from_soc
 
-                # Restdefizit, das aus dem Netz kommen muss
+                # Remaining deficit covered by grid import
                 remaining_kwh = needed_kwh - delivered_kwh
 
-                # Batterie-Leistung negativ = entladen
+                # Negative battery power = discharging
                 battery_power_kw = -delivered_kwh / timestep_hours
                 new_balance_kw = -remaining_kwh / timestep_hours
 
-            # Fall 3: exakt 0
+            # Case 3: exactly balanced
             else:
                 battery_power_kw = 0.0
                 new_balance_kw = 0.0
@@ -158,7 +159,7 @@ class BatteryStorage:
 
     def get_stats(self, result_df: pd.DataFrame, timestep_hours: float = 1.0) -> dict:
         """
-        Einfache Kennzahlen aus dem Simulationsergebnis.
+        Calculate simple key figures from the simulation result.
         """
         grid_import_kwh = abs(result_df.loc[result_df["new_balance_kw"] < 0, "new_balance_kw"].sum()) * timestep_hours
         grid_export_kwh = result_df.loc[result_df["new_balance_kw"] > 0, "new_balance_kw"].sum() * timestep_hours
