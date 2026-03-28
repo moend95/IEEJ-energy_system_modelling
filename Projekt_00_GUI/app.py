@@ -1,3 +1,5 @@
+# Übergabe fertig Felix
+
 import sys
 from pathlib import Path
 
@@ -10,6 +12,9 @@ from streamlit_folium import st_folium
 import json
 
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 from Projekt_00_GUI.core.io_types import GuiInput, SimOutput
 from Projekt_00_GUI.Simulation import run_simulation, industry_csv_mapping
@@ -85,13 +90,13 @@ st.write("\n")
 st.title("Energiesystem Modellierung - Innovationspark Jüchen")
 st.write("### Erzeugung Eingabewerte")
 
-# Container for Generation Input
+# ---------------- Generation Input ----------------
 with st.container(key="Erzeugung", width=1000, height='content'):
 
     # Tabs within Generation container
     tab1, tab2 = st.tabs(["Solarautobahn", "Energielandschaft"])
 
-    # Solar highway
+    # ---------------- Solar highway ----------------
     with tab1:
         col1_tab1, col2_tab1 = st.columns(2)
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -133,7 +138,7 @@ with st.container(key="Erzeugung", width=1000, height='content'):
             folium.LayerControl().add_to(m)
             st_data = st_folium(m, width=400, height=400)
 
-    # Energy landscape
+    # ---------------- Energy landscape ----------------
     with tab2:
         col1_tab2, col2_tab2 = st.columns(2)
 
@@ -221,18 +226,20 @@ with st.container(key="Erzeugung", width=1000, height='content'):
             st_data = st_folium(m, width=400, height=400)
 
 
+# Separation line
 col1, col2, col3 = st.columns([0.05, 0.9, 0.05])
 with col2:
     st.divider()
 
 
+# ---------------- Consumption Input ----------------
 st.write("### Verbrauch Eingabewerte")
 
 with st.container(key="Verbrauch", width=1500, height='content'):
 
     tab4, tab5, tab6 = st.tabs(["Industriegebiet", "Green Energy Hub", "Neubaugebiet Jüchen Süd"])
 
-    # INDUSTRIEGEBIET
+    # ---------------- Industrial Area ----------------
     with tab4:
         col1_tab4, col2_tab4 = st.columns(2)
 
@@ -261,6 +268,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
                 if choice is not None:
                     Input.i_companies.append(choice)
 
+        # Explanation expander
         with col2_tab4:
             Input.i_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
             expander = st.expander("Erklärung Wärme/Kälte")
@@ -270,6 +278,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
     Bei Auswahl "mit Wärme/Kälte Stromverbrauch" werden reversible Luftwärmepumpen und Geothermie-Sonden verwendet
             ''')
 
+            # Dynamic info box
             st.write('\n')
             if not Input.i_companies:
                 st.info("Industriegebiet deaktiviert.")
@@ -285,7 +294,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
         expander = st.expander("Erklärung Unternehmen")
         with expander:
-            #einzelne markdowns??
+
             st.markdown('''
     1. **Entsorgung:**  
     5 1/2 Tage Woche, Kein Schichtbetrieb  
@@ -330,6 +339,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
         selected_columns = [industry_csv_mapping[i] for i in Input.i_companies if i in industry_csv_mapping]
         selected_columns = list(dict.fromkeys(selected_columns))
 
+        # Plot example week of selected companies
         if selected_columns:
             st.write("#### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen")
 
@@ -340,7 +350,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
             )
             st.pyplot(fig_preview)
 
-    # GREEN ENERGY HUB
+    # ---------------- Green energy hub ----------------
     with tab5:
         green_hub_base_dir = os.path.join(
             script_dir,
@@ -349,6 +359,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
             "green_energy_hub"
         )
 
+        # Explanation expander
         expander = st.expander("Erklärung")
         with expander:
             st.write("""
@@ -415,6 +426,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
         geh_e_active = Input.geh_e_load_scenario != "Keine"
         green_hub_active = geh_h2_active or geh_e_active
 
+        # Plot example week of selected H2/electric szenario
         if green_hub_active:
             st.write("#### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
 
@@ -429,7 +441,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
             st.info("Green Energy Hub ist deaktiviert.")
 
 
-        # JÜCHEN SÜD
+        # ---------------- Jüchen Süd ----------------
         with tab6:
             st.write("Wähle das Szenario für das Neubaugebiet Jüchen Süd:")
 
@@ -450,6 +462,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
             js_factor = js_options[Input.js_scenario]
 
+            # Dynamic info box
             if js_factor == 0:
                 st.info("Jüchen Süd ist deaktiviert.")
             else:
@@ -480,11 +493,13 @@ with st.container(key="Verbrauch", width=1500, height='content'):
                 st.pyplot(fig_js)
 
 
+# Separation line
 col1, col2, col3 = st.columns([0.05, 0.9, 0.05])
 with col2:
     st.divider()
 
 
+# ---------------- Battery input ----------------
 st.write("### Batterie Eingabewerte")
 
 with st.container(key="Batterie", width=1500, height='content'):
@@ -538,7 +553,7 @@ with st.container(key="Batterie", width=1500, height='content'):
         format_func=lambda x: f"{x:.2g} C"
     )
 
-
+    # Dynamic info box
     if bat_active:
         st.info(
             f"""
@@ -557,6 +572,8 @@ with st.container(key="Batterie", width=1500, height='content'):
 st.space(size='small')
 col1, col2, col3 = st.columns([0.15, 0.7, 0.15])
 
+
+# ---------------- Run simulation ----------------
 with col2:
     run = st.button(
         "⚡ Simulation starten",
@@ -565,14 +582,15 @@ with col2:
     )
 st.space(size='small')
 
-
+# if button is pressed, actual simulation is started
 if run:
     with st.spinner("Simulation läuft..."):
-        Output = run_simulation(Input)
+        Output = run_simulation(Input)          # Simulation call
 
     st.success("Simulation abgeschlossen.")
-    st.session_state.simulation_ran = True
 
+    # Safe simulation state and output in session state
+    st.session_state.simulation_ran = True
     st.session_state.sim_output = Output
     #print('\nOutput Daten:\n', Output)     #debug
     #st.write(Output.res_df.columns)        #debug
@@ -580,31 +598,22 @@ if run:
 
 
 
-# =========================================================
-# Neue Visualisierung: Synergie-Diagramm
-# =========================================================
 
+# ---------------- Support function: KPIs and Energy flow visualization ----------------
 st.write("### Ergebnisse")
-#, text_alignment="center") klppt nicht     #:rainbow[Simulationsergebnisse]")
-#sim_output = st.session_state.sim_output if st.session_state.simulation_ran else Output
-
 with st.spinner("Visualisierung wird erstellt..."):
     fig_synergy = build_synergy_diagram(Input, st.session_state.sim_output)
     st.plotly_chart(fig_synergy, width="stretch")
 
 
 
-# =========================================================
-# Wenn Simulation gelaufen ist, weitere Ergebnisse darstellen
-# =========================================================
+# ---------------- Additional Results (if Sim ran) ----------------
 if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
 
     sim_output = st.session_state.sim_output
 
-
-    #NUll spalten entfernen
+    # Drop zero columns
     protected_cols = ["Bilanz [kW]"]
-
     zero_cols = [
         col for col in sim_output.res_df.columns
         if col not in protected_cols and sim_output.res_df[col].fillna(0).eq(0).all()
@@ -613,20 +622,10 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
     sim_output.res_df = sim_output.res_df.drop(columns=zero_cols)
 
 
-
-
+    # ---------------- Net balance Plot ----------------
     st.write("### Bilanzverlauf")
 
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    import matplotlib.dates as mdates
-    import streamlit as st
-
-
-
-
-
-
+    # Balance from res_df (no battery) or bs_df (if battery)
     if hasattr(sim_output, "bs_df") and sim_output.bs_df is not None and not sim_output.bs_df.empty:
         y = sim_output.bs_df["new_balance_kw"].copy()
         #plot_title = "Bilanz nach Batteriespeicher"
@@ -635,8 +634,6 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         y = sim_output.res_df["Bilanz [kW]"].copy()
         #plot_title = "Bilanzverlauf"
         #line_label = "Bilanz"
-
-    #y = sim_output.res_df["Bilanz [kW]"].copy()
 
     if not isinstance(y.index, pd.DatetimeIndex):
         y.index = pd.date_range(
@@ -650,7 +647,6 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
     max_val = y.max()
 
     fig, ax = plt.subplots(figsize=(12, 5))
-
     ax.plot(y.index, y.values, label="Bilanz")
 
     ax.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
@@ -669,6 +665,9 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
     fig.autofmt_xdate()
     st.pyplot(fig)
 
+
+
+    # ---------------- Detailed information expander ----------------
     with st.expander("Lastgang Infos anzeigen", expanded=False):
         desc_stats = sim_output.res_df
         desc = desc_stats.describe().loc[["mean", "min", "max"]].round(0)
@@ -677,7 +676,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         desc = desc.loc[["sum [kWh]", "mean", "min", "max"]]
         st.dataframe(desc)
 
-        # Plot 1: Erzeuger
+        # Plot 1: Generation
         generation_cols = [col for col in sim_output.res_df.columns if "Erzeugung" in col]
         generation = sim_output.res_df[generation_cols].sum(axis=1)
         if not isinstance(generation.index, pd.DatetimeIndex):
@@ -687,7 +686,6 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
                 freq="15min"
             )
         mean_val = generation.mean()
-        #min_val = generation.min()
         max_val = generation.max()
 
         fig1, ax1 = plt.subplots(figsize=(12, 4))
@@ -697,7 +695,6 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             label="Erzeugung"
         )
         ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-        #ax1.axhline(min_val, color="red", linestyle=":", linewidth=1.2, label=f"Minimum: {min_val:.1f} kW")
         ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
         ax1.xaxis.set_major_locator(mdates.MonthLocator())
         ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
@@ -710,7 +707,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         st.pyplot(fig1)
 
 
-        # Plot 1: Verbaucher
+        # Plot 2: Consumption
         demand_cols = [col for col in sim_output.res_df.columns if "Last" in col]
         demand = sim_output.res_df[demand_cols].sum(axis=1)
         if not isinstance(demand.index, pd.DatetimeIndex):
@@ -730,7 +727,6 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             label="Verbrauch"
         )
         ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-        # ax1.axhline(min_val, color="red", linestyle=":", linewidth=1.2, label=f"Minimum: {min_val:.1f} kW")
         ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
         ax1.xaxis.set_major_locator(mdates.MonthLocator())
         ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
@@ -742,14 +738,14 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         fig1.autofmt_xdate()
         st.pyplot(fig1)
 
-    # =========================================================
-    # Falls Batterie aktiv, Batterie Ergebnisse
-    # =========================================================
+
+
+    # ---------------- Battery details expander ----------------
     if not sim_output.bs_df.empty:
 
         with st.expander("Batterieergebnisse anzeigen", expanded=False):
 
-            #Stats
+            # Stats
             bs_desc_stats = sim_output.bs_df.drop(columns=['soc_kwh'])
             bs_desc = bs_desc_stats.describe().loc[["mean", "min", "max"]].round(0)
             bs_desc.loc["sum [kWh]"] = bs_desc_stats.sum()/4
@@ -764,7 +760,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             st.dataframe(bs_desc)
 
 
-            # Plot 1: Bilanz mit batteriespeicher
+            # Plot 1: Balance with battery storage
             balance_with_battery = sim_output.bs_df["new_balance_kw"].copy()
             if not isinstance(balance_with_battery.index, pd.DatetimeIndex):
                 balance_with_battery.index = pd.date_range(
@@ -796,7 +792,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             st.pyplot(fig1)
 
 
-            # Plot 2: Bilanz vor batteriespeicher
+            # Plot 2: Balance withOUT battery storage
             balance_without_battery = sim_output.bs_df["balance_kw"].copy()
             if not isinstance(balance_without_battery.index, pd.DatetimeIndex):
                 balance_without_battery.index = pd.date_range(
@@ -828,7 +824,7 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             st.pyplot(fig1)
 
 
-            # Plot 2: SOC
+            # Plot 3: State of charge
             bs_soc = sim_output.bs_df["soc_kwh"].copy()
             bs_soc_percent = bs_soc / Input.bs_energy_kwh * 100
             if not isinstance(bs_soc_percent.index, pd.DatetimeIndex):
@@ -844,8 +840,6 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
                 bs_soc_percent.values,
                 label="State of charge"
             )
-            #fig3, ax3 = plt.subplots(figsize=(12, 4))
-            #ax3.plot(sim_output.bs_df.index, sim_output.bs_df["soc_kwh"])
             ax3.xaxis.set_major_locator(mdates.MonthLocator())
             ax3.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
             ax3.set_xlabel("Monat")
@@ -855,4 +849,3 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             ax3.legend()
             fig3.autofmt_xdate()
             st.pyplot(fig3)
-
