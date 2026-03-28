@@ -1,3 +1,4 @@
+#Übergabefertig kommentiert Felix
 from core.io_types import GuiInput
 from Simulation import run_simulation
 
@@ -6,6 +7,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import TwoSlopeNorm
+from pathlib import Path
+
+output_dir = Path("sensitivity_output_dir")
+output_dir.mkdir(parents=True, exist_ok=True)
+
 
 import pandas as pd
 pd.set_option('display.max_rows', None)
@@ -21,11 +27,12 @@ def plot_heatmap(heatmap: pd.DataFrame, save_path: str | None = None):
     Heatmap:
     - red to green colour grading
     - zero as middle point (yellow)
+    - current implementation does not consider Jüchen Süd and battery scenarios
     """
 
     plot_df = heatmap.copy()
 
-    # Readable labels for scenarios
+    # Readable labels for scenarios (excluding battery)
     plot_df.index = [f"{geh} | {ind}" for geh, ind in plot_df.index]
     plot_df.columns = [f"{el} | {h}" for el, h in plot_df.columns]
 
@@ -73,7 +80,7 @@ h_cases = [1]       #,2,3]
 el_cases = [3]      #,2,3]
 i_cases = [1]       #,2,3]
 geh_cases = [1]     #,2,3]
-b_cases = [2]
+b_cases = [2]       # (multiple) choices not saved as csv or displayed in heatmap
 
 
 # ---------------- Solar highway ----------------
@@ -179,7 +186,7 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
     """
     Creates the individual Input objects for each simulation run.
     Based on case definitions/ scenario configurations.
-    :param : All Params within configuration cases are consistent with Input types from io_types.py
+    :param : All Params within configuration cases are consistent with Input types from io_types.py. Jüchen Süd is not included in current implementation.
     :return: inp object
     """
     cfg = DEFAULT_CONFIG.copy()
@@ -216,9 +223,10 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
 
 
 
-# ---------------- Individual input builder ----------------
+# ---------------- Sensitivity analysis ----------------
 def run_sensitivity_analysis():
 
+    # Predefine columns and row indices for heatmap data frame (results matrix)
     col_index = pd.MultiIndex.from_tuples(
         [(f"EL{el}",f"H{h}") for el, h in product(el_cases, h_cases)],
         names=["EnergyLandscape","Highway"]
@@ -230,6 +238,9 @@ def run_sensitivity_analysis():
 
     heatmap_df = pd.DataFrame(index=row_index, columns=col_index, dtype=float)
 
+
+    # ---------------- for-loops to move through all cases  ----------------
+    # multiple battery cases are not saved separately (last iteration will overwrite the previous ones)
     for b_case in b_cases:
         for el_case in el_cases:
             for h_case in h_cases:
@@ -243,6 +254,7 @@ def run_sensitivity_analysis():
                               f"\ngeh \t-  {geh_case}"
                               f"\nb\t\t- {b_case} ")
 
+                        # Building individual input for current loop
                         inp = build_test_input(
                             el_case=el_case,
                             h_case=h_case,
@@ -251,21 +263,10 @@ def run_sensitivity_analysis():
                             b_case=b_case
                         )
 
-
+                        # Simulation call
                         out = run_simulation(inp)
 
-                        prod = out.res_df["Erzeugung_Solarautobahn [kW]"] + out.res_df["Erzeugung_Energielandschaft [kW]"]
-                        cons = out.res_df['Last_Industrie [kW]'] + out.res_df["Last_Green_Energy_Hub [kW]"]
-
-                        '''heatmap_df_selfcons.loc[
-                            (f"GEH{geh_case}", f"I{i_case}"),
-                            (f"EL{el_case}", f"H{h_case}")
-                        ] = 100 * np.minimum(prod, cons).sum() / prod.sum()
-
-                        heatmap_df_selfcons.to_excel("data/outputs/sensi_res_dfs/balance_self_consumption_rate.xlsx")
-                        '''
-
-
+                        # Writing current scenario result into results matrix (heatmap_df)
                         heatmap_df.loc[
                             (f"GEH{geh_case}", f"I{i_case}"),
                             (f"EL{el_case}", f"H{h_case}")
@@ -275,19 +276,20 @@ def run_sensitivity_analysis():
                             heatmap_df.loc[
                                 (f"GEH{geh_case}", f"I{i_case}"),
                                 (f"EL{el_case}", f"H{h_case}")
-                            ] = out.bs_df['new_balance_kw'].sum() / 4  # out.res_df['Bilanz [kW]'].sum()/4 #
+                            ] = out.bs_df['new_balance_kw'].sum() / 4       # out.res_df['Bilanz [kW]'].sum()/4 #
 
-                        print(heatmap_df)
-                        heatmap_df.to_excel("data/outputs/sensi_res_dfs/bat_balance.xlsx")
+                        heatmap_df.to_excel(f"./{output_dir}/bat_balance.xlsx")
 
-                        #Output Lastgang speichern
+                        # Save output results data frame as csv
                         if not out.res_df.empty:
-                            filename = f"data/outputs/sensi_res_dfs/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
+                            filename = f"{output_dir}/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
                             out.res_df.to_csv(
                                 filename,
                                 sep=",",
                                 decimal="."
                             )
+
+                            # Console Output
                             print('-'*50,'\nResults Data Frame:')
                             print("CSV saved:", filename)
                             print('\n',out.res_df.head())
@@ -295,6 +297,7 @@ def run_sensitivity_analysis():
                             #print('\n', out.res_df.sum().sum())
                             print('\n',out.res_df.describe())
 
+                            # Console Output if battery
                             if not out.bs_df.empty:
                                 print('-'*50,'\nBatterie Data Frame:')
                                 print('\n', out.bs_df.head())
@@ -302,37 +305,16 @@ def run_sensitivity_analysis():
                                 print('\nStats: \n', {k: round(v, 0) if isinstance(v, float) else v for k, v in out.bs_stats.items()})
 
                         else:
-                            print("res_df empty")
+                            print("No results: res_df empty")
 
 
-
-    #manualle heat map
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(
-        heatmap_df,
-        annot=True,  # Werte anzeigen
-        fmt=".0f",  # Ganzzahlen
-        cmap="RdYlGn"  # Farbskala
-
-    )
-    plt.title("Balance Avg. Neg. Power Sensitivity")
-    plt.tight_layout()
-    plt.savefig("data/outputs/sensi_res_dfs/balance_self_consumption_rate.png", dpi=300)
-    plt.show()
-
-
-
-
-
+    # Plot and save heatmap
     plot_heatmap(
         heatmap_df,
-        save_path="../../data/outputs/sensi_res_dfs/balance_self_consumption_rate.png"
+        save_path=f"./{output_dir}/balance_self_consumption_rate.png"
     )
 
 
-# ---------------------------------------------------
-# SCRIPT ENTRY
-# ---------------------------------------------------
-
+# ---------------- Execute main function ----------------
 if __name__ == "__main__":
     run_sensitivity_analysis()

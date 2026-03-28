@@ -477,5 +477,5 @@ def run_simulation(inp: GuiInput) -> SimOutput:
 
 
         print('\nInput Daten:\n',inp)
-        print('\nOutput Daten:\n', out)
+        #print('\nOutput Daten:\n', out)    # only enable for website use, causes large console output in sensitivity_analysis.py
         return out
