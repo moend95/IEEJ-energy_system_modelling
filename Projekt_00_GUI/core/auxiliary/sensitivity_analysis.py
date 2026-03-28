@@ -1,34 +1,35 @@
-from core.io_types import GuiInput
-from Simulation import run_simulation
-import pandas as pd
+from Projekt_00_GUI.core.io_types import GuiInput
+from Projekt_00_GUI.Simulation import run_simulation
+
 from itertools import product
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.colors import TwoSlopeNorm
 
+import pandas as pd
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
 
-import numpy as np
-from matplotlib.colors import TwoSlopeNorm
 
 
-def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None):
+# ---------------- Heatmap plot ----------------
+def plot_heatmap(heatmap: pd.DataFrame, save_path: str | None = None):
     """
-    Wissenschaftliche Heatmap:
-    - divergierende Farbskala
-    - 0 als neutraler Mittelpunkt
-    - saubere Beschriftung
+    Heatmap:
+    - red to green colour grading
+    - zero as middle point (yellow)
     """
 
     plot_df = heatmap.copy()
 
-    # Lesbarere Labels erzeugen
+    # Readable labels for scenarios
     plot_df.index = [f"{geh} | {ind}" for geh, ind in plot_df.index]
     plot_df.columns = [f"{el} | {h}" for el, h in plot_df.columns]
 
-    # Gemeinsame symmetrische Skala um 0
+    # Shared scale in pos and neg space, zero as center
     max_abs = np.nanmax(np.abs(plot_df.to_numpy()))
     norm = TwoSlopeNorm(vmin=-max_abs, vcenter=0, vmax=max_abs)
 
@@ -37,7 +38,7 @@ def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None)
         plot_df,
         annot=False,
         fmt=".0f",
-        cmap="RdYlGn",#"RdBu_r",   # negativ blau, positiv rot
+        cmap="RdYlGn",  #"RdBu_r",   # negativ blau, positiv rot
         norm=norm,
         linewidths=0.5,
         linecolor="lightgray",
@@ -51,6 +52,7 @@ def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None)
     plt.yticks(rotation=0)
     plt.tight_layout()
 
+    # Optional plot save
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
 
@@ -58,23 +60,23 @@ def plot_scientific_heatmap(heatmap: pd.DataFrame, save_path: str | None = None)
 
 
 # ---------------------------------------------------
-# DEFAULT CONFIG
+# Configuration of scenarios
 # ---------------------------------------------------
 
 DEFAULT_CONFIG = {}
 
-# ---------------------------------------------------
-# CASE DEFINITIONS      1: Small, 2: Medium, 3: Large
-# ---------------------------------------------------
+# ---------------- Case definitions ----------------
+# 0: None, 1: Small, 2: Medium, 3: Large
 
-# Welche Szenarien wirklich gerechnet werden sollen
-h_cases = [1]#,2,3]
-el_cases = [3]#,2,3]
-i_cases = [1]#,2,3]
-geh_cases = [1]#,2,3]
+# List of cases for multiple simulations and sensitivity analysis
+h_cases = [1]       #,2,3]
+el_cases = [3]      #,2,3]
+i_cases = [1]       #,2,3]
+geh_cases = [1]     #,2,3]
 b_cases = [2]
 
-# Solarautobahn
+
+# ---------------- Solar highway ----------------
 H_CONFIGS = {
     0: {},
     1: {
@@ -92,12 +94,12 @@ H_CONFIGS = {
     }
 }
 
-# Energielandschaft
+# ---------------- Energy landscape ----------------
 EL_CONFIGS = {
     0: {},
     1: {
         "el_build_state": 50,
-        "el_pv_type": 5,        #ZUORDNUNG CHECKEN... 6: horizontal mit tracking, 5: vertikal, 4: horizontal (MIT ODER OHNE TRACKING???)
+        "el_pv_type": 5,
         "tractor_width": 24.0,
         "tractor_length": 15.0,
         "tractor_turn_radius": 9.0
@@ -114,7 +116,7 @@ EL_CONFIGS = {
     }
 }
 
-# Industrie
+# ---------------- Industrial area ----------------
 I_CONFIGS = {
     0: {},
     1: {
@@ -133,7 +135,7 @@ I_CONFIGS = {
     }
 }
 
-# Green Energy Hub
+# ---------------- Green Energy Hub ----------------
 GEH_CONFIGS = {
     0: {},
     1: {
@@ -153,7 +155,7 @@ GEH_CONFIGS = {
 
 }
 
-# Battery
+# ---------------- Battery ----------------
 B_CONFIGS = {
     0: {},
     1: {
@@ -171,12 +173,15 @@ B_CONFIGS = {
 }
 
 
-# ---------------------------------------------------
-# INPUT BUILDER
-# ---------------------------------------------------
 
+# ---------------- Individual input builder ----------------
 def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
-
+    """
+    Creates the individual Input objects for each simulation run.
+    Based on case definitions/ scenario configurations.
+    :param : All Params within configuration cases are consistent with Input types from io_types.py
+    :return: inp object
+    """
     cfg = DEFAULT_CONFIG.copy()
 
     cfg.update(H_CONFIGS[h_case])
@@ -210,11 +215,9 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
     return inp
 
 
-# ---------------------------------------------------
-# MAIN
-# ---------------------------------------------------
 
-def main():
+# ---------------- Individual input builder ----------------
+def run_sensitivity_analysis():
 
     col_index = pd.MultiIndex.from_tuples(
         [(f"EL{el}",f"H{h}") for el, h in product(el_cases, h_cases)],
@@ -321,7 +324,7 @@ def main():
 
 
 
-    plot_scientific_heatmap(
+    plot_heatmap(
         heatmap_df,
         save_path="../../data/outputs/sensi_res_dfs/balance_self_consumption_rate.png"
     )
@@ -332,4 +335,4 @@ def main():
 # ---------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    run_sensitivity_analysis()
