@@ -195,7 +195,7 @@ class IndustryLoadAggregator:
         combined_df_csv = combined_df.copy()
         combined_df_csv["Time stamp"] = combined_df_csv["Time stamp"].dt.strftime("%d.%m %H:%M")
         import os
-        output_dir = "../data/outputs/industry_area"
+        output_dir = "/../data/outputs/industry_area"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(self.script_dir,output_dir, f"{self.BASISNAME_AUSGABE}.csv")
