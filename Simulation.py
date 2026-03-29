@@ -382,6 +382,8 @@ class Simulator:
 
         out.bal_energy_kwh = h_energy + el_energy - geh_energy - i_energy - js_energy
 
+        feed_in_kwh = out.res_df["Bilanz [kW]"].clip(lower=0).sum() / 4
+
         # For coverage_rate
         total_generation = h_energy + el_energy
         total_demand = geh_energy + i_energy + js_energy
@@ -394,7 +396,7 @@ class Simulator:
         out.bal_power_max_kw = out.res_df["Bilanz [kW]"].max()
         out.bal_power_min_kw = out.res_df["Bilanz [kW]"].min()
 
-        return total_demand, total_generation
+        return total_demand, total_generation, feed_in_kwh
 
     def run_battery(self, inp: GuiInput, out: SimOutput) -> SimOutput:
         """
@@ -463,12 +465,13 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         sim.run_juechen_sued(inp, out)
         print('Juechen-Sued \t- abgeschlossen')
 
-        total_demand, total_generation = sim.run_balance(out)
+        total_demand, total_generation, feed_in_kwh = sim.run_balance(out)
 
         sim.run_battery(inp,out)
         print('Batterie \t\t- abgeschlossen')
 
-        feed_in_kwh = out.bs_df["new_balance_kw"].clip(lower=0).sum() / 4
+        if hasattr(out, "bs_df") and "new_balance_kw" in out.bs_df.columns:
+            feed_in_kwh = out.bs_df["new_balance_kw"].clip(lower=0).sum() / 4
 
         out.ee_self_consumption = (total_generation - feed_in_kwh) / total_generation
         if total_demand == 0:
