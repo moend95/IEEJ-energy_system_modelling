@@ -22,6 +22,71 @@ from core.functions_plot import (
 
 
 
+def plot_generation(sim_output):
+    generation_cols = [col for col in sim_output.res_df.columns if "Erzeugung" in col]
+    generation = sim_output.res_df[generation_cols].sum(axis=1)
+
+    if not isinstance(generation.index, pd.DatetimeIndex):
+        generation.index = pd.date_range(
+            start="2021-01-01 00:00:00",
+            periods=len(generation),
+            freq="15min"
+        )
+
+    mean_val = generation.mean()
+    max_val = generation.max()
+
+    fig, ax = plt.subplots(figsize=(12, 4))
+    ax.plot(
+        generation.index,
+        generation.values,
+        label="Erzeugung"
+    )
+    ax.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
+    ax.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+    ax.set_title("Leistungsverlauf Erzeugung")
+    ax.set_xlabel("Monat")
+    ax.set_ylabel("Leistung [kW]")
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    fig.autofmt_xdate()
+
+    return fig
+
+def plot_consumption(sim_output):
+    demand_cols = [col for col in sim_output.res_df.columns if "Last" in col]
+    demand = sim_output.res_df[demand_cols].sum(axis=1)
+    if not isinstance(demand.index, pd.DatetimeIndex):
+        demand.index = pd.date_range(
+            start="2021-01-01 00:00:00",
+            periods=len(demand),
+            freq="15min"
+        )
+    mean_val = demand.mean()
+    # min_val = demand.min()
+    max_val = demand.max()
+
+    fig1, ax1 = plt.subplots(figsize=(12, 4))
+    ax1.plot(
+        demand.index,
+        demand.values,
+        label="Verbrauch"
+    )
+    ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
+    ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
+    ax1.xaxis.set_major_locator(mdates.MonthLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+    ax1.set_title("Leistungsverlauf Verbrauch")
+    ax1.set_xlabel("Monat")
+    ax1.set_ylabel("Leistung [kW]")
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    fig1.autofmt_xdate()
+
+    return fig1
+
 # Mapping: PV type name to id
 pv_name_to_id = {
     "Windschutzwand": 0,
@@ -670,37 +735,14 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         st.dataframe(desc)
 
         # Plot 1: Generation
-        generation_cols = [col for col in sim_output.res_df.columns if "Erzeugung" in col]
-        generation = sim_output.res_df[generation_cols].sum(axis=1)
-        if not isinstance(generation.index, pd.DatetimeIndex):
-            generation.index = pd.date_range(
-                start="2021-01-01 00:00:00",
-                periods=len(generation),
-                freq="15min"
-            )
-        mean_val = generation.mean()
-        max_val = generation.max()
-
-        fig1, ax1 = plt.subplots(figsize=(12, 4))
-        ax1.plot(
-            generation.index,
-            generation.values,
-            label="Erzeugung"
-        )
-        ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-        ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-        ax1.xaxis.set_major_locator(mdates.MonthLocator())
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-        ax1.set_title("Leistungsverlauf Erzeugung")
-        ax1.set_xlabel("Monat")
-        ax1.set_ylabel("Leistung [kW]")
-        ax1.grid(True, alpha=0.3)
-        ax1.legend()
-        fig1.autofmt_xdate()
-        st.pyplot(fig1)
+        fig = plot_generation(sim_output)
+        st.pyplot(fig)
 
 
         # Plot 2: Consumption
+        fig2 = plot_consumption(sim_output)
+        st.pyplot(fig2)
+
         demand_cols = [col for col in sim_output.res_df.columns if "Last" in col]
         demand = sim_output.res_df[demand_cols].sum(axis=1)
         if not isinstance(demand.index, pd.DatetimeIndex):
