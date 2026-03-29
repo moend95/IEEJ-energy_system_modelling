@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 import plotly.express as px
 #from collections import Counter
 #import time
-from electrolyzer import electrolyzer
+from electrolyzer_GEH import electrolyzer
 #from zoneinfo import ZoneInfo
 import os
 import pickle
@@ -30,8 +30,8 @@ import seaborn as sns
 
 #%% User Input
 
-path = './Input/' # Pfad für den Datenimport
-output_path = 'Output_test2030/'  # Pfad für Export von Ergebnissen
+path = '../../Projekt_03_Green_Energy_Hub/MA_Saur_Data/Wasserstofftankstelle_Saur_angepasst/Input/'  # Pfad für den Datenimport
+output_path = '../../Projekt_03_Green_Energy_Hub/MA_Saur_Data/Wasserstofftankstelle_Saur_angepasst/Output_test2030/'  # Pfad für Export von Ergebnissen
 
 year = 2030 # Für welches Jahr soll die Simulation durchgeführt werden? Eingabe von 2020 bis 2050 möglich.
 
