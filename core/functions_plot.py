@@ -461,7 +461,7 @@ def plot_consumption(sim_output):
     ax1.set_xlabel("Monat")
     ax1.set_ylabel("Leistung [kW]")
     ax1.grid(True, alpha=0.3)
-    ax1.legend(loc="upper right")
+    ax1.legend(loc="upper center")
     fig1.autofmt_xdate()
 
     return fig1

@@ -317,7 +317,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
             fig_annual_all = plot_industry_annual_energy(
                 preview_csv_path,
                 ordered_columns=industry_order_all,
-                title="Jahresenergiebedarf aller Unternehmensprofile"
+                title="Jahresenergiebedarf aller Unternehmensprofile (inkl. Wärme & Kälte)"
             )
             st.pyplot(fig_annual_all)
 
@@ -326,7 +326,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
         # Plot example week of selected companies
         if selected_columns:
-            st.write("#### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen")
+            st.write("#### Beispielhafte Wochenlastgänge der ausgewählten Unternehmen (inkl. Wärme & Kälte)")
 
             fig_preview = plot_industry_preview(
                 preview_csv_path,

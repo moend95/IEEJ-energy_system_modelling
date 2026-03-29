@@ -463,7 +463,7 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         print('Green Energy Hub \t- abgeschlossen')
 
         sim.run_juechen_sued(inp, out)
-        print('Juechen-Sued \t- abgeschlossen')
+        print('Juechen-Sued \t\t- abgeschlossen')
 
         total_demand, total_generation, feed_in_kwh = sim.run_balance(out)
 
