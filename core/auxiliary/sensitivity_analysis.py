@@ -8,8 +8,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import TwoSlopeNorm
 from pathlib import Path
+import os
 
-output_dir = Path("sensitivity_output_dir")
+
+base_dir = Path(__file__).resolve().parents[2]
+output_dir = base_dir / "data" / "outputs" / "sensi_res_dfs"
 output_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -76,11 +79,11 @@ DEFAULT_CONFIG = {}
 # 0: None, 1: Small, 2: Medium, 3: Large
 
 # List of cases for multiple simulations and sensitivity analysis
-h_cases = [1]       #,2,3]
-el_cases = [3]      #,2,3]
-i_cases = [1]       #,2,3]
-geh_cases = [1]     #,2,3]
-b_cases = [2]       # (multiple) choices not saved as csv or displayed in heatmap
+h_cases = [1,2]       #,2,3]
+el_cases = [1,2]      #,2,3]
+i_cases = [1,2]       #,2,3]
+geh_cases = [1,2]     #,2,3]
+b_cases = [1,2]       # (multiple) choices not saved as csv or displayed in heatmap
 
 
 # ---------------- Solar highway ----------------
@@ -278,11 +281,11 @@ def run_sensitivity_analysis():
                                 (f"EL{el_case}", f"H{h_case}")
                             ] = out.bs_df['new_balance_kw'].sum() / 4       # out.res_df['Bilanz [kW]'].sum()/4 #
 
-                        heatmap_df.to_excel(f"./{output_dir}/bat_balance.xlsx")
+                        heatmap_df.to_excel(output_dir / "bat_balance.xlsx")
 
                         # Save output results data frame as csv
                         if not out.res_df.empty:
-                            filename = f"{output_dir}/res_df_{el_case}{h_case}{geh_case}{i_case}.csv"
+                            filename = f"{output_dir}/res_df_EL{el_case}_H{h_case}_GEH{geh_case}_I{i_case}_B{b_case}.csv"
                             out.res_df.to_csv(
                                 filename,
                                 sep=",",
@@ -308,11 +311,11 @@ def run_sensitivity_analysis():
                             print("No results: res_df empty")
 
 
-    # Plot and save heatmap
-    plot_heatmap(
-        heatmap_df,
-        save_path=f"./{output_dir}/balance_self_consumption_rate.png"
-    )
+        # Plot and save heatmap
+        plot_heatmap(
+            heatmap_df,
+            save_path = os.path.join(output_dir, f"Bat_scenario_{b_case}_energy_balance.png")
+        )
 
 
 # ---------------- Execute main function ----------------
