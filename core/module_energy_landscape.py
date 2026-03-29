@@ -1,5 +1,5 @@
 """
-Projekt 02 - Energielandschaft
+Energielandschaft
 
 Dieses Skript enthält modular aufgebaute Klassen zur:
 - Einlesung einer eingebetteten GeoJSON-Fläche (WGS84)
