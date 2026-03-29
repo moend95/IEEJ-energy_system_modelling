@@ -5,7 +5,7 @@ import pandas as pd
 
 #Functions
 from core.io_types import GuiInput, SimOutput
-from core.module_industrial_are import IndustryLoadAggregator
+from core.module_industrial_area import IndustryLoadAggregator
 from core.module_pv_modulator import PV_System, PV_TYPEN
 from core.module_energy_landscape import main
 from core.module_battery_storage import BatteryStorage
