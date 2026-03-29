@@ -6,86 +6,13 @@ from streamlit_folium import st_folium
 import json
 
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 
 from core.io_types import GuiInput, SimOutput
 from Simulation import Simulator, run_simulation, industry_csv_mapping
 from core.functions_web_support import *
-from core.functions_plot import (
-    plot_industry_preview,
-    plot_industry_annual_energy,
-    plot_green_hub_weekly_profiles,
-    plot_green_hub_annual_energy,
-    plot_js_weekly_profile,
-)
+from core.functions_plot import *
 
 
-
-def plot_generation(sim_output):
-    generation_cols = [col for col in sim_output.res_df.columns if "Erzeugung" in col]
-    generation = sim_output.res_df[generation_cols].sum(axis=1)
-
-    if not isinstance(generation.index, pd.DatetimeIndex):
-        generation.index = pd.date_range(
-            start="2021-01-01 00:00:00",
-            periods=len(generation),
-            freq="15min"
-        )
-
-    mean_val = generation.mean()
-    max_val = generation.max()
-
-    fig, ax = plt.subplots(figsize=(12, 4))
-    ax.plot(
-        generation.index,
-        generation.values,
-        label="Erzeugung"
-    )
-    ax.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-    ax.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-    ax.xaxis.set_major_locator(mdates.MonthLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-    ax.set_title("Leistungsverlauf Erzeugung")
-    ax.set_xlabel("Monat")
-    ax.set_ylabel("Leistung [kW]")
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-    fig.autofmt_xdate()
-
-    return fig
-
-def plot_consumption(sim_output):
-    demand_cols = [col for col in sim_output.res_df.columns if "Last" in col]
-    demand = sim_output.res_df[demand_cols].sum(axis=1)
-    if not isinstance(demand.index, pd.DatetimeIndex):
-        demand.index = pd.date_range(
-            start="2021-01-01 00:00:00",
-            periods=len(demand),
-            freq="15min"
-        )
-    mean_val = demand.mean()
-    # min_val = demand.min()
-    max_val = demand.max()
-
-    fig1, ax1 = plt.subplots(figsize=(12, 4))
-    ax1.plot(
-        demand.index,
-        demand.values,
-        label="Verbrauch"
-    )
-    ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-    ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-    ax1.xaxis.set_major_locator(mdates.MonthLocator())
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-    ax1.set_title("Leistungsverlauf Verbrauch")
-    ax1.set_xlabel("Monat")
-    ax1.set_ylabel("Leistung [kW]")
-    ax1.grid(True, alpha=0.3)
-    ax1.legend()
-    fig1.autofmt_xdate()
-
-    return fig1
 
 # Mapping: PV type name to id
 pv_name_to_id = {
@@ -684,45 +611,8 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
     st.write("### Bilanzverlauf")
 
     # Balance from res_df (no battery) or bs_df (if battery)
-    if hasattr(sim_output, "bs_df") and sim_output.bs_df is not None and not sim_output.bs_df.empty:
-        y = sim_output.bs_df["new_balance_kw"].copy()
-        #plot_title = "Bilanz nach Batteriespeicher"
-        #line_label = "Bilanz nach Batterie"
-    else:
-        y = sim_output.res_df["Bilanz [kW]"].copy()
-        #plot_title = "Bilanzverlauf"
-        #line_label = "Bilanz"
-
-    if not isinstance(y.index, pd.DatetimeIndex):
-        y.index = pd.date_range(
-            start="2021-01-01 00:00:00",
-            periods=len(y),
-            freq="15min"
-        )
-
-    mean_val = y.mean()
-    min_val = y.min()
-    max_val = y.max()
-
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(y.index, y.values, label="Bilanz")
-
-    ax.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-    ax.axhline(min_val, color="red", linestyle=":", linewidth=1.2, label=f"Minimum: {min_val:.1f} kW")
-    ax.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-
-    ax.xaxis.set_major_locator(mdates.MonthLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-
-    ax.set_title("Bilanzverlauf")
-    ax.set_xlabel("Monat")
-    ax.set_ylabel("Leistung [kW]")
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-
-    fig.autofmt_xdate()
-    st.pyplot(fig)
-
+    fig0 = plot_balance(sim_output)
+    st.pyplot(fig0)
 
 
     # ---------------- Detailed information expander ----------------
@@ -738,40 +628,9 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
         fig = plot_generation(sim_output)
         st.pyplot(fig)
 
-
         # Plot 2: Consumption
         fig2 = plot_consumption(sim_output)
         st.pyplot(fig2)
-
-        demand_cols = [col for col in sim_output.res_df.columns if "Last" in col]
-        demand = sim_output.res_df[demand_cols].sum(axis=1)
-        if not isinstance(demand.index, pd.DatetimeIndex):
-            demand.index = pd.date_range(
-                start="2021-01-01 00:00:00",
-                periods=len(demand),
-                freq="15min"
-            )
-        mean_val = demand.mean()
-        # min_val = demand.min()
-        max_val = demand.max()
-
-        fig1, ax1 = plt.subplots(figsize=(12, 4))
-        ax1.plot(
-            demand.index,
-            demand.values,
-            label="Verbrauch"
-        )
-        ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-        ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-        ax1.xaxis.set_major_locator(mdates.MonthLocator())
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-        ax1.set_title("Leistungsverlauf Verbrauch")
-        ax1.set_xlabel("Monat")
-        ax1.set_ylabel("Leistung [kW]")
-        ax1.grid(True, alpha=0.3)
-        ax1.legend()
-        fig1.autofmt_xdate()
-        st.pyplot(fig1)
 
 
 
@@ -795,92 +654,14 @@ if st.session_state.get("simulation_ran") and "sim_output" in st.session_state:
             st.dataframe(bs_desc)
 
 
+            # Battery Plots
+            fig3, fig4 = plot_battery_comparison(sim_output)
             # Plot 1: Balance with battery storage
-            balance_with_battery = sim_output.bs_df["new_balance_kw"].copy()
-            if not isinstance(balance_with_battery.index, pd.DatetimeIndex):
-                balance_with_battery.index = pd.date_range(
-                    start="2021-01-01 00:00:00",
-                    periods=len(balance_with_battery),
-                    freq="15min"
-                )
-            mean_val = balance_with_battery.mean()
-            min_val = balance_with_battery.min()
-            max_val = balance_with_battery.max()
-
-            fig1, ax1 = plt.subplots(figsize=(12, 4))
-            ax1.plot(
-                balance_with_battery.index,
-                balance_with_battery.values,
-                label="Bilanz MIT Batterie"
-            )
-            ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-            ax1.axhline(min_val, color="red", linestyle=":", linewidth=1.2, label=f"Minimum: {min_val:.1f} kW")
-            ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-            ax1.xaxis.set_major_locator(mdates.MonthLocator())
-            ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-            ax1.set_title("Netzbilanz MIT Batteriespeicher")
-            ax1.set_xlabel("Monat")
-            ax1.set_ylabel("Leistung [kW]")
-            ax1.grid(True, alpha=0.3)
-            ax1.legend()
-            fig1.autofmt_xdate()
-            st.pyplot(fig1)
-
-
+            st.pyplot(fig3)
             # Plot 2: Balance withOUT battery storage
-            balance_without_battery = sim_output.bs_df["balance_kw"].copy()
-            if not isinstance(balance_without_battery.index, pd.DatetimeIndex):
-                balance_without_battery.index = pd.date_range(
-                    start="2021-01-01 00:00:00",
-                    periods=len(balance_without_battery),
-                    freq="15min"
-                )
-            mean_val = balance_without_battery.mean()
-            min_val = balance_without_battery.min()
-            max_val = balance_without_battery.max()
-
-            fig1, ax1 = plt.subplots(figsize=(12, 4))
-            ax1.plot(
-                balance_without_battery.index,
-                balance_without_battery.values,
-                label="Bilanz OHNE Batterie"
-            )
-            ax1.axhline(mean_val, color="red", linestyle="--", linewidth=1.5, label=f"Mittelwert: {mean_val:.1f} kW")
-            ax1.axhline(min_val, color="red", linestyle=":", linewidth=1.2, label=f"Minimum: {min_val:.1f} kW")
-            ax1.axhline(max_val, color="red", linestyle=":", linewidth=1.2, label=f"Maximum: {max_val:.1f} kW")
-            ax1.xaxis.set_major_locator(mdates.MonthLocator())
-            ax1.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-            ax1.set_title("Netzbilanz OHNE Batteriespeicher")
-            ax1.set_xlabel("Monat")
-            ax1.set_ylabel("Leistung [kW]")
-            ax1.grid(True, alpha=0.3)
-            ax1.legend()
-            fig1.autofmt_xdate()
-            st.pyplot(fig1)
+            st.pyplot(fig4)
 
 
             # Plot 3: State of charge
-            bs_soc = sim_output.bs_df["soc_kwh"].copy()
-            bs_soc_percent = bs_soc / Input.bs_energy_kwh * 100
-            if not isinstance(bs_soc_percent.index, pd.DatetimeIndex):
-                bs_soc_percent.index = pd.date_range(
-                    start="2021-01-01 00:00:00",
-                    periods=len(bs_soc_percent),
-                    freq="15min"
-                )
-            
-            fig3, ax3 = plt.subplots(figsize=(12, 4))
-            ax3.plot(
-                bs_soc_percent.index,
-                bs_soc_percent.values,
-                label="State of charge"
-            )
-            ax3.xaxis.set_major_locator(mdates.MonthLocator())
-            ax3.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
-            ax3.set_xlabel("Monat")
-            ax3.set_title(f"State of Charge der Batterie (Kapazität: {Input.bs_energy_kwh/1000} MWh)")
-            ax3.set_ylabel("SOC [%]")
-            ax3.grid(True)
-            ax3.legend()
-            fig3.autofmt_xdate()
-            st.pyplot(fig3)
+            fig5 = plot_soc(Input, sim_output)
+            st.pyplot(fig5)
