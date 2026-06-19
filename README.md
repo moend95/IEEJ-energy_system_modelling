@@ -68,6 +68,14 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+## Run the Precomputed Demo GUI
+
+This demo page visualizes precomputed scenario JSON files from `data/outputs/precomputed/` and supports scenario switching without re-running the simulation.
+
+```bash
+streamlit run Web_Gui_Demo.py
+```
+
 ## Run the Sensitivity Analysis
 
 ```bash
@@ -95,6 +103,7 @@ Simulation-generated files and intermediate results are written to `data/outputs
 - `core/module_battery_storage.py` – battery storage simulation
 - `core/functions_plot.py` – helper plots for load and scenario visualization
 - `core/functions_web_support.py` – GUI helper functions and energy flow diagram
+- `Web_Gui_Demo.py` – precomputed demo page (scenario selector, flow arrows, tooltips)
 
 ## Documentation
 

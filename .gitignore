@@ -15,4 +15,13 @@ env/
 # Log-Dateien
 *.log
 
+# Generierte/vorberechnete Szenarien (zu groß für Git, mit generate_all_scenarios.py neu erzeugen)
+web_frontend/precomputed/
+data/outputs/precomputed/
+
+# Sonstige Output-Daten
+data/outputs/a46_segment/
+data/outputs/highway/*.csv
+data/outputs/energy_landscape/*.csv
+
 

@@ -1,5 +1,3 @@
-# Übergabe fertig Felix
-
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
@@ -393,22 +391,79 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
         scenario_options = ["Keine", "2022", "2030", "2050"]
 
-        Input.geh_h2_load_scenario = st.segmented_control(
-            "Wasserstoff-Bedarf Szenario",
-            options=scenario_options,
-            default="Keine",
-        )
-        Input.geh_h2_load_scenario = "Keine" if Input.geh_h2_load_scenario is None else Input.geh_h2_load_scenario
-
         Input.geh_e_load_scenario = st.segmented_control(
-            "Elektro-Bedarf Szenario",
+            "Elektro-Bedarf Szenario (BEV-Ladepark)",
             options=scenario_options,
             default="Keine",
         )
         Input.geh_e_load_scenario = "Keine" if Input.geh_e_load_scenario is None else Input.geh_e_load_scenario
 
-        geh_h2_active = Input.geh_h2_load_scenario != "Keine"
+        st.divider()
+        st.write("#### Elektrolyseur & H2-Prozesskette")
+        st.caption(
+            "Der Elektrolyseur nutzt verfügbaren Strom-Überschuss aus Erzeugung minus Verbrauch. "
+            "Leistung 0 kW = Elektrolyseur deaktiviert."
+        )
+
+        col_el1, col_el2 = st.columns(2)
+        with col_el1:
+            el_power = st.number_input(
+                "Elektrolyseur-Leistung [kW]",
+                min_value=0,
+                max_value=50_000,
+                value=0,
+                step=500,
+                help="Nennleistung des Elektrolyseurs. 0 = deaktiviert.",
+            )
+            Input.geh_electrolyzer_power_kw = float(el_power) if el_power > 0 else None
+
+            el_efficiency = st.slider(
+                "System-Wirkungsgrad Elektrolyseur",
+                min_value=0.50,
+                max_value=0.85,
+                value=0.70,
+                step=0.01,
+                format="%.0f%%",
+                help="LHV-bezogener Systemwirkungsgrad (typisch 65–75 %).",
+            )
+            Input.geh_electrolyzer_efficiency = el_efficiency
+
+        with col_el2:
+            storage_cap = st.number_input(
+                "H2-Speicherkapazität [kWh_H2]",
+                min_value=0,
+                max_value=1_000_000,
+                value=0,
+                step=1_000,
+                help="Kapazität des Druckgasspeichers in kWh (LHV). 0 = kein Speicher.",
+            )
+            Input.geh_storage_capacity_kwh = float(storage_cap) if storage_cap > 0 else None
+
+            max_charge = st.number_input(
+                "Speicher max. Ladeleistung [kW]",
+                min_value=0,
+                max_value=50_000,
+                value=0,
+                step=500,
+                help="Maximale Ein-/Ausspeicherleistung. 0 = unbegrenzt.",
+            )
+            Input.geh_storage_max_charge_kw = float(max_charge) if max_charge > 0 else None
+
+        dispenser_demand = st.number_input(
+            "Dispenser-Nachfrage [kg H2 / h]",
+            min_value=0.0,
+            max_value=2_000.0,
+            value=0.0,
+            step=10.0,
+            help="Konstante H2-Abnahme durch Zapfsäulen. 0 = kein Dispenser.",
+        )
+        Input.geh_dispenser_demand_kg_per_h = float(dispenser_demand) if dispenser_demand > 0 else None
+
+        # Szenario-String für Rückwärtskompatibilität mit Katalog/CSV
+        Input.geh_h2_load_scenario = "Keine"
+
         geh_e_active = Input.geh_e_load_scenario != "Keine"
+        geh_h2_active = bool(Input.geh_electrolyzer_power_kw and Input.geh_electrolyzer_power_kw > 0)
         green_hub_active = geh_h2_active or geh_e_active
 
         # Plot example week of selected H2/electric szenario
