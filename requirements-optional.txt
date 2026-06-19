@@ -1,0 +1,12 @@
+# Optional dependencies that are intentionally separated from requirements.txt
+# because they can conflict with the main environment stack.
+
+# Not available on PyPI for this Windows/Python setup in current testing.
+# Install only if you have an alternative source (wheel/private index/local path).
+pypsaheat==0.1.0
+
+# Conflicts with the modern geospatial stack in requirements.txt:
+# - pvfactors 1.5.2 requires shapely<2
+# - main stack uses shapely>=2 (via osmnx/geopandas)
+# Use only in a dedicated/legacy environment.
+pvfactors==1.5.2

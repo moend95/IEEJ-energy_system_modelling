@@ -438,18 +438,28 @@ def build_synergy_diagram(inp, sim_output):
     )
 
     # Green Energy Hub Hover
+    el_power_kw = float(getattr(inp, "geh_electrolyzer_power_kw", None) or 0.0)
     geh_active = (
-            inp.geh_h2_load_scenario not in [None, "Keine"] or
-            inp.geh_e_load_scenario not in [None, "Keine"]
+        el_power_kw > 0
+        or (getattr(inp, "geh_e_load_scenario", None) not in [None, "Keine"])
     )
 
     status = "aktiv" if geh_active else "nicht aktiv"
 
+    h2_prod_kwh = max(float(getattr(sim_output, "geh_h2_production_kwh", None) or 0.0), 0.0)
+    h2_del_kwh = max(float(getattr(sim_output, "geh_h2_delivered_kwh", None) or 0.0), 0.0)
+    h2_curt_kwh = max(float(getattr(sim_output, "geh_h2_curtailed_kwh", None) or 0.0), 0.0)
+    comp_kwh = max(float(getattr(sim_output, "geh_compressor_demand_kwh", None) or 0.0), 0.0)
+
     hub_text = (
         f"Status: {status}"
-        f"<br>H₂-Szenario: {inp.geh_h2_load_scenario}"
-        f"<br>El.-Szenario: {inp.geh_e_load_scenario}"
-        f"<br>Jahresbedarf: {format_energy(green_hub_energy)}"
+        f"<br>Elektrolyseur: {el_power_kw:.0f} kW"
+        f"<br>H₂-Produktion: {format_energy(h2_prod_kwh)}"
+        f"<br>H₂-Lieferung: {format_energy(h2_del_kwh)}"
+        f"<br>H₂-Überschuss: {format_energy(h2_curt_kwh)}"
+        f"<br>Kompressor: {format_energy(comp_kwh)}"
+        f"<br>El.-Szenario BEV: {getattr(inp, 'geh_e_load_scenario', 'Keine')}"
+        f"<br>Gesamt-Strombedarf: {format_energy(green_hub_energy)}"
     )
 
     # Jüchen-Süd Hover

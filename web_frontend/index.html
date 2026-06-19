@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IEEJ Precomputed Demo</title>
+  <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1>Precomputed Demo - Statisches Frontend</h1>
+      <p>
+        Rein statische Ausfuehrung im Browser ohne Streamlit. Dieses Grundgeruest nutzt
+        den Szenario-Index aus <strong>catalog.json</strong> als Einstieg.
+      </p>
+    </header>
+
+    <div class="layout">
+      <section class="workbench">
+        <aside class="sidebar">
+          <h2>Eingaben</h2>
+
+          <section class="panel">
+            <h3>Energie-Erzeugung</h3>
+            <div class="tab-list" role="tablist" aria-label="Erzeugung">
+              <button class="tab-btn tab-btn-generation active" role="tab" aria-selected="true" aria-controls="tab-solar" id="tab-btn-solar" data-tab-target="tab-solar">Solarautobahn</button>
+              <button class="tab-btn tab-btn-generation" role="tab" aria-selected="false" aria-controls="tab-landscape" id="tab-btn-landscape" data-tab-target="tab-landscape">Energielandschaft</button>
+            </div>
+
+            <div id="tab-solar" class="tab-panel generation-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-solar">
+              <label><input type="checkbox" name="h_highways" value="A44"> A44</label>
+              <label><input type="checkbox" name="h_highways" value="A46" checked> A46</label>
+
+              <label><input type="checkbox" name="h_pv_types" value="0" checked> Laerm-/Windschutzwand</label>
+              <label><input type="checkbox" name="h_pv_types" value="3"> Boeschung</label>
+              <div id="info-solar" class="info-box" hidden>Solarautobahn deaktiviert.</div>
+            </div>
+
+            <div id="tab-landscape" class="tab-panel generation-tab-panel" role="tabpanel" aria-labelledby="tab-btn-landscape" hidden>
+              <label for="el-build-state">Ausbaugrad [%]</label>
+              <select id="el-build-state">
+                <option value="0">0</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+              </select>
+
+              <label for="el-pv-type">PV-Typ</label>
+              <select id="el-pv-type">
+                <option value="5" selected>Vertikal (Zaun, Nord-Sued)</option>
+                <option value="6">Horizontal (aufgestaendert, Ost-West)</option>
+                <option value="4">Horizontal mit Single-Axis-Tracking</option>
+              </select>
+
+              <label for="el-tractor-width">Traktorbreite [m]</label>
+              <select id="el-tractor-width">
+                <option value="12" selected>12</option>
+                <option value="18">18</option>
+                <option value="24">24</option>
+                <option value="27">27</option>
+              </select>
+
+              <p class="field-hint">Traktorlaenge ist fest auf 15 m gesetzt. Wenderadius: <strong id="el-tractor-turn-radius-value">9.0 m</strong>.</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>Verbrauch</h3>
+
+            <div class="tab-list" role="tablist" aria-label="Verbraucher">
+              <button class="tab-btn tab-btn-consumption active" role="tab" aria-selected="true" aria-controls="cons-tab-industry" id="tab-btn-cons-industry" data-tab-target="cons-tab-industry">Industriegebiet Elsbachtal</button>
+              <button class="tab-btn tab-btn-consumption" role="tab" aria-selected="false" aria-controls="cons-tab-geh" id="tab-btn-cons-geh" data-tab-target="cons-tab-geh">Green Energy Hub</button>
+              <button class="tab-btn tab-btn-consumption" role="tab" aria-selected="false" aria-controls="cons-tab-js" id="tab-btn-cons-js" data-tab-target="cons-tab-js">Stadtteil Juechen-Sued</button>
+            </div>
+
+            <div id="cons-tab-industry" class="tab-panel consumption-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-cons-industry">
+              <div class="accordion" id="acc-industry" data-accordion-id="industry">
+                <button type="button" class="accordion-toggle" id="acc-toggle-industry" aria-expanded="false" aria-controls="acc-panel-industry">Industriegebiet Elsbachtal</button>
+                <div class="accordion-content-wrap" id="acc-panel-industry">
+                  <div class="accordion-content">
+                    <p class="field-hint">Waehle bis zu 5 Unternehmen (Duplikate moeglich)</p>
+
+                    <div class="company-grid">
+                      <div class="company-slot">
+                        <label for="i-company-1">Unternehmen 1</label>
+                        <select id="i-company-1">
+                          <option value="">Keine</option>
+                          <option value="0">Entsorgung</option>
+                          <option value="1">Stahl, 5-Tage-Woche, 3-Schicht</option>
+                          <option value="2" selected>Logistik und Lagerung</option>
+                          <option value="3">Schrott- und Metallhandel</option>
+                          <option value="4">Lagerung</option>
+                          <option value="5">Buero</option>
+                          <option value="6">Logistik Lebensmittel</option>
+                          <option value="7">Stahl, 7-Tage-Woche, 2-Schicht</option>
+                        </select>
+                      </div>
+
+                      <div class="company-slot">
+                        <label for="i-company-2">Unternehmen 2</label>
+                        <select id="i-company-2">
+                          <option value="">Keine</option>
+                          <option value="0">Entsorgung</option>
+                          <option value="1">Stahl, 5-Tage-Woche, 3-Schicht</option>
+                          <option value="2">Logistik und Lagerung</option>
+                          <option value="3" selected>Schrott- und Metallhandel</option>
+                          <option value="4">Lagerung</option>
+                          <option value="5">Buero</option>
+                          <option value="6">Logistik Lebensmittel</option>
+                          <option value="7">Stahl, 7-Tage-Woche, 2-Schicht</option>
+                        </select>
+                      </div>
+
+                      <div class="company-slot">
+                        <label for="i-company-3">Unternehmen 3</label>
+                        <select id="i-company-3">
+                          <option value="">Keine</option>
+                          <option value="0">Entsorgung</option>
+                          <option value="1">Stahl, 5-Tage-Woche, 3-Schicht</option>
+                          <option value="2">Logistik und Lagerung</option>
+                          <option value="3">Schrott- und Metallhandel</option>
+                          <option value="4" selected>Lagerung</option>
+                          <option value="5">Buero</option>
+                          <option value="6">Logistik Lebensmittel</option>
+                          <option value="7">Stahl, 7-Tage-Woche, 2-Schicht</option>
+                        </select>
+                      </div>
+
+                      <div class="company-slot">
+                        <label for="i-company-4">Unternehmen 4</label>
+                        <select id="i-company-4">
+                          <option value="">Keine</option>
+                          <option value="0">Entsorgung</option>
+                          <option value="1">Stahl, 5-Tage-Woche, 3-Schicht</option>
+                          <option value="2">Logistik und Lagerung</option>
+                          <option value="3">Schrott- und Metallhandel</option>
+                          <option value="4">Lagerung</option>
+                          <option value="5" selected>Buero</option>
+                          <option value="6">Logistik Lebensmittel</option>
+                          <option value="7">Stahl, 7-Tage-Woche, 2-Schicht</option>
+                        </select>
+                      </div>
+
+                      <div class="company-slot">
+                        <label for="i-company-5">Unternehmen 5</label>
+                        <select id="i-company-5">
+                          <option value="">Keine</option>
+                          <option value="0">Entsorgung</option>
+                          <option value="1">Stahl, 5-Tage-Woche, 3-Schicht</option>
+                          <option value="2">Logistik und Lagerung</option>
+                          <option value="3">Schrott- und Metallhandel</option>
+                          <option value="4">Lagerung</option>
+                          <option value="5">Buero</option>
+                          <option value="6" selected>Logistik Lebensmittel</option>
+                          <option value="7">Stahl, 7-Tage-Woche, 2-Schicht</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <p class="field-hint">Waerme/Kaelte wird im Industriegebiet immer mit betrachtet.</p>
+                    <div id="info-industry" class="info-box" hidden>Industriegebiet deaktiviert.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="accordion" id="acc-industry-help" data-accordion-id="industry-help">
+                <button type="button" class="accordion-toggle" id="acc-toggle-industry-help" aria-expanded="false" aria-controls="acc-panel-industry-help">Erklaerung Unternehmen</button>
+                <div class="accordion-content-wrap" id="acc-panel-industry-help">
+                  <div class="accordion-content">
+                    <ol class="company-explainer">
+                      <li><strong>Entsorgung:</strong> 5 1/2 Tage Woche, kein Schichtbetrieb, Jahresbedarf 7,1 GWh, Anlehnung an Schoenmackers Umweltdienste.</li>
+                      <li><strong>Stahl 1:</strong> 5 Tage Woche, 3-Schicht-Betrieb, Jahresbedarf 4,5 GWh, Anlehnung an TecPro.</li>
+                      <li><strong>Logistik und Lagerung:</strong> 5 Tage Woche, teilweise Samstag und Sonntag Betrieb, kein Schichtbetrieb, Jahresbedarf 1,2 GWh, Anlehnung an CTJ Janssen.</li>
+                      <li><strong>Schrott- und Metallhandel:</strong> 5 Tage Woche, kein Schichtbetrieb, Jahresbedarf 1,5 GWh, Anlehnung an Willi Jenner.</li>
+                      <li><strong>Lagerung:</strong> 5 Tage Woche, kein Schichtbetrieb, Jahresbedarf 0,6 GWh, Anlehnung an Kleine Logistik.</li>
+                      <li><strong>Buero:</strong> 5 Tage Woche, kein Schichtbetrieb, Jahresbedarf 0,6 GWh, Anlehnung an Marvin Wickenhaeuser.</li>
+                      <li><strong>Logistik Lebensmittel:</strong> 6 1/2 Tage Woche, kein Schichtbetrieb, Jahresbedarf 1,2 GWh, Anlehnung an CTJ Janssen.</li>
+                      <li><strong>Stahl 2:</strong> 7 Tage Woche, 2-Schicht-Betrieb, Jahresbedarf 4,5 GWh, Anlehnung an TecPro.</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="cons-tab-geh" class="tab-panel consumption-tab-panel" role="tabpanel" aria-labelledby="tab-btn-cons-geh" hidden>
+              <div class="accordion" id="acc-geh" data-accordion-id="geh">
+                <button type="button" class="accordion-toggle" id="acc-toggle-geh" aria-expanded="false" aria-controls="acc-panel-geh">Green Energy Hub</button>
+                <div class="accordion-content-wrap" id="acc-panel-geh">
+                  <div class="accordion-content">
+                    <label for="geh-h2">H2-Szenario</label>
+                    <select id="geh-h2">
+                      <option value="Keine">Keine</option>
+                      <option value="2022" selected>2022</option>
+                      <option value="2030">2030</option>
+                      <option value="2050">2050</option>
+                    </select>
+
+                    <label for="geh-e">E-Szenario</label>
+                    <select id="geh-e">
+                      <option value="Keine">Keine</option>
+                      <option value="2022" selected>2022</option>
+                      <option value="2030">2030</option>
+                      <option value="2050">2050</option>
+                    </select>
+                    <div id="info-geh" class="info-box" hidden>Green Energy Hub deaktiviert.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="cons-tab-js" class="tab-panel consumption-tab-panel" role="tabpanel" aria-labelledby="tab-btn-cons-js" hidden>
+              <div class="accordion" id="acc-js" data-accordion-id="js">
+                <button type="button" class="accordion-toggle" id="acc-toggle-js" aria-expanded="false" aria-controls="acc-panel-js">Stadtteil Juechen-Sued</button>
+                <div class="accordion-content-wrap" id="acc-panel-js">
+                  <div class="accordion-content">
+                    <label for="js-scenario">Szenario</label>
+                    <select id="js-scenario">
+                      <option value="Aus">Aus</option>
+                      <option value="1000 Bewohner" selected>1000 Bewohner</option>
+                      <option value="2000 Bewohner">2000 Bewohner</option>
+                      <option value="3000 Bewohner">3000 Bewohner</option>
+                    </select>
+                    <div id="info-js" class="info-box" hidden>Juechen-Sued deaktiviert.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <button id="btn-load" type="button">Szenario laden</button>
+        </aside>
+
+        <section class="map-panel">
+          <h2>Geodatenansicht</h2>
+          <p class="map-sub">Autobahn- und Energielandschaft-Auswahl werden farblich hervorgehoben.</p>
+          <p id="map-active-hint" class="map-active-hint" aria-live="polite">Keine aktive Kartenhervorhebung.</p>
+          <div id="leaflet-map" aria-label="Projektkarte"></div>
+          <div class="map-legend">
+            <span><i class="swatch a44"></i>A44</span>
+            <span><i class="swatch a46"></i>A46</span>
+            <span><i class="swatch landscape"></i>Energielandschaft</span>
+          </div>
+        </section>
+      </section>
+
+      <main class="content">
+        <section class="status">
+          <h2>Status</h2>
+          <p id="status-text" role="status" aria-live="polite">Initialisierung...</p>
+          <p id="status-match" aria-live="polite"></p>
+        </section>
+
+        <section class="summary">
+          <h2>Jahreswerte</h2>
+          <div id="summary-cards" class="summary-grid"></div>
+        </section>
+
+        <section class="diagram">
+          <h2>Synergiefluss (SVG)</h2>
+          <div id="flow-stage" class="flow-stage">Noch kein Szenario geladen.</div>
+        </section>
+
+
+      </main>
+    </div>
+  </div>
+
+  <script src="./vendor/leaflet/leaflet.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

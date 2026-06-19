@@ -32,9 +32,16 @@ class GuiInput:
     i_heat_cooling_electric: Optional[bool] = None     # Electric Heating/Cooling active
     i_companies: Optional[List[int]] = None            # Company typ list
 
-    # Green Energy Hub
-    geh_h2_load_scenario: Optional[str] = None          # Electric load of hydrogen scenario: 2022, 2030, 2050
-    geh_e_load_scenario: Optional[str] = None           # Electric load of electric charge scenario: 2022, 2030, 2050
+    # Green Energy Hub – Szenario-Auswahl (BEV-CSV und H2-Referenz)
+    geh_h2_load_scenario: Optional[str] = None          # H2-Referenzszenario: 2022, 2030, 2050
+    geh_e_load_scenario: Optional[str] = None           # BEV-Ladeszenario: 2022, 2030, 2050
+
+    # Green Energy Hub – physikalische Parameter der H2-Prozesskette
+    geh_electrolyzer_power_kw: Optional[float] = None      # Nennleistung Elektrolyseur [kW]
+    geh_electrolyzer_efficiency: Optional[float] = 0.70    # System-Wirkungsgrad (LHV-bezogen, 0–1)
+    geh_storage_capacity_kwh: Optional[float] = None       # H2-Speicherkapazität [kWh_H2]
+    geh_storage_max_charge_kw: Optional[float] = None      # Max. Lade-/Entladeleistung Speicher [kW]
+    geh_dispenser_demand_kg_per_h: Optional[float] = None  # H2-Nachfrage Zapfsäulen [kg/h]
 
     # Battery storage
     bs_efficiency: Optional[float] = None               # Roundtrip efficience [0–1]
@@ -70,6 +77,13 @@ class SimOutput:
     geh_max_power_kw: float | None = None
     i_max_power_kw: float | None = None
     js_max_power_kw: float | None = None
+
+    # Green Energy Hub – H2-Prozessketten-Ergebnisse
+    geh_h2_production_kwh: float | None = None       # H2-Jahresproduktion [kWh_H2]
+    geh_compressor_demand_kwh: float | None = None   # Kompressor-Strombedarf [kWh/a]
+    geh_h2_delivered_kwh: float | None = None        # An Dispenser gelieferte H2-Energie [kWh_H2]
+    geh_h2_curtailed_kwh: float | None = None        # Abgeregelter H2 (kein Speicher/Abnehmer) [kWh_H2]
+    geh_storage_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe Speicher
 
     # pandas dataframes with load profiles
     res_df: pd.DataFrame = field(default_factory=pd.DataFrame)
