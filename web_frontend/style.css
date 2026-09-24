@@ -1,17 +1,22 @@
 :root {
-  --bg: #f3f6fb;
+  /* Corporate Design Innovationspark Erneuerbare Energien Juechen */
+  --bg: #eef6f1;
   --card: #ffffff;
-  --line: #d8e0ea;
-  --line-strong: #c4cfdd;
-  --ink: #17212f;
-  --sub: #516073;
-  --accent: #0a7f46;
-  --focus-ring: #1d4ed8;
+  --line: #d6e6db;
+  --line-strong: #c2dccb;
+  --ink: #212934;
+  --sub: #5d6b73;
+  --accent: #5cb999;
+  --accent-deep: #3f9476;
+  --mint-2: #e1efe7;
+  --orange: #ea580c;
+  --amber: #f59e0b;
+  --blue-info-bg: #eef6f1;
+  --blue-info-border: #5cb999;
+  --blue-info-text: #212934;
+  --focus-ring: #3f9476;
   --motion-fast: 120ms;
   --motion-mid: 220ms;
-  --blue-info-bg: #eaf3ff;
-  --blue-info-border: #60a5fa;
-  --blue-info-text: #1e3a8a;
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 10px;
@@ -19,8 +24,8 @@
   --space-2: 12px;
   --space-3: 16px;
   --space-4: 20px;
-  --shadow-card: 0 6px 24px rgba(18, 33, 58, 0.08);
-  --shadow-kpi: 0 10px 26px rgba(15, 23, 42, 0.1);
+  --shadow-card: 0 4px 14px rgba(33, 41, 52, 0.05);
+  --shadow-kpi: 0 10px 30px rgba(63, 148, 118, 0.1);
 }
 
 * {
@@ -29,8 +34,8 @@
 
 body {
   margin: 0;
-  font-family: "Source Sans 3", "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background: radial-gradient(circle at 5% 5%, #fbfdff, var(--bg));
+  font-family: "Open Sans", Arial, Helvetica, sans-serif;
+  background: radial-gradient(1200px 500px at 85% -10%, #f4faf6 0%, transparent 60%), var(--bg);
   color: var(--ink);
   line-height: 1.5;
 }
@@ -42,22 +47,33 @@ body {
 }
 
 .hero {
-  background: linear-gradient(120deg, #f8fbff, #eef3fa);
-  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: linear-gradient(100deg, var(--accent-deep) 0%, var(--accent) 80%, #6cc4a6 100%);
+  color: #fff;
   border-radius: var(--radius-lg);
   padding: 18px 20px;
   margin-bottom: var(--space-4);
   box-shadow: var(--shadow-card);
 }
 
+.hero-logo {
+  height: 42px;
+  width: auto;
+  display: block;
+  flex: 0 0 auto;
+}
+
 .hero h1 {
   margin: 0 0 6px 0;
   font-size: 1.5rem;
+  color: #fff;
 }
 
 .hero p {
   margin: 0;
-  color: var(--sub);
+  color: rgba(255, 255, 255, 0.9);
   max-width: 90ch;
 }
 
@@ -94,7 +110,7 @@ body {
 .map-panel:hover,
 .content:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 30px rgba(18, 33, 58, 0.1);
+  box-shadow: 0 10px 30px rgba(33, 41, 52, 0.1);
 }
 
 .sidebar h2,
@@ -109,12 +125,24 @@ body {
   border-radius: var(--radius-md);
   padding: var(--space-2);
   margin-bottom: var(--space-2);
-  background: #fbfdff;
+  background: #f4faf6;
 }
 
 .panel h3 {
   margin: 0 0 var(--space-2) 0;
   font-size: 0.98rem;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.panel h3::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 10px;
+  height: 11px;
+  background: var(--accent);
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
 }
 
 .tab-list {
@@ -125,25 +153,26 @@ body {
 
 .tab-btn {
   border: 1px solid var(--line-strong);
-  background: #f4f7fb;
+  background: #f1f8f4;
   color: var(--ink);
   border-radius: 999px;
   font-size: 0.86rem;
   font-weight: 600;
   padding: 7px 12px;
   cursor: pointer;
-  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, transform var(--motion-fast) ease;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, color var(--motion-fast) ease, transform var(--motion-fast) ease;
 }
 
 .tab-btn:hover {
-  background: #e9f0fb;
-  border-color: #9ebbe6;
+  background: var(--mint-2);
+  border-color: var(--accent);
   transform: translateY(-1px);
 }
 
 .tab-btn.active {
-  background: #dce8f8;
-  border-color: #8db1e4;
+  background: var(--accent);
+  border-color: var(--accent-deep);
+  color: #fff;
 }
 
 .tab-panel {
@@ -207,14 +236,14 @@ input[type="number"] {
   text-align: left;
   font-weight: 600;
   font-size: 0.92rem;
-  background: #f7faff;
+  background: #f3faf6;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   transition: background-color var(--motion-fast) ease;
 }
 
 .accordion-toggle:hover {
-  background: #eef5ff;
+  background: var(--mint-2);
 }
 
 .accordion-content-wrap {
@@ -244,17 +273,17 @@ input[type="number"] {
   display: grid;
   gap: 7px;
   font-size: 0.84rem;
-  color: #1f2b3b;
+  color: var(--ink);
 }
 
 .company-explainer strong {
-  color: #0f172a;
+  color: var(--ink);
 }
 
 .info-box {
   margin-top: 8px;
   border: 1px solid var(--blue-info-border);
-  border-left: 4px solid #2563eb;
+  border-left: 4px solid var(--accent);
   background: var(--blue-info-bg);
   color: var(--blue-info-text);
   border-radius: 8px;
@@ -268,7 +297,8 @@ input[type="number"] {
   border-radius: 11px;
   padding: 11px 13px;
   color: #fff;
-  background: linear-gradient(120deg, #0f8f52, #0a7f46);
+  background: linear-gradient(120deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow: 0 8px 18px rgba(63, 148, 118, 0.22);
   cursor: pointer;
   font-weight: 700;
   margin-top: var(--space-1);
@@ -294,9 +324,9 @@ input[type="number"] {
 .map-active-hint {
   margin: 0 0 var(--space-2) 0;
   font-size: 0.82rem;
-  color: #0f3a7a;
-  background: #eaf3ff;
-  border: 1px solid #bfdbfe;
+  color: var(--accent-deep);
+  background: var(--mint-2);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 6px 8px;
 }
@@ -306,7 +336,7 @@ input[type="number"] {
   min-height: 450px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, #eef5ff 0%, #f7fbff 100%);
+  background: linear-gradient(180deg, #e7f4ed 0%, #f6fbf8 100%);
 }
 
 .map-legend {
@@ -332,15 +362,15 @@ input[type="number"] {
 }
 
 .swatch.a44 {
-  background: #2563eb;
+  background: var(--amber);
 }
 
 .swatch.a46 {
-  background: #ea580c;
+  background: var(--orange);
 }
 
 .swatch.landscape {
-  background: #0d9488;
+  background: var(--accent);
 }
 
 .status,
@@ -362,10 +392,10 @@ input[type="number"] {
 }
 
 .summary-card {
-  border: 1px solid #d8e2f0;
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 10px 12px;
-  background: linear-gradient(160deg, #ffffff, #f8fbff);
+  background: linear-gradient(160deg, #ffffff, #f7fbf8);
   box-shadow: var(--shadow-kpi);
   animation: rise-in 260ms ease both;
 }
@@ -377,8 +407,9 @@ input[type="number"] {
 
 .summary-value {
   margin-top: 6px;
-  font-size: 1.02rem;
+  font-size: 1.45rem;
   font-weight: 800;
+  letter-spacing: -0.5px;
 }
 
 .flow-stage {
@@ -390,7 +421,7 @@ input[type="number"] {
   justify-content: center;
   padding: 8px;
   color: var(--sub);
-  background: #fbfdff;
+  background: #f4faf6;
 }
 
 .flow-svg {
@@ -400,7 +431,7 @@ input[type="number"] {
 }
 
 .node-label {
-  fill: #0f172a;
+  fill: var(--ink);
   font-size: 12px;
   font-weight: 600;
 }
@@ -471,6 +502,7 @@ select:focus-visible {
 
   .hero {
     padding: 14px;
+    flex-wrap: wrap;
   }
 
   .tab-list {
