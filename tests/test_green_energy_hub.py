@@ -97,3 +97,26 @@ def test_profile_sonntagsfahrverbot(profiles):
     ban = df["mcs_kw"][sunday & (local.hour < 22)].mean()
     after = df["mcs_kw"][sunday & (local.hour >= 22)].mean()
     assert after > 2 * ban
+
+
+# ---------------------------------------------------------------------------
+# PV am Hub
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def weather_df():
+    from Simulation import Simulator
+    return Simulator().weather_df
+
+
+def test_geh_pv_erweiterung_ertrag(weather_df):
+    from core.module_green_energy_hub import simulate_geh_pv
+    pv = simulate_geh_pv(weather_df, GEH_VARIANTS["Erweiterung"]["pv_kwp"], weather_df.index)
+    assert len(pv) == len(weather_df)
+    assert (pv >= 0).all()
+    assert pv.sum() * DT_H == pytest.approx(1_060_000, rel=0.10)
+
+
+def test_geh_pv_null_kwp(weather_df):
+    from core.module_green_energy_hub import simulate_geh_pv
+    assert (simulate_geh_pv(weather_df, 0.0, weather_df.index) == 0).all()

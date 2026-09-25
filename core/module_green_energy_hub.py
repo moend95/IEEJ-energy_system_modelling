@@ -14,6 +14,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
+import pvlib
+from pvlib.location import Location
 
 from core.io_types import GuiInput
 
@@ -65,6 +67,78 @@ GEH_VARIANTS: dict[str, dict] = {
         "pv_kwp": 1_245.0,
     },
 }
+
+# ---------------------------------------------------------------------------
+# PV am Hub (Standort AK Jackerath)
+# ---------------------------------------------------------------------------
+GEH_PV_LAT: float = 51.06                   # ANNAHME, nicht aus Studie
+GEH_PV_LON: float = 6.49                    # ANNAHME, nicht aus Studie
+GEH_PV_GAMMA_PDC: float = -0.0037           # Temperaturkoeffizient [1/K]
+GEH_PV_INVERTER_ETA: float = 0.96           # Nennwirkungsgrad Wechselrichter
+GEH_PV_LOSSES: float = 0.14                 # Gesamtverluste (Verschmutzung, Kabel, Mismatch, …)
+
+# Teilflächen: (Anteil an kWp, Azimut [°], Neigung [°])
+GEH_PV_SURFACES: list[tuple[float, float, float]] = [
+    (0.50, 180.0, 15.0),                    # ANNAHME, nicht aus Studie: Dächer Süd
+    (0.25, 90.0, 10.0),                     # ANNAHME, nicht aus Studie: Carports Ost
+    (0.25, 270.0, 10.0),                    # ANNAHME, nicht aus Studie: Carports West
+]
+
+
+def simulate_geh_pv(weather_df: pd.DataFrame, kwp: float, index: pd.DatetimeIndex) -> pd.Series:
+    """
+    PV-Erzeugung am Hub mit dem vereinfachten PVWatts-Modell.
+
+    Zwei Teilflächen (Dächer Süd, Carports Ost-West), Zelltemperatur nach Faiman,
+    pauschale Systemverluste GEH_PV_LOSSES, PVWatts-Wechselrichter.
+
+    Args:
+        weather_df: Wetterdaten (tz-naiv UTC, 15 min) mit ghi, dhi, dni, temp_air, wind_speed
+        kwp:        installierte PV-Leistung [kWp]
+        index:      Zielindex der Ergebniszeitreihe
+
+    Returns:
+        AC-Leistung [kW] auf index, NaN → 0
+    """
+    if kwp <= 0.0:
+        return pd.Series(0.0, index=index)
+
+    times = weather_df.index
+    times_utc = times.tz_localize("UTC") if times.tz is None else times.tz_convert("UTC")
+
+    loc = Location(GEH_PV_LAT, GEH_PV_LON, tz="Europe/Berlin")
+    solpos = loc.get_solarposition(times_utc)
+    dni_extra = pvlib.irradiance.get_extra_radiation(times_utc)
+
+    ghi = weather_df["ghi"].to_numpy()
+    dhi = weather_df["dhi"].to_numpy()
+    dni = weather_df["dni"].to_numpy()
+    temp_air = weather_df["temp_air"].to_numpy()
+    wind_speed = weather_df["wind_speed"].to_numpy()
+
+    pdc0_w = kwp * 1000.0
+    pdc_w = np.zeros(len(times))
+    for share, azimuth, tilt in GEH_PV_SURFACES:
+        poa = pvlib.irradiance.get_total_irradiance(
+            surface_tilt=tilt,
+            surface_azimuth=azimuth,
+            solar_zenith=solpos["apparent_zenith"].to_numpy(),
+            solar_azimuth=solpos["azimuth"].to_numpy(),
+            dni=dni,
+            ghi=ghi,
+            dhi=dhi,
+            dni_extra=dni_extra.to_numpy(),
+            model="haydavies",
+        )
+        poa_global = np.nan_to_num(np.asarray(poa["poa_global"], dtype=float), nan=0.0)
+        temp_cell = pvlib.temperature.faiman(poa_global, temp_air, wind_speed)
+        pdc_w += pvlib.pvsystem.pvwatts_dc(poa_global, temp_cell, share * pdc0_w, GEH_PV_GAMMA_PDC)
+
+    pdc_w = np.clip(pdc_w, 0.0, None) * (1.0 - GEH_PV_LOSSES)
+    pac_w = pvlib.inverter.pvwatts(pdc_w, pdc0_w, eta_inv_nom=GEH_PV_INVERTER_ETA)
+
+    pv_kw = pd.Series(np.clip(np.asarray(pac_w, dtype=float), 0.0, None) / 1000.0, index=times)
+    return pv_kw.reindex(index).fillna(0.0)
 
 
 # ---------------------------------------------------------------------------
