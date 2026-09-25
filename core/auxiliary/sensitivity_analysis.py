@@ -149,18 +149,15 @@ I_CONFIGS = {
 GEH_CONFIGS = {
     0: {},
     1: {
-        "h2_load_scenario": "2022",
-        "e_load_scenario": "2022"
+        "geh_variant": "Basis"
     },
 
     2: {
-        "h2_load_scenario": "2050",
-        "e_load_scenario": "2050"
+        "geh_variant": "Erweiterung"
     },
 
     3: {
-        "h2_load_scenario": "2030",
-        "e_load_scenario": "2030"
+        "geh_variant": "Keine"
     }
 
 }
@@ -215,8 +212,7 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
     inp.i_heat_cooling_electric = cfg.get("is_heat_cooling_electric", False)
     inp.i_companies = cfg.get("companies", [])
 
-    inp.geh_h2_load_scenario = cfg.get("h2_load_scenario", None)
-    inp.geh_e_load_scenario = cfg.get("e_load_scenario", None)
+    inp.geh_variant = cfg.get("geh_variant", None)
 
     inp.bs_efficiency = cfg.get("bs_efficiency", None)
     inp.bs_energy_kwh = cfg.get("bs_energy_kwh", None)

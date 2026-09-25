@@ -32,16 +32,18 @@ class GuiInput:
     i_heat_cooling_electric: Optional[bool] = None     # Electric Heating/Cooling active
     i_companies: Optional[List[int]] = None            # Company typ list
 
-    # Green Energy Hub – Szenario-Auswahl (BEV-CSV und H2-Referenz)
-    geh_h2_load_scenario: Optional[str] = None          # H2-Referenzszenario: 2022, 2030, 2050
-    geh_e_load_scenario: Optional[str] = None           # BEV-Ladeszenario: 2022, 2030, 2050
+    # Green Energy Hub – Variante aus der Machbarkeitsstudie
+    geh_variant: Optional[str] = None                      # "Keine", "Basis", "Erweiterung"
 
-    # Green Energy Hub – physikalische Parameter der H2-Prozesskette
+    # Green Energy Hub – optionale Overrides (None = Wert aus GEH_VARIANTS)
+    geh_pv_kwp: Optional[float] = None                     # PV-Leistung am Hub [kWp]
+    geh_battery_kwh: Optional[float] = None                # Batteriekapazität [kWh]
+    geh_battery_kw: Optional[float] = None                 # Batterieleistung [kW]
+    geh_h2_demand_t_per_a: Optional[float] = None          # H2-Nachfrage Tankstelle [t/a]
+    geh_h2_min_soc: Optional[float] = None                 # Mindestfüllstand H2-Speicher [0–1]
     geh_electrolyzer_power_kw: Optional[float] = None      # Nennleistung Elektrolyseur [kW]
-    geh_electrolyzer_efficiency: Optional[float] = 0.70    # System-Wirkungsgrad (LHV-bezogen, 0–1)
+    geh_electrolyzer_efficiency: Optional[float] = None    # System-Wirkungsgrad (LHV-bezogen, 0–1)
     geh_storage_capacity_kwh: Optional[float] = None       # H2-Speicherkapazität [kWh_H2]
-    geh_storage_max_charge_kw: Optional[float] = None      # Max. Lade-/Entladeleistung Speicher [kW]
-    geh_dispenser_demand_kg_per_h: Optional[float] = None  # H2-Nachfrage Zapfsäulen [kg/h]
 
     # Battery storage
     bs_efficiency: Optional[float] = None               # Roundtrip efficience [0–1]
@@ -82,8 +84,29 @@ class SimOutput:
     geh_h2_production_kwh: float | None = None       # H2-Jahresproduktion [kWh_H2]
     geh_compressor_demand_kwh: float | None = None   # Kompressor-Strombedarf [kWh/a]
     geh_h2_delivered_kwh: float | None = None        # An Dispenser gelieferte H2-Energie [kWh_H2]
-    geh_h2_curtailed_kwh: float | None = None        # Abgeregelter H2 (kein Speicher/Abnehmer) [kWh_H2]
-    geh_storage_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe Speicher
+    geh_storage_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe H2-Speicher
+
+    # Green Energy Hub – Erzeugung, Lasten, Batterie
+    geh_pv_sum_energy_kwh: float | None = None       # PV-Ertrag am Hub [kWh/a]
+    geh_pv_max_power_kw: float | None = None         # PV-Spitzenleistung am Hub [kW]
+    geh_charging_mcs_kwh: float | None = None        # Ladeenergie Lkw MCS [kWh/a]
+    geh_charging_ccs_kwh: float | None = None        # Ladeenergie Lkw Overnight CCS [kWh/a]
+    geh_charging_hpc_kwh: float | None = None        # Ladeenergie Pkw HPC [kWh/a]
+    geh_charging_ac_kwh: float | None = None         # Ladeenergie Pkw Parkhaus AC [kWh/a]
+    geh_building_kwh: float | None = None            # Strombedarf Gebäude [kWh/a]
+    geh_electrolyzer_kwh: float | None = None        # Strombezug Elektrolyseur [kWh/a]
+    geh_electrolyzer_full_load_hours: float | None = None  # Volllaststunden Elektrolyseur [h/a]
+    geh_h2_demand_kwh: float | None = None           # H2-Nachfrage Tankstelle [kWh_H2/a]
+    geh_h2_unmet_kwh: float | None = None            # Ungedeckte H2-Nachfrage [kWh_H2/a]
+    geh_battery_charge_kwh: float | None = None      # Batterie-Ladung [kWh/a]
+    geh_battery_discharge_kwh: float | None = None   # Batterie-Entladung [kWh/a]
+    geh_battery_full_cycles: float | None = None     # Batterie-Vollzyklen [1/a]
+    geh_battery_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe Batterie
+
+    # Netzaustausch des Parks (nach allen Speichern)
+    grid_import_kwh: float | None = None             # Netzbezug [kWh/a]
+    grid_export_kwh: float | None = None             # Netzeinspeisung [kWh/a]
+    grid_max_import_kw: float | None = None          # Maximale Netzbezugsleistung [kW]
 
     # pandas dataframes with load profiles
     res_df: pd.DataFrame = field(default_factory=pd.DataFrame)

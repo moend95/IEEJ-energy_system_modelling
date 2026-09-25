@@ -74,7 +74,7 @@ DEFAULT_FLOW_EDGES = [
     {"id": "grid_to_system", "color": "#B9B9B9"},
 ]
 
-GEH_SCENARIO_OPTIONS = ["Keine", "2022", "2030", "2050"]
+GEH_VARIANT_OPTIONS = ["Keine", "Basis", "Erweiterung"]
 JS_SCENARIO_OPTIONS = ["Aus", "1000 Bewohner", "2000 Bewohner", "3000 Bewohner"]
 
 
@@ -115,8 +115,7 @@ def _canonicalize_input(raw_input: dict[str, Any]) -> dict[str, Any]:
         "el_tractor_turn_radius": _round_float(raw_input.get("el_tractor_turn_radius"), 3),
         "i_heat_cooling_electric": bool(raw_input.get("i_heat_cooling_electric", False)),
         "i_companies": _sort_unique_ints(raw_input.get("i_companies", [])),
-        "geh_h2_load_scenario": str(raw_input.get("geh_h2_load_scenario") or "Keine"),
-        "geh_e_load_scenario": str(raw_input.get("geh_e_load_scenario") or "Keine"),
+        "geh_variant": str(raw_input.get("geh_variant") or "Keine"),
         "bs_energy_kwh": bs_energy_kwh if battery_active else None,
         "bs_efficiency": _round_float(raw_input.get("bs_efficiency"), 3) if battery_active else None,
         "bs_c_rate": _round_float(raw_input.get("bs_c_rate"), 3) if battery_active else None,
@@ -630,24 +629,17 @@ def _render_selector_form() -> dict[str, Any]:
                     st.info(f"Industriegebiet aktiv ({len(selected_companies)} Auswahlwerte).")
 
         with tab_con2:
-            geh_h2_load_scenario = st.segmented_control(
-                "Wasserstoff-Bedarf Szenario",
-                options=GEH_SCENARIO_OPTIONS,
-                default="2022",
+            geh_variant = st.segmented_control(
+                "Variante",
+                options=GEH_VARIANT_OPTIONS,
+                default="Basis",
             )
-            geh_h2_load_scenario = "Keine" if geh_h2_load_scenario is None else str(geh_h2_load_scenario)
+            geh_variant = "Keine" if geh_variant is None else str(geh_variant)
 
-            geh_e_load_scenario = st.segmented_control(
-                "Elektro-Bedarf Szenario",
-                options=GEH_SCENARIO_OPTIONS,
-                default="2022",
-            )
-            geh_e_load_scenario = "Keine" if geh_e_load_scenario is None else str(geh_e_load_scenario)
-
-            if geh_h2_load_scenario == "Keine" and geh_e_load_scenario == "Keine":
+            if geh_variant == "Keine":
                 st.info("Green Energy Hub deaktiviert.")
             else:
-                st.info("Green Energy Hub aktiv.")
+                st.info(f"Green Energy Hub aktiv: {geh_variant}")
 
         with tab_con3:
             js_scenario = st.segmented_control("Szenario", options=JS_SCENARIO_OPTIONS, default="1000 Bewohner")
@@ -706,8 +698,7 @@ def _render_selector_form() -> dict[str, Any]:
         "el_tractor_turn_radius": float(el_tractor_turn_radius if el_tractor_turn_radius is not None else 9.0),
         "i_heat_cooling_electric": bool(i_heat_cooling_electric),
         "i_companies": selected_companies,
-        "geh_h2_load_scenario": geh_h2_load_scenario,
-        "geh_e_load_scenario": geh_e_load_scenario,
+        "geh_variant": geh_variant,
         "bs_efficiency": float(bs_efficiency) if bs_energy_kwh > 0 else None,
         "bs_energy_kwh": float(bs_energy_kwh) if bs_energy_kwh > 0 else None,
         "bs_c_rate": float(bs_c_rate) if bs_energy_kwh > 0 else None,
@@ -751,7 +742,7 @@ def _render_catalog_overview(catalog: list[dict[str, Any]]) -> None:
                 "h_pv_types": ", ".join(str(v) for v in inp.get("h_pv_types", [])) or "-",
                 "el_build_state": inp.get("el_build_state", "-"),
                 "companies": ", ".join(str(v) for v in inp.get("i_companies", [])) or "-",
-                "geh": f"H2={inp.get('geh_h2_load_scenario', '-')}, E={inp.get('geh_e_load_scenario', '-')}",
+                "geh": inp.get("geh_variant", "-"),
                 "battery_kwh": inp.get("bs_energy_kwh", "-"),
                 "js": inp.get("js_scenario", "-"),
             }
