@@ -338,3 +338,19 @@ def test_synergy_diagram(sim_erweiterung):
     hover = " ".join(str(t.hovertemplate or "") for t in fig.data)
     assert "Variante: Erweiterung" in hover
     assert "Volllaststunden" in hover
+
+
+@pytest.mark.slow
+def test_integration_dispatch_invarianten(sim_erweiterung):
+    """Batterie- und H2-Invarianten auf der echten Park-Bilanz der Standardkonfiguration."""
+    from Simulation import Simulator, GEH_GENERATION_COLUMNS, GEH_PARK_LOAD_COLUMNS
+    from core.geh_profiles import build_geh_load_profiles
+    df = sim_erweiterung.res_df
+    net = sum(df[c].to_numpy() for c in GEH_GENERATION_COLUMNS if c in df.columns) \
+        - sum(df[c].to_numpy() for c in GEH_PARK_LOAD_COLUMNS if c in df.columns)
+    demand = build_geh_load_profiles(Simulator().weather_df.index, GEH_VARIANTS["Erweiterung"])["h2_demand_kwh"].to_numpy()
+    p = GEHParams.from_variant(GEH_VARIANTS["Erweiterung"])
+    r = run_geh_dispatch(net, demand, p, DT_H)
+    _check_invariants(net, demand, p, r)
+    np.testing.assert_allclose(r.electrolyzer_kw, df["Last_GEH_Elektrolyseur [kW]"])
+    np.testing.assert_allclose(r.balance_after_kw, df["Bilanz [kW]"], atol=1e-6)
