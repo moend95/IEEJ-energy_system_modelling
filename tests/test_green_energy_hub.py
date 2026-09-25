@@ -301,3 +301,40 @@ def test_integration_allgemeine_batterie_ueberschreibt_netz():
     np.testing.assert_allclose(o.res_df["Netzeinspeisung [kW]"], np.maximum(new_balance, 0))
     assert o.grid_max_import_kw == pytest.approx(max(-new_balance.min(), 0))
     assert o.grid_import_kwh == pytest.approx(o.bs_stats["grid_import_kwh"])
+
+
+# ---------------------------------------------------------------------------
+# Export und GUI-Helfer
+# ---------------------------------------------------------------------------
+
+def test_geh_variant_table():
+    from core.functions_web_support import geh_variant_table
+    table = geh_variant_table(GEH_VARIANTS["Basis"])
+    assert "Lkw MCS" in table.index
+    assert table.loc["Pkw Parkhaus AC", "Auslegung"] == "entfällt"
+
+
+@pytest.mark.slow
+def test_export_json(sim_erweiterung, tmp_path):
+    import json
+    from core.export_utils import export_scenario_flows_to_json
+    path = export_scenario_flows_to_json(standard_input("Erweiterung"), sim_erweiterung, "t01", tmp_path,
+                                         timeseries_mode="none")
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    assert payload["metadata"]["schema_version"] == "1.1.0"
+    geh = payload["annual_summary"]["green_energy_hub"]
+    assert "h2_curtailed_kwh" not in geh
+    assert geh["variant"] == "Erweiterung"
+    assert geh["electrolyzer_full_load_hours"] == pytest.approx(sim_erweiterung.geh_electrolyzer_full_load_hours)
+    grid = payload["annual_summary"]["grid"]
+    assert grid["import_kwh"] == pytest.approx(sim_erweiterung.grid_import_kwh)
+    assert grid["max_import_kw"] == pytest.approx(sim_erweiterung.grid_max_import_kw)
+
+
+@pytest.mark.slow
+def test_synergy_diagram(sim_erweiterung):
+    from core.functions_web_support import build_synergy_diagram
+    fig = build_synergy_diagram(standard_input("Erweiterung"), sim_erweiterung)
+    hover = " ".join(str(t.hovertemplate or "") for t in fig.data)
+    assert "Variante: Erweiterung" in hover
+    assert "Volllaststunden" in hover

@@ -92,6 +92,8 @@ No additional user-provided input data is required to run the default simulation
 
 Simulation-generated files and intermediate results are written to `data/outputs/`.
 
+**Deprecated:** `data/inputs/green_energy_hub/*/Electrolyzer_output.csv` and `data/inputs/green_energy_hub/*/BEV_load_el_15min.csv` are no longer read by the simulation. The Green Energy Hub now generates synthetic load profiles (`core/geh_profiles.py`) based on the feasibility study "Green Energy Hub – Autohof der Zukunft" (inno2grid / PRSch, 10/2025). The files are kept for reference only.
+
 ## Main Components
 
 - `app.py` – Streamlit GUI for input, simulation trigger, and result display
@@ -101,6 +103,8 @@ Simulation-generated files and intermediate results are written to `data/outputs
 - `core/module_energy_landscape.py` – Agri-PV / Energy Landscape geometry and layout generation
 - `core/module_industrial_area.py` – industrial load aggregation
 - `core/module_battery_storage.py` – battery storage simulation
+- `core/module_green_energy_hub.py` – Green Energy Hub variants, PV at the hub, and rule-based dispatch (electrolyzer, H2 storage, battery, grid)
+- `core/geh_profiles.py` – synthetic load profiles for the Green Energy Hub charging clusters, building, and H2 station
 - `core/functions_plot.py` – helper plots for load and scenario visualization
 - `core/functions_web_support.py` – GUI helper functions and energy flow diagram
 - `Web_Gui_Demo.py` – precomputed demo page (scenario selector, flow arrows, tooltips)

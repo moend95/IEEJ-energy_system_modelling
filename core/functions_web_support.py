@@ -290,6 +290,35 @@ def add_optional_connection(fig, points, color="#1DA1F2", width=1.6, dash="dot",
 
 
 
+def geh_variant_table(variant: dict) -> pd.DataFrame:
+    """Anlagenparameter einer Green-Energy-Hub-Variante als Tabelle für die GUI."""
+    def mwh(kwh):
+        return f"{kwh / 1000:,.0f} MWh/a".replace(",", ".")
+
+    def num(value, unit):
+        return f"{value:,.0f} {unit}".replace(",", ".")
+
+    rows = [
+        ("Lkw MCS", f"{variant['mcs_points']} × {variant['mcs_point_kw']:.0f} kW, "
+                    f"Grenze {num(variant['mcs_limit_kw'], 'kW')}", mwh(variant["mcs_kwh"])),
+        ("Lkw Overnight CCS", f"{variant['ccs_points']} Ladepunkte, "
+                              f"Grenze {num(variant['ccs_limit_kw'], 'kW')}", mwh(variant["ccs_kwh"])),
+        ("Pkw HPC", f"{variant['hpc_points']} × {variant['hpc_point_kw']:.0f} kW, "
+                    f"Grenze {num(variant['hpc_limit_kw'], 'kW')}", mwh(variant["hpc_kwh"])),
+        ("Pkw Parkhaus AC", f"{variant['ac_points']} × {variant['ac_point_kw']:.0f} kW, "
+                            f"Grenze {num(variant['ac_limit_kw'], 'kW')}"
+                            if variant["ac_kwh"] > 0 else "entfällt", mwh(variant["ac_kwh"])),
+        ("Gebäude", "", mwh(variant["building_kwh"])),
+        ("PV am Hub", num(variant["pv_kwp"], "kWp"), ""),
+        ("Batteriespeicher", f"{num(variant['battery_kwh'], 'kWh')} / {num(variant['battery_kw'], 'kW')}",
+         f"η_RT {variant['battery_eff_rt']:.0%}"),
+        ("Elektrolyseur", num(variant["electrolyzer_kw"], "kW"), f"η {variant['electrolyzer_eff']:.0%} (LHV)"),
+        ("H₂-Speicher", num(variant["h2_storage_kwh"], "kWh_H₂"), f"Mindestfüllstand {variant['h2_min_soc']:.0%}"),
+        ("H₂-Nachfrage Tankstelle", "", f"{variant['h2_demand_t_per_a']:.1f} t/a".replace(".", ",")),
+    ]
+    return pd.DataFrame(rows, columns=["Komponente", "Auslegung", "Jahreswert / Kennzahl"]).set_index("Komponente")
+
+
 def build_synergy_diagram(inp, sim_output):
     """
     System visualization of energy flow balance:
@@ -373,8 +402,9 @@ def build_synergy_diagram(inp, sim_output):
     # =========================================================
     # 2) Balance for Visualization
     # =========================================================
-    # Local coverage
-    total_generation = solar_energy + landscape_energy
+    # Local coverage (inkl. PV am Green Energy Hub)
+    geh_pv_energy = max(float(getattr(sim_output, "geh_pv_sum_energy_kwh", 0) or 0), 0.0)
+    total_generation = solar_energy + landscape_energy + geh_pv_energy
     total_demand = industry_energy + green_hub_energy + juechen_sued_energy
 
     balance = float(getattr(sim_output, "bal_energy_kwh", 0) or 0)
@@ -399,8 +429,8 @@ def build_synergy_diagram(inp, sim_output):
         solar_share = 0.0
         landscape_share = 0.0
 
-    solar_to_system = total_generation * solar_share
-    landscape_to_system = total_generation * landscape_share
+    solar_to_system = total_gen_for_split * solar_share
+    landscape_to_system = total_gen_for_split * landscape_share
 
     # Batterie nur visuell aktiv/inaktiv
     battery_active = bool(getattr(inp, "bs_energy_kwh", 0) and getattr(inp, "bs_energy_kwh", 0) > 0)
@@ -438,29 +468,28 @@ def build_synergy_diagram(inp, sim_output):
     )
 
     # Green Energy Hub Hover
-    el_power_kw = float(getattr(inp, "geh_electrolyzer_power_kw", None) or 0.0)
-    geh_active = (
-        el_power_kw > 0
-        or (getattr(inp, "geh_e_load_scenario", None) not in [None, "Keine"])
-    )
+    geh_variant = getattr(inp, "geh_variant", None) or "Keine"
 
-    status = "aktiv" if geh_active else "nicht aktiv"
+    def _geh(attr):
+        return max(float(getattr(sim_output, attr, None) or 0.0), 0.0)
 
-    h2_prod_kwh = max(float(getattr(sim_output, "geh_h2_production_kwh", None) or 0.0), 0.0)
-    h2_del_kwh = max(float(getattr(sim_output, "geh_h2_delivered_kwh", None) or 0.0), 0.0)
-    h2_curt_kwh = max(float(getattr(sim_output, "geh_h2_curtailed_kwh", None) or 0.0), 0.0)
-    comp_kwh = max(float(getattr(sim_output, "geh_compressor_demand_kwh", None) or 0.0), 0.0)
-
-    hub_text = (
-        f"Status: {status}"
-        f"<br>Elektrolyseur: {el_power_kw:.0f} kW"
-        f"<br>H₂-Produktion: {format_energy(h2_prod_kwh)}"
-        f"<br>H₂-Lieferung: {format_energy(h2_del_kwh)}"
-        f"<br>H₂-Überschuss: {format_energy(h2_curt_kwh)}"
-        f"<br>Kompressor: {format_energy(comp_kwh)}"
-        f"<br>El.-Szenario BEV: {getattr(inp, 'geh_e_load_scenario', 'Keine')}"
-        f"<br>Gesamt-Strombedarf: {format_energy(green_hub_energy)}"
-    )
+    if geh_variant == "Keine":
+        hub_text = "Status: nicht aktiv"
+    else:
+        hub_text = (
+            f"Variante: {geh_variant}"
+            f"<br>Laden Lkw MCS: {format_energy(_geh('geh_charging_mcs_kwh'))}"
+            f"<br>Laden Lkw CCS: {format_energy(_geh('geh_charging_ccs_kwh'))}"
+            f"<br>Laden Pkw HPC: {format_energy(_geh('geh_charging_hpc_kwh'))}"
+            f"<br>Laden Pkw AC: {format_energy(_geh('geh_charging_ac_kwh'))}"
+            f"<br>PV am Hub: {format_energy(_geh('geh_pv_sum_energy_kwh'))}"
+            f"<br>Batterie: {_geh('geh_battery_full_cycles'):.0f} Vollzyklen"
+            f"<br>H₂ produziert: {format_energy(_geh('geh_h2_production_kwh'))}"
+            f"<br>H₂ geliefert: {format_energy(_geh('geh_h2_delivered_kwh'))}"
+            f"<br>H₂ ungedeckt: {format_energy(_geh('geh_h2_unmet_kwh'))}"
+            f"<br>Elektrolyseur: {_geh('geh_electrolyzer_full_load_hours'):,.0f} Volllaststunden".replace(",", ".")
+            + f"<br>Gesamt-Strombedarf: {format_energy(green_hub_energy)}"
+        )
 
     # Jüchen-Süd Hover
     js_active = inp.js_scenario not in [None, "Aus"]

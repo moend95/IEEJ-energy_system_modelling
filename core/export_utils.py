@@ -64,19 +64,11 @@ def _write_json(path: Path, payload: Any, compress: bool = False) -> None:
 
 
 def _grid_peaks_kw(sim_output: Any) -> tuple[float, float]:
-    bs_df = getattr(sim_output, "bs_df", pd.DataFrame())
     res_df = getattr(sim_output, "res_df", pd.DataFrame())
-
-    if isinstance(bs_df, pd.DataFrame) and not bs_df.empty and "new_balance_kw" in bs_df.columns:
-        balance_series = _series_or_empty(bs_df, "new_balance_kw")
-    else:
-        balance_series = _series_or_empty(res_df, "Bilanz [kW]")
-
-    if balance_series.empty:
-        return 0.0, 0.0
-
-    export_peak = _safe_float(balance_series.clip(lower=0).max())
-    import_peak = _safe_float((-balance_series.clip(upper=0)).max())
+    import_series = _series_or_empty(res_df, "Netzbezug [kW]")
+    export_series = _series_or_empty(res_df, "Netzeinspeisung [kW]")
+    import_peak = _safe_float(import_series.max()) if not import_series.empty else 0.0
+    export_peak = _safe_float(export_series.max()) if not export_series.empty else 0.0
     return import_peak, export_peak
 
 
@@ -85,7 +77,7 @@ def export_scenario_flows_to_json(
     sim_output: Any,
     scenario_id: str,
     output_dir: str | Path,
-    schema_version: str = "1.0.0",
+    schema_version: str = "1.1.0",
     min_px: float = 2.0,
     max_px: float = 8.0,
     timeseries_mode: str = "inline",
@@ -117,24 +109,23 @@ def export_scenario_flows_to_json(
     landscape_kwh = max(_safe_float(getattr(sim_output, "el_sum_energy_kwh", 0.0)), 0.0)
     industry_kwh = max(_safe_float(getattr(sim_output, "i_sum_energy_kwh", 0.0)), 0.0)
     geh_kwh = max(_safe_float(getattr(sim_output, "geh_sum_energy_kwh", 0.0)), 0.0)
+    geh_pv_kwh = max(_safe_float(getattr(sim_output, "geh_pv_sum_energy_kwh", 0.0)), 0.0)
     js_kwh = max(_safe_float(getattr(sim_output, "js_sum_energy_kwh", 0.0)), 0.0)
 
-    total_generation_kwh = solar_kwh + landscape_kwh
+    total_generation_kwh = solar_kwh + landscape_kwh + geh_pv_kwh
     total_demand_kwh = industry_kwh + geh_kwh + js_kwh
 
     battery_charge_kwh = max(_safe_float(bs_stats.get("battery_charge_kwh", 0.0)), 0.0)
     battery_discharge_kwh = max(_safe_float(bs_stats.get("battery_discharge_kwh", 0.0)), 0.0)
 
-    # Prefer battery-adjusted grid values if available.
-    if "grid_import_kwh" in bs_stats or "grid_export_kwh" in bs_stats:
-        grid_import_kwh = max(_safe_float(bs_stats.get("grid_import_kwh", 0.0)), 0.0)
-        grid_export_kwh = max(_safe_float(bs_stats.get("grid_export_kwh", 0.0)), 0.0)
-    else:
-        balance_kwh = _safe_float(getattr(sim_output, "bal_energy_kwh", 0.0))
-        grid_import_kwh = abs(balance_kwh) if balance_kwh < 0 else 0.0
-        grid_export_kwh = balance_kwh if balance_kwh > 0 else 0.0
+    # Netzaustausch nach allen Speichern (GEH-Batterie und allgemeine Batterie)
+    grid_import_kwh = max(_safe_float(getattr(sim_output, "grid_import_kwh", 0.0)), 0.0)
+    grid_export_kwh = max(_safe_float(getattr(sim_output, "grid_export_kwh", 0.0)), 0.0)
 
     grid_import_peak_kw, grid_export_peak_kw = _grid_peaks_kw(sim_output)
+
+    def geh(attr: str) -> float:
+        return max(_safe_float(getattr(sim_output, attr, 0.0)), 0.0)
 
     nodes = [
         {"id": "solar", "label": "Solarautobahn", "x": 0.10, "y": 0.48, "type": "generation"},
@@ -253,6 +244,7 @@ def export_scenario_flows_to_json(
         "generation": {
             "solar_highway_kwh": solar_kwh,
             "energy_landscape_kwh": landscape_kwh,
+            "green_energy_hub_pv_kwh": geh_pv_kwh,
             "total_generation_kwh": total_generation_kwh,
         },
         "demand": {
@@ -262,10 +254,24 @@ def export_scenario_flows_to_json(
             "total_demand_kwh": total_demand_kwh,
         },
         "green_energy_hub": {
-            "h2_production_kwh": max(_safe_float(getattr(sim_output, "geh_h2_production_kwh", 0.0)), 0.0),
-            "h2_delivered_kwh": max(_safe_float(getattr(sim_output, "geh_h2_delivered_kwh", 0.0)), 0.0),
-            "h2_curtailed_kwh": max(_safe_float(getattr(sim_output, "geh_h2_curtailed_kwh", 0.0)), 0.0),
-            "compressor_demand_kwh": max(_safe_float(getattr(sim_output, "geh_compressor_demand_kwh", 0.0)), 0.0),
+            "variant": str(getattr(inp, "geh_variant", None) or "Keine"),
+            "charging_mcs_kwh": geh("geh_charging_mcs_kwh"),
+            "charging_ccs_kwh": geh("geh_charging_ccs_kwh"),
+            "charging_hpc_kwh": geh("geh_charging_hpc_kwh"),
+            "charging_ac_kwh": geh("geh_charging_ac_kwh"),
+            "building_kwh": geh("geh_building_kwh"),
+            "pv_kwh": geh_pv_kwh,
+            "pv_max_power_kw": geh("geh_pv_max_power_kw"),
+            "electrolyzer_kwh": geh("geh_electrolyzer_kwh"),
+            "electrolyzer_full_load_hours": geh("geh_electrolyzer_full_load_hours"),
+            "compressor_demand_kwh": geh("geh_compressor_demand_kwh"),
+            "h2_production_kwh": geh("geh_h2_production_kwh"),
+            "h2_demand_kwh": geh("geh_h2_demand_kwh"),
+            "h2_delivered_kwh": geh("geh_h2_delivered_kwh"),
+            "h2_unmet_kwh": geh("geh_h2_unmet_kwh"),
+            "battery_charge_kwh": geh("geh_battery_charge_kwh"),
+            "battery_discharge_kwh": geh("geh_battery_discharge_kwh"),
+            "battery_full_cycles": geh("geh_battery_full_cycles"),
         },
         "balance": {
             "bal_energy_kwh": _safe_float(getattr(sim_output, "bal_energy_kwh", 0.0)),

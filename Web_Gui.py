@@ -7,6 +7,7 @@ import numpy as np
 
 from core.io_types import GuiInput, SimOutput
 from Simulation import Simulator, run_simulation, industry_csv_mapping
+from core.module_green_energy_hub import GEH_VARIANTS
 from core.functions_web_support import *
 from core.functions_plot import *
 
@@ -335,150 +336,82 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
     # ---------------- Green energy hub ----------------
     with tab5:
-        green_hub_base_dir = os.path.join(
-            script_dir,
-            "data",
-            "inputs",
-            "green_energy_hub"
-        )
-
         # Explanation expander
         expander = st.expander("Erklärung")
         with expander:
             st.write("""
-    **Allgemeine Daten**
-    - Elektrolyseur Wirkungsgrad 70%
-    - Wasserstoffspeicher (Gas) 10 MWh Kapazität
-    - keine PV- oder Windanlagen
-    - Ladepunkt Berechnung ohne Wartezeiten
-    - BEV Ladesäulen mit 200 kW Leistung
-    - Darstellung des Strombedarfs des Elektrolyseurs und der BEV-Ladesäulen
-    - Anteil der Anzahl an FCEVs für jedes Jahr: PKW 92.77% , LKW 7.07% , Busse 0.16%
+    Green Energy Hub am Autobahnkreuz Jackerath nach der Machbarkeitsstudie
+    **„Green Energy Hub – Autohof der Zukunft“** (inno2grid / PRSch, 10/2025, Zieljahr 2035).
 
-    **Szenario 2022**
-    - 5 BEV-Ladesäulen
-    - 3 Wasserstoff-Ladesäulen
-    - Elektrolyseur mit einer Leistung von ca. 8 MW um H2 Bedarf zu decken
-    - Anzahl BEV-Ladevorgänge: 10.381
+    - Ladecluster: Lkw MCS, Lkw Overnight CCS, Pkw HPC und (nur Erweiterung) Pkw-Parkhaus AC
+    - Gebäude, PV auf Dächern und Carports, Batteriespeicher
+    - H₂-Tankstelle mit Elektrolyseur und H₂-Speicher
+    - **Basis:** ohne Parkhaus · **Erweiterung:** mit Parkhaus (AC-Laden, zusätzliche PV)
 
-    **Szenario 2030**
-    - 6 BEV-Ladesäulen
-    - 8 Wasserstoff-Ladesäulen
-    - Elektrolyseur mit einer Leistung von ca. 30 MW
-    - Anzahl an FCEVs: 1.800.000
-    - Anzahl BEV-Ladevorgänge: 12.154
-
-    **Szenario 2050**
-    - 6 BEV-Ladesäulen
-    - 8 Wasserstoff-Ladesäulen
-    - Elektrolyseur mit einer Leistung von ca. 18 MW
-    - Anzahl an FCEVs: 4.560.000
-    - Anzahl BEV-Ladevorgänge: 16.587
-
-    **Einordnung der geringeren Elektrolyseurleistung im Jahr 2050**
-    Die geringere Elektrolyseurleistung im Vergleich zum Szenario 2030 ist modellseitig dadurch begründet,
-    dass nicht allein die Anzahl der Ladepunkte entscheidend ist, sondern vor allem die angenommene
-    Wasserstoffnachfrage und deren zeitliche Spitzenlast am betrachteten Standort. Im 2050-Szenario verteilt
-    sich die Nachfrage auf eine stärker ausgebaute Infrastruktur, sodass an diesem Standort trotz ausgebauter
-    Tankstellenstruktur eine geringere Elektrolyseurleistung ausreicht.
+    **Betriebsführung (regelbasiert)**
+    - Der Elektrolyseur nutzt Strom-Überschuss des Parks. Fällt der H₂-Speicher unter den
+      Mindestfüllstand, läuft er mit voller Leistung, notfalls mit Netz- oder Batteriestrom.
+    - Die Batterie nimmt verbleibenden Überschuss auf und deckt Defizite.
+    - Restlicher Überschuss wird eingespeist, Fehlmengen werden aus dem Netz bezogen.
+    - Ladeprofile sind synthetisch (Tagesform × Wochentag), skaliert auf die Jahresenergie der Studie.
             """)
 
-            fig_green_hub_bar = plot_green_hub_annual_energy(
-                green_hub_base_dir,
-                years=("2022", "2030", "2050")
-            )
-            st.pyplot(fig_green_hub_bar)
-
-        scenario_options = ["Keine", "2022", "2030", "2050"]
-
-        Input.geh_e_load_scenario = st.segmented_control(
-            "Elektro-Bedarf Szenario (BEV-Ladepark)",
-            options=scenario_options,
-            default="Keine",
+        geh_variant = st.segmented_control(
+            "Variante",
+            options=["Keine", "Basis", "Erweiterung"],
+            default="Basis",
         )
-        Input.geh_e_load_scenario = "Keine" if Input.geh_e_load_scenario is None else Input.geh_e_load_scenario
+        Input.geh_variant = "Keine" if geh_variant is None else geh_variant
 
-        st.divider()
-        st.write("#### Elektrolyseur & H2-Prozesskette")
-        st.caption(
-            "Der Elektrolyseur nutzt verfügbaren Strom-Überschuss aus Erzeugung minus Verbrauch. "
-            "Leistung 0 kW = Elektrolyseur deaktiviert."
-        )
-
-        col_el1, col_el2 = st.columns(2)
-        with col_el1:
-            el_power = st.number_input(
-                "Elektrolyseur-Leistung [kW]",
-                min_value=0,
-                max_value=50_000,
-                value=0,
-                step=500,
-                help="Nennleistung des Elektrolyseurs. 0 = deaktiviert.",
-            )
-            Input.geh_electrolyzer_power_kw = float(el_power) if el_power > 0 else None
-
-            el_efficiency = st.slider(
-                "System-Wirkungsgrad Elektrolyseur",
-                min_value=0.50,
-                max_value=0.85,
-                value=0.70,
-                step=0.01,
-                format="%.0f%%",
-                help="LHV-bezogener Systemwirkungsgrad (typisch 65–75 %).",
-            )
-            Input.geh_electrolyzer_efficiency = el_efficiency
-
-        with col_el2:
-            storage_cap = st.number_input(
-                "H2-Speicherkapazität [kWh_H2]",
-                min_value=0,
-                max_value=1_000_000,
-                value=0,
-                step=1_000,
-                help="Kapazität des Druckgasspeichers in kWh (LHV). 0 = kein Speicher.",
-            )
-            Input.geh_storage_capacity_kwh = float(storage_cap) if storage_cap > 0 else None
-
-            max_charge = st.number_input(
-                "Speicher max. Ladeleistung [kW]",
-                min_value=0,
-                max_value=50_000,
-                value=0,
-                step=500,
-                help="Maximale Ein-/Ausspeicherleistung. 0 = unbegrenzt.",
-            )
-            Input.geh_storage_max_charge_kw = float(max_charge) if max_charge > 0 else None
-
-        dispenser_demand = st.number_input(
-            "Dispenser-Nachfrage [kg H2 / h]",
-            min_value=0.0,
-            max_value=2_000.0,
-            value=0.0,
-            step=10.0,
-            help="Konstante H2-Abnahme durch Zapfsäulen. 0 = kein Dispenser.",
-        )
-        Input.geh_dispenser_demand_kg_per_h = float(dispenser_demand) if dispenser_demand > 0 else None
-
-        # Szenario-String für Rückwärtskompatibilität mit Katalog/CSV
-        Input.geh_h2_load_scenario = "Keine"
-
-        geh_e_active = Input.geh_e_load_scenario != "Keine"
-        geh_h2_active = bool(Input.geh_electrolyzer_power_kw and Input.geh_electrolyzer_power_kw > 0)
-        green_hub_active = geh_h2_active or geh_e_active
-
-        # Plot example week of selected H2/electric szenario
-        if green_hub_active:
-            st.write("#### Beispielhafte Wochenlastprofile der ausgewählten Green-Energy-Hub-Szenarien")
-
-            fig_green_hub_week = plot_green_hub_weekly_profiles(
-                green_hub_base_dir,
-                h2_year=Input.geh_h2_load_scenario,
-                e_year=Input.geh_e_load_scenario,
-                start="2022-03-05"
-            )
-            st.pyplot(fig_green_hub_week)
-        else:
+        if Input.geh_variant == "Keine":
             st.info("Green Energy Hub ist deaktiviert.")
+        else:
+            geh_v = GEH_VARIANTS[Input.geh_variant]
+
+            with st.expander("Anlagenparameter (Machbarkeitsstudie)"):
+                st.table(geh_variant_table(geh_v))
+
+            # Widget-Keys je Variante, damit die Vorbelegung beim Variantenwechsel mitwechselt
+            k = Input.geh_variant
+            with st.expander("Parameter anpassen"):
+                col_geh1, col_geh2 = st.columns(2)
+                with col_geh1:
+                    Input.geh_pv_kwp = float(st.number_input(
+                        "PV am Hub [kWp]", min_value=0.0, max_value=20_000.0,
+                        value=float(geh_v["pv_kwp"]), step=50.0, key=f"geh_pv_kwp_{k}",
+                    ))
+                    Input.geh_battery_kwh = float(st.number_input(
+                        "Batteriekapazität [kWh]", min_value=0.0, max_value=100_000.0,
+                        value=float(geh_v["battery_kwh"]), step=100.0, key=f"geh_battery_kwh_{k}",
+                    ))
+                    Input.geh_battery_kw = float(st.number_input(
+                        "Batterieleistung [kW]", min_value=0.0, max_value=50_000.0,
+                        value=float(geh_v["battery_kw"]), step=100.0, key=f"geh_battery_kw_{k}",
+                    ))
+                    Input.geh_h2_demand_t_per_a = float(st.number_input(
+                        "H₂-Nachfrage Tankstelle [t/a]", min_value=0.0, max_value=5_000.0,
+                        value=float(geh_v["h2_demand_t_per_a"]), step=5.0, key=f"geh_h2_demand_{k}",
+                    ))
+                with col_geh2:
+                    Input.geh_electrolyzer_power_kw = float(st.number_input(
+                        "Elektrolyseur-Leistung [kW]", min_value=0.0, max_value=50_000.0,
+                        value=float(geh_v["electrolyzer_kw"]), step=100.0, key=f"geh_el_kw_{k}",
+                        help="Nennleistung des Elektrolyseurs. 0 = deaktiviert.",
+                    ))
+                    Input.geh_electrolyzer_efficiency = float(st.slider(
+                        "System-Wirkungsgrad Elektrolyseur", min_value=0.50, max_value=0.85,
+                        value=float(geh_v["electrolyzer_eff"]), step=0.01, key=f"geh_el_eff_{k}",
+                        help="LHV-bezogener Systemwirkungsgrad (typisch 65–75 %).",
+                    ))
+                    Input.geh_storage_capacity_kwh = float(st.number_input(
+                        "H₂-Speicherkapazität [kWh_H₂]", min_value=0.0, max_value=1_000_000.0,
+                        value=float(geh_v["h2_storage_kwh"]), step=1_000.0, key=f"geh_h2_storage_{k}",
+                    ))
+                    Input.geh_h2_min_soc = float(st.slider(
+                        "Mindestfüllstand H₂-Speicher", min_value=0.0, max_value=1.0,
+                        value=float(geh_v["h2_min_soc"]), step=0.05, key=f"geh_h2_min_soc_{k}",
+                        help="Unterhalb läuft der Elektrolyseur mit voller Leistung, auch mit Netzstrom.",
+                    ))
 
 
         # ---------------- Jüchen Süd ----------------
