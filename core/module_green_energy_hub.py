@@ -338,6 +338,7 @@ def run_geh_dispatch(
                 dis = min(-net2, p.battery_kw, soc_b * eta_d / dt_h)
             soc_b -= dis / eta_d * dt_h
             net3 = net2 + dis
+        soc_b = min(max(soc_b, 0.0), p.battery_kwh)          # Numerische Absicherung
 
         # 4) Netz
         el_arr[t] = p_el

@@ -9,7 +9,13 @@ from core.module_industrial_area import IndustryLoadAggregator
 from core.module_pv_modulator import PV_System, PV_TYPEN
 from core.module_energy_landscape import main
 from core.module_battery_storage import BatteryStorage
-from core.module_green_energy_hub import run_geh_h2_chain
+from core.module_green_energy_hub import (
+    GEHParams,
+    resolve_geh_variant,
+    run_geh_dispatch,
+    simulate_geh_pv,
+)
+from core.geh_profiles import build_geh_load_profiles
 
 #TYPE MAPPING
 industry_csv_mapping = {
@@ -33,9 +39,27 @@ weather_csv = os.path.join(base_input,"wetter_daten_2021_15min.csv")
 output_dir = os.path.join(script_dir,"data", "outputs")
 os.makedirs(output_dir, exist_ok=True)
 
+# Green Energy Hub: Profilspalte → Spalte in res_df
+GEH_LOAD_COLUMNS = {
+    "mcs_kw": "Last_GEH_MCS [kW]",
+    "ccs_kw": "Last_GEH_CCS [kW]",
+    "hpc_kw": "Last_GEH_HPC [kW]",
+    "ac_kw": "Last_GEH_AC [kW]",
+    "building_kw": "Last_GEH_Gebaeude [kW]",
+}
+GEH_GENERATION_COLUMNS = [
+    "Erzeugung_Solarautobahn [kW]",
+    "Erzeugung_Energielandschaft [kW]",
+    "Erzeugung_GEH_PV [kW]",
+]
+GEH_PARK_LOAD_COLUMNS = ["Last_Industrie [kW]", "Last_Juechen_Sued [kW]", *GEH_LOAD_COLUMNS.values()]
+DT_H = 0.25
+
+
 class Simulator:
     def __init__(self):
         self.weather_df = self.weather_prep() #Read weather data from csv
+        self.geh_h2_demand_kwh = np.zeros(0)  # H2-Nachfrage Tankstelle je Zeitschritt [kWh_H2]
 
     def weather_prep(self):
         """
@@ -225,73 +249,94 @@ class Simulator:
 
     def run_green_energy_hub(self, inp: GuiInput, out: SimOutput) -> SimOutput:
         """
-        Green Energy Hub load simulation module.
-        This function loads selected hydrogen and electric mobility demand scenarios,
-        combines them into a single load profile, and writes the resulting time series
-        and energy values to the output object.
-        If no scenario is selected, a zero load profile is used.
+        Green Energy Hub – Lasten und PV (Machbarkeitsstudie „Autohof der Zukunft“).
+        Erzeugt für die gewählte Variante die synthetischen Ladeprofile je Ladecluster,
+        die Gebäudelast, die H2-Tankstellennachfrage und die PV am Hub und schreibt
+        sie in out.res_df. Ohne Variante sind alle Profile 0.
+        Die Betriebsführung (Elektrolyseur, Batterie, Netz) folgt in run_geh_dispatch_step().
         """
+        weather_index = self.weather_df.index
+        if len(out.res_df.index) == 0:
+            out.res_df = pd.DataFrame(index=pd.RangeIndex(len(weather_index)))
+        # res_df hat einen RangeIndex → Profile werden positionsgleich über .values geschrieben
+        assert len(weather_index) == len(out.res_df), (
+            f"Wetterdaten ({len(weather_index)}) und res_df ({len(out.res_df)}) sind nicht gleich lang."
+        )
 
-        hub_dir = os.path.join(base_input, "green_energy_hub")
+        variant = resolve_geh_variant(inp)
 
-        # Default: not active -> Null profile
-        out.res_df["Last_Green_Energy_Hub [kW]"] = 0.0
-        out.geh_max_power_kw = 0.0
-        out.geh_sum_energy_kwh = 0.0
+        if variant is None:
+            for column in GEH_LOAD_COLUMNS.values():
+                out.res_df[column] = 0.0
+            out.res_df["Erzeugung_GEH_PV [kW]"] = 0.0
+            self.geh_h2_demand_kwh = np.zeros(len(out.res_df))
+        else:
+            profiles = build_geh_load_profiles(weather_index, variant)
+            for profile_column, column in GEH_LOAD_COLUMNS.items():
+                out.res_df[column] = profiles[profile_column].values
+            self.geh_h2_demand_kwh = profiles["h2_demand_kwh"].to_numpy()
 
-        # BEV-Ladepark: externes CSV-Profil (bleibt szenariobasiert)
-        geh_series = pd.Series(0.0, index=out.res_df.index)
-        if inp.geh_e_load_scenario not in [None, "Keine"]:
-            el_load_path = os.path.join(hub_dir, inp.geh_e_load_scenario, "BEV_load_el_15min.csv")
-            df_el_load = pd.read_csv(el_load_path)
-            df_el_load["timestamp"] = pd.to_datetime(
-                df_el_load["timestamp"],
-                format="%d-%m %H:%M",
-                errors="coerce"
-            )
-            df_el_load.set_index("timestamp", inplace=True)
-            el_series = df_el_load["power_kW"].clip(lower=0).reset_index(drop=True)
-            el_series.index = out.res_df.index[:len(el_series)]
-            geh_series = geh_series.add(el_series.reindex(out.res_df.index, fill_value=0.0), fill_value=0.0)
+            pv_kw = simulate_geh_pv(self.weather_df, float(variant["pv_kwp"]), weather_index)
+            out.res_df["Erzeugung_GEH_PV [kW]"] = pv_kw.values
 
-        out.res_df["Last_Green_Energy_Hub [kW]"] = geh_series
-        out.geh_max_power_kw = float(geh_series.max())
-        out.geh_sum_energy_kwh = float((geh_series * 0.25).sum())
-
-        # H2-Elektrolyseur: wird NACH der vorläufigen Bilanz dynamisch berechnet
-        # → siehe run_geh_electrolyzer() / run_simulation()
+        out.geh_pv_sum_energy_kwh = float(out.res_df["Erzeugung_GEH_PV [kW]"].sum() * DT_H)
+        out.geh_pv_max_power_kw = float(out.res_df["Erzeugung_GEH_PV [kW]"].max())
+        out.geh_charging_mcs_kwh = float(out.res_df["Last_GEH_MCS [kW]"].sum() * DT_H)
+        out.geh_charging_ccs_kwh = float(out.res_df["Last_GEH_CCS [kW]"].sum() * DT_H)
+        out.geh_charging_hpc_kwh = float(out.res_df["Last_GEH_HPC [kW]"].sum() * DT_H)
+        out.geh_charging_ac_kwh = float(out.res_df["Last_GEH_AC [kW]"].sum() * DT_H)
+        out.geh_building_kwh = float(out.res_df["Last_GEH_Gebaeude [kW]"].sum() * DT_H)
+        out.geh_h2_demand_kwh = float(self.geh_h2_demand_kwh.sum())
 
         return out
 
-    def run_geh_electrolyzer(self, inp: GuiInput, out: SimOutput) -> SimOutput:
+    def run_geh_dispatch_step(self, inp: GuiInput, out: SimOutput) -> SimOutput:
         """
-        Berechnet die H2-Prozesskette (Elektrolyseur → Kompressor → Speicher → Dispenser)
-        auf Basis des verfügbaren Überschuss-Stroms aus der vorläufigen Bilanz.
-        Ergänzt Last_Green_Energy_Hub [kW] um den Strombedarf von Elektrolyseur + Kompressor.
+        Betriebsführung des Green Energy Hubs auf Basis der Park-Bilanz vor Flexibilität:
+        eigener Strom zuerst (Elektrolyseur, GEH-Batterie), Überschuss ins Netz,
+        Fehlmengen aus dem Netz. Läuft auch ohne Variante (mit Nullkomponenten),
+        damit Netzbezug und -einspeisung immer einheitlich berechnet werden.
         """
-        if not (inp.geh_electrolyzer_power_kw and inp.geh_electrolyzer_power_kw > 0):
-            return out
+        n = len(out.res_df)
+        net_kw = np.zeros(n)
+        for column in GEH_GENERATION_COLUMNS:
+            if column in out.res_df.columns:
+                net_kw += out.res_df[column].fillna(0.0).to_numpy()
+        for column in GEH_PARK_LOAD_COLUMNS:
+            if column in out.res_df.columns:
+                net_kw -= out.res_df[column].fillna(0.0).to_numpy()
 
-        surplus_kw = out.res_df.get("Bilanz_vorläufig [kW]", out.res_df.get("Bilanz [kW]",
-                                     pd.Series(0.0, index=out.res_df.index)))
+        params = GEHParams.from_variant(resolve_geh_variant(inp))
+        r = run_geh_dispatch(net_kw, self.geh_h2_demand_kwh, params, dt_h=DT_H)
 
-        geh_result = run_geh_h2_chain(inp, surplus_kw, dt_h=0.25)
+        out.res_df["Last_GEH_Elektrolyseur [kW]"] = r.electrolyzer_kw
+        out.res_df["Last_GEH_Kompressor [kW]"] = r.compressor_kw
+        out.res_df["GEH_Batterie_Laden [kW]"] = r.battery_charge_kw
+        out.res_df["GEH_Batterie_Entladen [kW]"] = r.battery_discharge_kw
+        out.res_df["Netzbezug [kW]"] = r.grid_import_kw
+        out.res_df["Netzeinspeisung [kW]"] = r.grid_export_kw
 
-        # Elektrolyseur + Kompressor als elektrische Last hinzufügen
-        out.res_df["Last_Green_Energy_Hub [kW]"] = (
-            out.res_df["Last_Green_Energy_Hub [kW]"] + geh_result.total_el_demand_kw.values
-        )
-
-        # GEH-Jahreswerte aktualisieren
+        geh_load_columns = [*GEH_LOAD_COLUMNS.values(), "Last_GEH_Elektrolyseur [kW]", "Last_GEH_Kompressor [kW]"]
+        out.res_df["Last_Green_Energy_Hub [kW]"] = out.res_df[geh_load_columns].sum(axis=1)
         out.geh_max_power_kw = float(out.res_df["Last_Green_Energy_Hub [kW]"].max())
-        out.geh_sum_energy_kwh = float((out.res_df["Last_Green_Energy_Hub [kW]"] * 0.25).sum())
+        out.geh_sum_energy_kwh = float(out.res_df["Last_Green_Energy_Hub [kW]"].sum() * DT_H)
 
-        # H2-spezifische Ergebnisse in SimOutput schreiben
-        out.geh_h2_production_kwh = geh_result.h2_production_kwh
-        out.geh_compressor_demand_kwh = geh_result.compressor_demand_kwh
-        out.geh_h2_delivered_kwh = geh_result.h2_delivered_kwh
-        out.geh_h2_curtailed_kwh = geh_result.h2_curtailed_kwh
-        out.geh_storage_soc_df = geh_result.storage_soc_kwh.to_frame(name="soc_kwh")
+        out.geh_electrolyzer_kwh = r.electrolyzer_kwh
+        out.geh_electrolyzer_full_load_hours = r.electrolyzer_full_load_hours
+        out.geh_compressor_demand_kwh = r.compressor_kwh
+        out.geh_h2_production_kwh = r.h2_production_kwh
+        out.geh_h2_delivered_kwh = r.h2_delivered_total_kwh
+        out.geh_h2_demand_kwh = r.h2_demand_kwh
+        out.geh_h2_unmet_kwh = r.unmet_kwh
+        out.geh_battery_charge_kwh = r.battery_charge_kwh
+        out.geh_battery_discharge_kwh = r.battery_discharge_kwh
+        out.geh_battery_full_cycles = r.battery_full_cycles
+        out.geh_storage_soc_df = pd.DataFrame({"soc_kwh": r.h2_soc_kwh}, index=out.res_df.index)
+        out.geh_battery_soc_df = pd.DataFrame({"soc_kwh": r.battery_soc_kwh}, index=out.res_df.index)
+
+        out.grid_import_kwh = r.grid_import_kwh
+        out.grid_export_kwh = r.grid_export_kwh
+        out.grid_max_import_kw = r.grid_max_import_kw
 
         return out
 
@@ -379,9 +424,12 @@ class Simulator:
         sign_map = {
             "Erzeugung_Solarautobahn [kW]": 1,
             "Erzeugung_Energielandschaft [kW]": 1,
+            "Erzeugung_GEH_PV [kW]": 1,
             "Last_Industrie [kW]": -1,
             "Last_Green_Energy_Hub [kW]": -1,
             "Last_Juechen_Sued [kW]": -1,
+            "GEH_Batterie_Entladen [kW]": 1,
+            "GEH_Batterie_Laden [kW]": -1,
         }
 
         balance = 0
@@ -390,20 +438,23 @@ class Simulator:
             if col in out.res_df.columns:
                 balance = balance + out.res_df[col] * sign
 
+        # Bilanz nach GEH-Batterie (= balance_after_kw aus run_geh_dispatch)
         out.res_df["Bilanz [kW]"] = balance
 
         h_energy = out.h_sum_energy_kwh or 0
         el_energy = out.el_sum_energy_kwh or 0
+        geh_pv_energy = out.geh_pv_sum_energy_kwh or 0
         geh_energy = out.geh_sum_energy_kwh or 0
         i_energy = out.i_sum_energy_kwh or 0
         js_energy = out.js_sum_energy_kwh or 0
+        geh_battery_net = (out.geh_battery_discharge_kwh or 0) - (out.geh_battery_charge_kwh or 0)
 
-        out.bal_energy_kwh = h_energy + el_energy - geh_energy - i_energy - js_energy
+        out.bal_energy_kwh = h_energy + el_energy + geh_pv_energy - geh_energy - i_energy - js_energy + geh_battery_net
 
-        feed_in_kwh = out.res_df["Bilanz [kW]"].clip(lower=0).sum() / 4
+        feed_in_kwh = out.res_df["Netzeinspeisung [kW]"].sum() * DT_H
 
         # For coverage_rate
-        total_generation = h_energy + el_energy
+        total_generation = h_energy + el_energy + geh_pv_energy
         total_demand = geh_energy + i_energy + js_energy
 
         if total_demand > 0:
@@ -455,6 +506,14 @@ class Simulator:
             out.bal_power_max_kw = out.bs_df["new_balance_kw"].max()
             out.bal_power_min_kw = out.bs_df["new_balance_kw"].min()
 
+            # Netzaustausch nach allgemeiner Batterie überschreibt die Werte aus dem GEH-Dispatch
+            new_balance = out.bs_df["new_balance_kw"].to_numpy()
+            out.res_df["Netzbezug [kW]"] = np.maximum(-new_balance, 0.0)
+            out.res_df["Netzeinspeisung [kW]"] = np.maximum(new_balance, 0.0)
+            out.grid_import_kwh = float(out.res_df["Netzbezug [kW]"].sum() * DT_H)
+            out.grid_export_kwh = float(out.res_df["Netzeinspeisung [kW]"].sum() * DT_H)
+            out.grid_max_import_kw = float(out.res_df["Netzbezug [kW]"].max())
+
         return out
 
 
@@ -477,29 +536,22 @@ def run_simulation(inp: GuiInput) -> SimOutput:
         sim.run_industry_area(inp, out)
         print('Industriegebiet \t- abgeschlossen')
 
-        sim.run_green_energy_hub(inp, out)   # Lädt nur BEV-CSV, kein H2-CSV mehr
-        print('Green Energy Hub (BEV)\t- abgeschlossen')
+        sim.run_green_energy_hub(inp, out)   # Ladeprofile, Gebäude, H2-Nachfrage, PV am Hub
+        print('Green Energy Hub \t- abgeschlossen')
 
         sim.run_juechen_sued(inp, out)
         print('Juechen-Sued \t\t- abgeschlossen')
 
-        # Vorläufige Bilanz – nötig damit der Elektrolyseur den verfügbaren
-        # Überschuss-Strom als Input bekommt
-        sim.run_balance(out)
-        out.res_df["Bilanz_vorläufig [kW]"] = out.res_df["Bilanz [kW]"].copy()
+        # GEH-Betriebsführung: Elektrolyseur, H2-Speicher, GEH-Batterie, Netz
+        sim.run_geh_dispatch_step(inp, out)
+        print('GEH-Dispatch \t\t- abgeschlossen')
 
-        # GEH – H2-Prozesskette dynamisch berechnen (Elektrolyseur + Kompressor)
-        sim.run_geh_electrolyzer(inp, out)
-        print('Green Energy Hub (H2)\t- abgeschlossen')
-
-        # Finale Bilanz inkl. Elektrolyseur- und Kompressorlast
         total_demand, total_generation, feed_in_kwh = sim.run_balance(out)
 
         sim.run_battery(inp, out)
         print('Batterie \t\t- abgeschlossen')
 
-        if hasattr(out, "bs_df") and "new_balance_kw" in out.bs_df.columns:
-            feed_in_kwh = out.bs_df["new_balance_kw"].clip(lower=0).sum() / 4
+        feed_in_kwh = out.res_df["Netzeinspeisung [kW]"].sum() * DT_H
 
         if total_generation > 0:
             out.ee_self_consumption = (total_generation - feed_in_kwh) / total_generation

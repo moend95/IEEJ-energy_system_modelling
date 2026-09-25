@@ -202,3 +202,102 @@ def test_dispatch_nullkomponenten():
     np.testing.assert_allclose(r.grid_import_kw, np.maximum(-net, 0))
     np.testing.assert_allclose(r.balance_after_kw, net)
     assert r.electrolyzer_kwh == 0 and r.battery_charge_kwh == 0
+
+
+# ---------------------------------------------------------------------------
+# Integration (vollständige run_simulation)
+# ---------------------------------------------------------------------------
+
+GEH_COLUMNS = [
+    "Last_GEH_MCS [kW]", "Last_GEH_CCS [kW]", "Last_GEH_HPC [kW]", "Last_GEH_AC [kW]",
+    "Last_GEH_Gebaeude [kW]", "Last_GEH_Elektrolyseur [kW]", "Last_GEH_Kompressor [kW]",
+    "Erzeugung_GEH_PV [kW]", "GEH_Batterie_Laden [kW]", "GEH_Batterie_Entladen [kW]",
+    "Last_Green_Energy_Hub [kW]",
+]
+GENERATION = ["Erzeugung_Solarautobahn [kW]", "Erzeugung_Energielandschaft [kW]", "Erzeugung_GEH_PV [kW]"]
+LOADS = ["Last_Industrie [kW]", "Last_Juechen_Sued [kW]", "Last_Green_Energy_Hub [kW]"]
+
+
+def standard_input(variant: str) -> GuiInput:
+    """Standardkonfiguration: A46 + Wand, Energielandschaft 50 %, Unternehmen [2–6], Jüchen-Süd 1000."""
+    return GuiInput(
+        h_highways=["A46"], h_pv_types=[0],
+        el_build_state=50, el_pv_type=5,
+        el_tractor_width=12.0, el_tractor_length=15.0, el_tractor_turn_radius=9.0,
+        i_heat_cooling_electric=True, i_companies=[2, 3, 4, 5, 6],
+        js_scenario="1000 Bewohner",
+        geh_variant=variant,
+    )
+
+
+@pytest.fixture(scope="module")
+def sim_erweiterung():
+    from Simulation import run_simulation
+    return run_simulation(standard_input("Erweiterung"))
+
+
+@pytest.fixture(scope="module")
+def sim_keine():
+    from Simulation import run_simulation
+    return run_simulation(standard_input("Keine"))
+
+
+def _col_kwh(df, column):
+    return df[column].sum() * DT_H if column in df.columns else 0.0
+
+
+@pytest.mark.slow
+def test_integration_energiebilanz(sim_erweiterung):
+    df = sim_erweiterung.res_df
+    supply = sum(_col_kwh(df, c) for c in GENERATION) + _col_kwh(df, "Netzbezug [kW]") \
+        + _col_kwh(df, "GEH_Batterie_Entladen [kW]")
+    use = sum(_col_kwh(df, c) for c in LOADS) + _col_kwh(df, "Netzeinspeisung [kW]") \
+        + _col_kwh(df, "GEH_Batterie_Laden [kW]")
+    assert supply == pytest.approx(use, rel=0.001)
+    # Last_Green_Energy_Hub enthält alle GEH-Lasten inkl. Elektrolyseur und Kompressor
+    parts = [c for c in GEH_COLUMNS if c.startswith("Last_GEH")]
+    np.testing.assert_allclose(df[parts].sum(axis=1), df["Last_Green_Energy_Hub [kW]"], atol=1e-6)
+
+
+@pytest.mark.slow
+def test_integration_ladeenergie(sim_erweiterung):
+    v = GEH_VARIANTS["Erweiterung"]
+    for attr, key in [("geh_charging_mcs_kwh", "mcs_kwh"), ("geh_charging_ccs_kwh", "ccs_kwh"),
+                      ("geh_charging_hpc_kwh", "hpc_kwh"), ("geh_charging_ac_kwh", "ac_kwh"),
+                      ("geh_building_kwh", "building_kwh")]:
+        assert getattr(sim_erweiterung, attr) == pytest.approx(v[key], rel=0.005), attr
+
+
+@pytest.mark.slow
+def test_integration_plausibilitaet(sim_erweiterung):
+    o = sim_erweiterung
+    assert 4_500 <= o.geh_electrolyzer_full_load_hours <= 5_500
+    assert o.geh_h2_unmet_kwh < 0.01 * o.geh_h2_demand_kwh
+    assert o.geh_pv_sum_energy_kwh == pytest.approx(1_060_000, rel=0.10)
+    soc_h2 = o.geh_storage_soc_df["soc_kwh"]
+    assert soc_h2.min() >= 0 and soc_h2.max() <= GEH_VARIANTS["Erweiterung"]["h2_storage_kwh"] + 1e-6
+    soc_b = o.geh_battery_soc_df["soc_kwh"]
+    assert soc_b.min() >= 0 and soc_b.max() <= GEH_VARIANTS["Erweiterung"]["battery_kwh"] + 1e-6
+
+
+@pytest.mark.slow
+def test_integration_keine(sim_keine):
+    df = sim_keine.res_df
+    for column in GEH_COLUMNS:
+        assert (df[column] == 0).all(), column
+    np.testing.assert_allclose(df["Netzbezug [kW]"], np.maximum(-df["Bilanz [kW]"], 0), atol=1e-9)
+    np.testing.assert_allclose(df["Netzeinspeisung [kW]"], np.maximum(df["Bilanz [kW]"], 0), atol=1e-9)
+    assert sim_keine.geh_sum_energy_kwh == 0
+
+
+@pytest.mark.slow
+def test_integration_allgemeine_batterie_ueberschreibt_netz():
+    from dataclasses import replace
+    from Simulation import run_simulation
+    inp = replace(standard_input("Basis"), bs_energy_kwh=10_000.0, bs_efficiency=0.9, bs_c_rate=1.0)
+    o = run_simulation(inp)
+    new_balance = o.bs_df["new_balance_kw"].to_numpy()
+    np.testing.assert_allclose(o.res_df["Netzbezug [kW]"], np.maximum(-new_balance, 0))
+    np.testing.assert_allclose(o.res_df["Netzeinspeisung [kW]"], np.maximum(new_balance, 0))
+    assert o.grid_max_import_kw == pytest.approx(max(-new_balance.min(), 0))
+    assert o.grid_import_kwh == pytest.approx(o.bs_stats["grid_import_kwh"])
