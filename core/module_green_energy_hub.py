@@ -1,12 +1,16 @@
 """
-Green Energy Hub – H2-Prozessketten-Modul
-==========================================
-Prozesskette: Überschuss-Strom → Elektrolyseur → Kompressor → H2-Speicher → Dispenser
+Green Energy Hub – Autohof der Zukunft
+======================================
+Vereinfachte Abbildung der Machbarkeitsstudie „Green Energy Hub – Autohof der
+Zukunft“ (inno2grid / PRSch, 10/2025, Zieljahr 2035) in zwei Varianten
+(Basis, Erweiterung):
 
-Einstiegsfunktion: run_geh_h2_chain()
+  - Parameter der Varianten:  GEH_VARIANTS, resolve_geh_variant()
+  - PV am Hub:                simulate_geh_pv()
+  - Betriebsführung:          run_geh_dispatch()
+    Elektrolyseur → H2-Speicher → Tankstelle, Batterie, Netzbezug/-einspeisung
 
-Wird von Simulation.py aufgerufen, nachdem eine vorläufige Bilanz berechnet wurde,
-damit der verfügbare Überschuss-Strom bekannt ist.
+Die Ladeprofile der Ladecluster liegen in core/geh_profiles.py.
 """
 
 from __future__ import annotations
@@ -142,202 +146,236 @@ def simulate_geh_pv(weather_df: pd.DataFrame, kwp: float, index: pd.DatetimeInde
 
 
 # ---------------------------------------------------------------------------
-# Ergebnis-Datenklasse
+# Variante auflösen (GEH_VARIANTS + Overrides aus GuiInput)
 # ---------------------------------------------------------------------------
-@dataclass
-class GEHResult:
-    """Ergebnisse des H2-Prozessketten-Moduls (Zeitreihen + Jahreswerte)."""
 
-    # Zeitreihen [kW] bzw. [kg] je Zeitschritt
-    electrolyzer_power_kw: pd.Series = field(default_factory=pd.Series)
-    compressor_power_kw: pd.Series = field(default_factory=pd.Series)
-    h2_production_kg: pd.Series = field(default_factory=pd.Series)
-    h2_delivered_kg: pd.Series = field(default_factory=pd.Series)
-    storage_soc_kwh: pd.Series = field(default_factory=pd.Series)
-    total_el_demand_kw: pd.Series = field(default_factory=pd.Series)
+# GuiInput-Feld → Schlüssel in GEH_VARIANTS
+_GEH_OVERRIDES: dict[str, str] = {
+    "geh_pv_kwp": "pv_kwp",
+    "geh_battery_kwh": "battery_kwh",
+    "geh_battery_kw": "battery_kw",
+    "geh_h2_demand_t_per_a": "h2_demand_t_per_a",
+    "geh_h2_min_soc": "h2_min_soc",
+    "geh_electrolyzer_power_kw": "electrolyzer_kw",
+    "geh_electrolyzer_efficiency": "electrolyzer_eff",
+    "geh_storage_capacity_kwh": "h2_storage_kwh",
+}
+
+
+def resolve_geh_variant(inp: GuiInput) -> dict | None:
+    """
+    Liefert die Parameter der gewählten Variante inkl. Overrides aus GuiInput.
+    None, wenn keine Variante aktiv ist (geh_variant None oder "Keine").
+    """
+    if inp.geh_variant not in GEH_VARIANTS:
+        return None
+    variant = dict(GEH_VARIANTS[inp.geh_variant])
+    for inp_field, key in _GEH_OVERRIDES.items():
+        value = getattr(inp, inp_field, None)
+        if value is not None:
+            variant[key] = float(value)
+    return variant
+
+
+# ---------------------------------------------------------------------------
+# Dispatch (regelbasiert, 1:1 nach JavaScript übertragbar)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class GEHParams:
+    """Anlagenparameter für run_geh_dispatch."""
+
+    electrolyzer_kw: float
+    electrolyzer_eff: float
+    h2_storage_kwh: float
+    h2_min_soc: float          # 0..1
+    h2_soc_start: float        # 0..1
+    battery_kwh: float
+    battery_kw: float
+    battery_eff_rt: float
+    battery_soc_start: float   # 0..1
+    compressor_factor: float = COMPRESSOR_FACTOR
+
+    @classmethod
+    def from_variant(cls, variant: dict | None) -> "GEHParams":
+        """Parameter aus einer aufgelösten Variante; None ergibt Nullkomponenten."""
+        if variant is None:
+            return cls(
+                electrolyzer_kw=0.0, electrolyzer_eff=1.0, h2_storage_kwh=0.0,
+                h2_min_soc=0.0, h2_soc_start=0.0, battery_kwh=0.0, battery_kw=0.0,
+                battery_eff_rt=1.0, battery_soc_start=0.0,
+            )
+        return cls(
+            electrolyzer_kw=float(variant["electrolyzer_kw"]),
+            electrolyzer_eff=float(variant["electrolyzer_eff"]),
+            h2_storage_kwh=float(variant["h2_storage_kwh"]),
+            h2_min_soc=float(variant["h2_min_soc"]),
+            h2_soc_start=float(variant["soc_start"]),
+            battery_kwh=float(variant["battery_kwh"]),
+            battery_kw=float(variant["battery_kw"]),
+            battery_eff_rt=float(variant["battery_eff_rt"]),
+            battery_soc_start=float(variant["soc_start"]),
+        )
+
+
+def _zeros() -> np.ndarray:
+    return np.zeros(0)
+
+
+@dataclass
+class GEHDispatchResult:
+    """Ergebnisse von run_geh_dispatch (Zeitreihen [kW] bzw. [kWh] + Jahreswerte)."""
+
+    # Zeitreihen
+    electrolyzer_kw: np.ndarray = field(default_factory=_zeros)
+    compressor_kw: np.ndarray = field(default_factory=_zeros)
+    h2_soc_kwh: np.ndarray = field(default_factory=_zeros)
+    h2_delivered_kwh: np.ndarray = field(default_factory=_zeros)     # je Zeitschritt [kWh_H2]
+    battery_charge_kw: np.ndarray = field(default_factory=_zeros)
+    battery_discharge_kw: np.ndarray = field(default_factory=_zeros)
+    battery_soc_kwh: np.ndarray = field(default_factory=_zeros)
+    grid_import_kw: np.ndarray = field(default_factory=_zeros)
+    grid_export_kw: np.ndarray = field(default_factory=_zeros)
+    balance_after_kw: np.ndarray = field(default_factory=_zeros)
+
+    # Startwerte (für Bilanzprüfungen)
+    h2_soc_start_kwh: float = 0.0
+    battery_soc_start_kwh: float = 0.0
 
     # Jahreswerte
+    electrolyzer_kwh: float = 0.0
+    compressor_kwh: float = 0.0
     h2_production_kwh: float = 0.0
-    compressor_demand_kwh: float = 0.0
-    h2_delivered_kwh: float = 0.0
-    h2_curtailed_kwh: float = 0.0
+    h2_demand_kwh: float = 0.0
+    h2_delivered_total_kwh: float = 0.0
+    unmet_kwh: float = 0.0
+    electrolyzer_full_load_hours: float = 0.0
+    battery_charge_kwh: float = 0.0
+    battery_discharge_kwh: float = 0.0
+    battery_full_cycles: float = 0.0
+    grid_import_kwh: float = 0.0
+    grid_export_kwh: float = 0.0
+    grid_max_import_kw: float = 0.0
 
 
-# ---------------------------------------------------------------------------
-# Teilschritte
-# ---------------------------------------------------------------------------
-
-def _electrolyzer_step(
-    surplus_kw: pd.Series,
-    p_nominal_kw: float,
-    efficiency: float,
-    dt_h: float,
-) -> tuple[pd.Series, pd.Series]:
-    """
-    Vereinfachtes Elektrolyseur-Modell (Stationär, ohne Anlaufzeiten).
-
-    Der Elektrolyseur nimmt Strom bis zur Nennleistung ab, wenn Überschuss
-    vorhanden ist. H2-Produktion = Strombezug × Systemwirkungsgrad / LHV.
-
-    Returns:
-        el_power_kw  – tatsächlicher Strombezug [kW] je Zeitschritt
-        h2_kg_per_dt – H2-Massenstrom [kg] je Zeitschritt
-    """
-    el_power_kw = surplus_kw.clip(lower=0.0).clip(upper=p_nominal_kw)
-    h2_kwh_per_dt = el_power_kw * dt_h * efficiency
-    h2_kg_per_dt = h2_kwh_per_dt / LHV_H2_KWH_PER_KG
-    return el_power_kw, h2_kg_per_dt
-
-
-def _compressor_step(h2_kg_per_dt: pd.Series, dt_h: float) -> pd.Series:
-    """
-    Vereinfachtes Kompressor-Modell (30 → 1000 bar).
-
-    Strombedarf ≈ COMPRESSOR_FACTOR × H2-Energie je Zeitschritt.
-    Gibt Leistung in kW zurück.
-    """
-    h2_kwh_per_dt = h2_kg_per_dt * LHV_H2_KWH_PER_KG
-    comp_kwh_per_dt = h2_kwh_per_dt * COMPRESSOR_FACTOR
-    return comp_kwh_per_dt / dt_h  # kW
-
-
-def _storage_step(
-    h2_produced_kwh: pd.Series,
-    h2_demanded_kwh: pd.Series,
-    capacity_kwh: float,
-    max_charge_kw: float,
-    dt_h: float,
-) -> tuple[pd.Series, pd.Series, float]:
-    """
-    Einfaches SOC-Tracking für den H2-Speicher.
-
-    Logik je Zeitschritt:
-      1. Produktion deckt Nachfrage direkt
-      2. Restbedarf kommt aus dem Speicher
-      3. Überschuss-H2 geht in den Speicher (bis Kapazität)
-      4. Kann der Speicher nicht mehr aufnehmen → Abregelung
-
-    Returns:
-        h2_delivered_kwh – tatsächlich an Dispenser gelieferte H2-Energie [kWh]
-        soc_kwh          – Speicher-SOC je Zeitschritt [kWh_H2]
-        curtailed_kwh    – Abgeregelter H2 (kein Platz) [kWh_H2]
-    """
-    max_charge_kwh = max_charge_kw * dt_h if max_charge_kw > 0 else float("inf")
-
-    soc = 0.0
-    soc_list: list[float] = []
-    delivered_list: list[float] = []
-    curtailed_total = 0.0
-
-    for produced, demanded in zip(h2_produced_kwh, h2_demanded_kwh):
-        # Nachfrage zuerst aus aktueller Produktion decken
-        direct = min(produced, demanded)
-        surplus = produced - direct
-        remaining_demand = demanded - direct
-
-        # Restbedarf aus Speicher
-        from_storage = min(remaining_demand, soc)
-        soc -= from_storage
-        delivered = direct + from_storage
-
-        # Überschuss in Speicher laden (max. Ladeleistung + freie Kapazität)
-        to_storage = min(surplus, capacity_kwh - soc, max_charge_kwh)
-        soc += to_storage
-        soc = max(0.0, min(soc, capacity_kwh))  # Numerische Absicherung
-
-        curtailed_this = surplus - to_storage
-        curtailed_total += max(0.0, curtailed_this)
-
-        soc_list.append(soc)
-        delivered_list.append(delivered)
-
-    idx = h2_produced_kwh.index
-    return (
-        pd.Series(delivered_list, index=idx, dtype=float),
-        pd.Series(soc_list, index=idx, dtype=float),
-        curtailed_total,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Haupt-Einstiegsfunktion
-# ---------------------------------------------------------------------------
-
-def run_geh_h2_chain(
-    inp: GuiInput,
-    surplus_kw: pd.Series,
+def run_geh_dispatch(
+    net_kw: np.ndarray,
+    h2_demand_kwh: np.ndarray,
+    p: GEHParams,
     dt_h: float = 0.25,
-) -> GEHResult:
+) -> GEHDispatchResult:
     """
-    Berechnet die H2-Prozesskette des Green Energy Hubs.
+    Regelbasierte Betriebsführung des Green Energy Hubs je Zeitschritt.
+
+    Reihenfolge je Zeitschritt:
+      1. Elektrolyseur: nur Überschuss; unter Mindestfüllstand volle Leistung
+         (Versorgungssicherung, notfalls mit Netz-/Batteriestrom); begrenzt durch
+         den freien Platz im H2-Speicher
+      2. H2-Speicher: Produktion rein, Tankstellennachfrage raus
+      3. Batterie: nimmt Rest-Überschuss auf, deckt Defizite
+      4. Netz: verbleibender Überschuss → Einspeisung, Defizit → Bezug
 
     Args:
-        inp:        GuiInput mit GEH-Parametern (geh_electrolyzer_power_kw etc.)
-        surplus_kw: Vorläufige Bilanz [kW] – positiv = Strom-Überschuss
-        dt_h:       Zeitschrittgröße [h] (Standard 0.25 = 15 min)
-
-    Returns:
-        GEHResult mit Zeitreihen und aggregierten Jahreswerten
+        net_kw:        Park-Bilanz vor Flexibilität [kW], positiv = Überschuss
+        h2_demand_kwh: H2-Nachfrage Tankstelle je Zeitschritt [kWh_H2]
+        p:             Anlagenparameter
+        dt_h:          Zeitschrittgröße [h]
     """
-    result = GEHResult()
-    idx = surplus_kw.index
+    n = len(net_kw)
+    el_arr = np.zeros(n)
+    comp_arr = np.zeros(n)
+    soc_h2_arr = np.zeros(n)
+    delivered_arr = np.zeros(n)
+    ch_arr = np.zeros(n)
+    dis_arr = np.zeros(n)
+    soc_b_arr = np.zeros(n)
+    import_arr = np.zeros(n)
+    export_arr = np.zeros(n)
+    balance_arr = np.zeros(n)
 
-    p_nom = float(inp.geh_electrolyzer_power_kw or 0.0)
-    if p_nom <= 0.0:
-        empty = pd.Series(0.0, index=idx)
-        result.electrolyzer_power_kw = empty
-        result.compressor_power_kw = empty
-        result.h2_production_kg = empty
-        result.h2_delivered_kg = empty
-        result.storage_soc_kwh = empty
-        result.total_el_demand_kw = empty
-        return result
+    eta_c = np.sqrt(p.battery_eff_rt)
+    eta_d = eta_c
+    soc_h2 = p.h2_soc_start * p.h2_storage_kwh
+    soc_b = p.battery_soc_start * p.battery_kwh
+    h2_min_kwh = p.h2_min_soc * p.h2_storage_kwh
+    el_active = p.electrolyzer_kw > 0.0 and p.electrolyzer_eff > 0.0
+    battery_active = p.battery_kwh > 0.0 and p.battery_kw > 0.0
+    unmet = 0.0
 
-    efficiency = float(inp.geh_electrolyzer_efficiency or 0.70)
-    capacity_kwh = float(inp.geh_storage_capacity_kwh or 0.0)
-    max_charge_kw = float(inp.geh_storage_max_charge_kw or p_nom)
-    dispenser_kg_per_h = float(inp.geh_dispenser_demand_kg_per_h or 0.0)
+    for t in range(n):
+        demand_t = float(h2_demand_kwh[t])
+        net_t = float(net_kw[t])
 
-    # 1 – Elektrolyseur
-    el_kw, h2_kg_dt = _electrolyzer_step(surplus_kw, p_nom, efficiency, dt_h)
-    h2_kwh_dt = h2_kg_dt * LHV_H2_KWH_PER_KG
+        # 1) Elektrolyseur
+        p_el_max = 0.0
+        if el_active:
+            free_h2 = p.h2_storage_kwh - soc_h2 + demand_t   # so viel H2 passt noch rein (inkl. Abgabe)
+            p_el_max = min(p.electrolyzer_kw, max(free_h2, 0.0) / (p.electrolyzer_eff * dt_h))
+        if soc_h2 < h2_min_kwh:
+            p_el = p_el_max                                  # Versorgungssicherung
+        else:
+            p_el = min(p_el_max, max(net_t, 0.0))            # nur Überschuss
+        p_comp = p.compressor_factor * p_el * p.electrolyzer_eff
+        net2 = net_t - p_el - p_comp
 
-    # 2 – Kompressor
-    comp_kw = _compressor_step(h2_kg_dt, dt_h)
+        # 2) H2-Speicher
+        prod = p_el * p.electrolyzer_eff * dt_h
+        avail = soc_h2 + prod
+        delivered = min(demand_t, avail)
+        unmet += demand_t - delivered
+        soc_h2 = min(avail - delivered, p.h2_storage_kwh)
 
-    # 3 – Dispenser-Nachfrage (konstantes Profil aus Eingabeparameter)
-    dispenser_kwh_dt = pd.Series(
-        dispenser_kg_per_h * dt_h * LHV_H2_KWH_PER_KG,
-        index=idx,
-        dtype=float,
+        # 3) Batterie
+        ch = 0.0
+        dis = 0.0
+        if net2 > 0.0:
+            if battery_active:
+                ch = min(net2, p.battery_kw, (p.battery_kwh - soc_b) / (eta_c * dt_h))
+            soc_b += ch * eta_c * dt_h
+            net3 = net2 - ch
+        else:
+            if battery_active:
+                dis = min(-net2, p.battery_kw, soc_b * eta_d / dt_h)
+            soc_b -= dis / eta_d * dt_h
+            net3 = net2 + dis
+
+        # 4) Netz
+        el_arr[t] = p_el
+        comp_arr[t] = p_comp
+        soc_h2_arr[t] = soc_h2
+        delivered_arr[t] = delivered
+        ch_arr[t] = ch
+        dis_arr[t] = dis
+        soc_b_arr[t] = soc_b
+        export_arr[t] = max(net3, 0.0)
+        import_arr[t] = max(-net3, 0.0)
+        balance_arr[t] = net3
+
+    r = GEHDispatchResult(
+        electrolyzer_kw=el_arr,
+        compressor_kw=comp_arr,
+        h2_soc_kwh=soc_h2_arr,
+        h2_delivered_kwh=delivered_arr,
+        battery_charge_kw=ch_arr,
+        battery_discharge_kw=dis_arr,
+        battery_soc_kwh=soc_b_arr,
+        grid_import_kw=import_arr,
+        grid_export_kw=export_arr,
+        balance_after_kw=balance_arr,
+        h2_soc_start_kwh=p.h2_soc_start * p.h2_storage_kwh,
+        battery_soc_start_kwh=p.battery_soc_start * p.battery_kwh,
     )
-
-    # 4 – Speicher-Tracking
-    if capacity_kwh > 0.0:
-        delivered_kwh, soc_kwh, curtailed = _storage_step(
-            h2_kwh_dt, dispenser_kwh_dt, capacity_kwh, max_charge_kw, dt_h
-        )
-    else:
-        # Kein Speicher: direkter Durchlauf
-        delivered_kwh = pd.Series(
-            np.minimum(h2_kwh_dt.values, dispenser_kwh_dt.values),
-            index=idx,
-            dtype=float,
-        )
-        soc_kwh = pd.Series(0.0, index=idx)
-        curtailed = float((h2_kwh_dt - delivered_kwh).clip(lower=0.0).sum())
-
-    # 5 – Ergebnisse
-    result.electrolyzer_power_kw = el_kw
-    result.compressor_power_kw = comp_kw
-    result.h2_production_kg = h2_kg_dt
-    result.h2_delivered_kg = delivered_kwh / LHV_H2_KWH_PER_KG
-    result.storage_soc_kwh = soc_kwh
-    result.total_el_demand_kw = el_kw + comp_kw
-
-    result.h2_production_kwh = float(h2_kwh_dt.sum())
-    result.compressor_demand_kwh = float((comp_kw * dt_h).sum())
-    result.h2_delivered_kwh = float(delivered_kwh.sum())
-    result.h2_curtailed_kwh = curtailed
-
-    return result
+    r.electrolyzer_kwh = float(el_arr.sum() * dt_h)
+    r.compressor_kwh = float(comp_arr.sum() * dt_h)
+    r.h2_production_kwh = r.electrolyzer_kwh * p.electrolyzer_eff
+    r.h2_demand_kwh = float(np.sum(h2_demand_kwh))
+    r.h2_delivered_total_kwh = float(delivered_arr.sum())
+    r.unmet_kwh = unmet
+    r.electrolyzer_full_load_hours = r.electrolyzer_kwh / p.electrolyzer_kw if p.electrolyzer_kw > 0 else 0.0
+    r.battery_charge_kwh = float(ch_arr.sum() * dt_h)
+    r.battery_discharge_kwh = float(dis_arr.sum() * dt_h)
+    r.battery_full_cycles = r.battery_discharge_kwh / p.battery_kwh if p.battery_kwh > 0 else 0.0
+    r.grid_import_kwh = float(import_arr.sum() * dt_h)
+    r.grid_export_kwh = float(export_arr.sum() * dt_h)
+    r.grid_max_import_kw = float(import_arr.max()) if n else 0.0
+    return r

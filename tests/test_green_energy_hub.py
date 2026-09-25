@@ -120,3 +120,85 @@ def test_geh_pv_erweiterung_ertrag(weather_df):
 def test_geh_pv_null_kwp(weather_df):
     from core.module_green_energy_hub import simulate_geh_pv
     assert (simulate_geh_pv(weather_df, 0.0, weather_df.index) == 0).all()
+
+
+# ---------------------------------------------------------------------------
+# Dispatch mit synthetischen Arrays
+# ---------------------------------------------------------------------------
+
+from core.module_green_energy_hub import GEHParams, run_geh_dispatch
+
+
+def _check_invariants(net, demand, p, r):
+    eta = np.sqrt(p.battery_eff_rt)
+    tol = 1e-6
+    # Batterie
+    assert (r.battery_soc_kwh >= -tol).all() and (r.battery_soc_kwh <= p.battery_kwh + tol).all()
+    assert not ((r.battery_charge_kw > tol) & (r.battery_discharge_kw > tol)).any()
+    assert r.battery_charge_kw.max() <= p.battery_kw + tol
+    assert r.battery_discharge_kw.max() <= p.battery_kw + tol
+    batt = (r.battery_charge_kw.sum() * eta - r.battery_discharge_kw.sum() / eta) * DT_H
+    assert batt == pytest.approx(r.battery_soc_kwh[-1] - r.battery_soc_start_kwh, abs=1.0)
+    # H2
+    assert (r.h2_soc_kwh >= -tol).all() and (r.h2_soc_kwh <= p.h2_storage_kwh + tol).all()
+    assert r.electrolyzer_kw.max() <= p.electrolyzer_kw + tol
+    h2 = r.h2_production_kwh - r.h2_delivered_total_kwh
+    assert h2 == pytest.approx(r.h2_soc_kwh[-1] - r.h2_soc_start_kwh, abs=1.0)
+    assert r.h2_delivered_total_kwh + r.unmet_kwh == pytest.approx(demand.sum(), abs=1e-6)
+    # Speicher voll → Produktion ≤ Nachfrage
+    prod = r.electrolyzer_kw * p.electrolyzer_eff * DT_H
+    prev_soc = np.concatenate(([r.h2_soc_start_kwh], r.h2_soc_kwh[:-1]))
+    full = prev_soc >= p.h2_storage_kwh - tol
+    assert (prod[full] <= demand[full] + tol).all()
+    # Leistungsbilanz je Zeitschritt
+    lhs = net + r.grid_import_kw + r.battery_discharge_kw
+    rhs = r.electrolyzer_kw + r.compressor_kw + r.grid_export_kw + r.battery_charge_kw
+    np.testing.assert_allclose(lhs, rhs, atol=1e-6)
+    assert not ((r.grid_import_kw > tol) & (r.grid_export_kw > tol)).any()
+
+
+@pytest.fixture(scope="module")
+def synthetic():
+    rng = np.random.default_rng(1)
+    n = 4 * 24 * 60
+    t = np.arange(n)
+    net = 3000 * np.sin(2 * np.pi * t / 96) + rng.normal(0, 1500, n) - 500
+    demand = np.full(n, 150.0) + rng.uniform(0, 300, n)
+    return net, demand
+
+
+def test_dispatch_invarianten(synthetic):
+    net, demand = synthetic
+    p = GEHParams.from_variant(GEH_VARIANTS["Erweiterung"])
+    _check_invariants(net, demand, p, run_geh_dispatch(net, demand, p, DT_H))
+
+
+def test_dispatch_kleiner_speicher_und_batterie(synthetic):
+    net, demand = synthetic
+    p = GEHParams.from_variant({**GEH_VARIANTS["Basis"], "h2_storage_kwh": 2_000.0,
+                                "battery_kwh": 500.0, "battery_kw": 200.0})
+    _check_invariants(net, demand, p, run_geh_dispatch(net, demand, p, DT_H))
+
+
+def test_dispatch_mindestfuellstand_nutzt_netz():
+    n = 96
+    net = np.full(n, -1000.0)   # dauerhaftes Defizit, kein Überschuss
+    demand = np.zeros(n)
+    p = GEHParams.from_variant({**GEH_VARIANTS["Basis"], "soc_start": 0.0, "battery_kwh": 0.0})
+    r = run_geh_dispatch(net, demand, p, DT_H)
+    assert r.electrolyzer_kw[0] == pytest.approx(p.electrolyzer_kw)
+    assert r.grid_import_kw[0] == pytest.approx(1000 + p.electrolyzer_kw * (1 + p.compressor_factor * p.electrolyzer_eff))
+    # oberhalb des Mindestfüllstands ohne Überschuss aus
+    above = r.h2_soc_kwh >= p.h2_min_soc * p.h2_storage_kwh
+    idx = np.argmax(above)
+    assert (r.electrolyzer_kw[idx + 1:] == 0).all()
+
+
+def test_dispatch_nullkomponenten():
+    net = np.array([500.0, -300.0, 0.0, 1200.0])
+    demand = np.array([10.0, 0.0, 5.0, 0.0])
+    r = run_geh_dispatch(net, demand, GEHParams.from_variant(None), DT_H)
+    np.testing.assert_allclose(r.grid_export_kw, np.maximum(net, 0))
+    np.testing.assert_allclose(r.grid_import_kw, np.maximum(-net, 0))
+    np.testing.assert_allclose(r.balance_after_kw, net)
+    assert r.electrolyzer_kwh == 0 and r.battery_charge_kwh == 0
