@@ -9,6 +9,8 @@ import sys
 from dataclasses import fields
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +18,25 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.io_types import GuiInput, SimOutput
+from core.geh_profiles import build_geh_load_profiles
+from core.module_green_energy_hub import GEH_VARIANTS, LHV_H2_KWH_PER_KG
+
+DT_H = 0.25
+# Gleicher Zeitindex wie die Wetterdaten (2021, 15 min, tz-naiv UTC)
+YEAR_INDEX = pd.date_range("2021-01-01 00:00", periods=35_040, freq="15min")
+
+CLUSTERS = [
+    ("mcs_kw", "mcs_kwh", "mcs_limit_kw"),
+    ("ccs_kw", "ccs_kwh", "ccs_limit_kw"),
+    ("hpc_kw", "hpc_kwh", "hpc_limit_kw"),
+    ("ac_kw", "ac_kwh", "ac_limit_kw"),
+    ("building_kw", "building_kwh", None),
+]
+
+
+@pytest.fixture(scope="module")
+def profiles():
+    return {name: build_geh_load_profiles(YEAR_INDEX, v) for name, v in GEH_VARIANTS.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -39,3 +60,40 @@ def test_simoutput_geh_felder():
                 "geh_h2_unmet_kwh", "geh_battery_full_cycles", "geh_battery_soc_df",
                 "grid_import_kwh", "grid_export_kwh", "grid_max_import_kw"):
         assert neu in names
+
+
+# ---------------------------------------------------------------------------
+# Ladeprofile
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("variant", ["Basis", "Erweiterung"])
+def test_profile_jahresenergie_und_grenzen(profiles, variant):
+    v = GEH_VARIANTS[variant]
+    df = profiles[variant]
+    for col, energy_key, limit_key in CLUSTERS:
+        energy = df[col].sum() * DT_H
+        assert energy == pytest.approx(v[energy_key], rel=0.005, abs=1e-6), col
+        if limit_key is not None:
+            assert df[col].max() <= v[limit_key] + 1e-9, col
+    h2_target = v["h2_demand_t_per_a"] * 1000 * LHV_H2_KWH_PER_KG
+    assert df["h2_demand_kwh"].sum() == pytest.approx(h2_target, rel=0.005)
+    assert (df.to_numpy() >= 0).all()
+
+
+def test_profile_basis_ohne_parkhaus(profiles):
+    assert (profiles["Basis"]["ac_kw"] == 0).all()
+
+
+def test_profile_reproduzierbar():
+    a = build_geh_load_profiles(YEAR_INDEX, GEH_VARIANTS["Erweiterung"], seed=7)
+    b = build_geh_load_profiles(YEAR_INDEX, GEH_VARIANTS["Erweiterung"], seed=7)
+    pd.testing.assert_frame_equal(a, b)
+
+
+def test_profile_sonntagsfahrverbot(profiles):
+    df = profiles["Erweiterung"]
+    local = YEAR_INDEX.tz_localize("UTC").tz_convert("Europe/Berlin")
+    sunday = local.weekday == 6
+    ban = df["mcs_kw"][sunday & (local.hour < 22)].mean()
+    after = df["mcs_kw"][sunday & (local.hour >= 22)].mean()
+    assert after > 2 * ban

@@ -26,6 +26,46 @@ LHV_H2_KWH_PER_KG: float = 33.33  # Unterer Heizwert Wasserstoff [kWh/kg]
 # Abgeleitet aus MA_Saur_GEH.py (energy_loss_compressor ≈ 5–8 %)
 COMPRESSOR_FACTOR: float = 0.06
 
+# ---------------------------------------------------------------------------
+# Varianten aus der Machbarkeitsstudie „Green Energy Hub – Autohof der Zukunft“
+# (inno2grid / PRSch, 10/2025, Zieljahr 2035)
+# ---------------------------------------------------------------------------
+GEH_PV_KWP_PARKHAUSDACH: float = 500.0      # ANNAHME, nicht aus Studie (Basis = Erweiterung − Parkhausdach)
+GEH_BATTERY_EFF_RT: float = 0.90            # ANNAHME, nicht aus Studie
+GEH_H2_MIN_SOC: float = 0.30                # ANNAHME, nicht aus Studie
+GEH_SOC_START: float = 0.50                 # ANNAHME, nicht aus Studie (H2-Speicher und Batterie)
+
+# H2-Nachfrage abgeleitet: 1.500 kW × 5.000 h × 0,70 / 33,33 kWh/kg ≈ 157,5 t/a
+GEH_H2_DEMAND_T_PER_A: float = 157.5
+
+_GEH_COMMON: dict = {
+    # Ladecluster: Jahresenergie [kWh/a], Leistungsgrenze [kW], Ladepunkte × Leistung [kW]
+    "mcs_kwh": 11_108_000.0, "mcs_limit_kw": 2_400.0, "mcs_points": 4, "mcs_point_kw": 750.0,
+    "ccs_kwh": 3_699_000.0, "ccs_limit_kw": 1_600.0, "ccs_points": 17, "ccs_point_kw": None,
+    "hpc_kwh": 2_632_000.0, "hpc_limit_kw": 2_400.0, "hpc_points": 20, "hpc_point_kw": 150.0,
+    "ac_limit_kw": 220.0, "ac_points": 102, "ac_point_kw": 11.0,
+    "building_kwh": 135_000.0,
+    # Batteriespeicher
+    "battery_kwh": 6_200.0, "battery_kw": 5_000.0, "battery_eff_rt": GEH_BATTERY_EFF_RT,
+    # H2-Kette
+    "electrolyzer_kw": 1_500.0, "electrolyzer_eff": 0.70,
+    "h2_storage_kwh": 40_000.0, "h2_demand_t_per_a": GEH_H2_DEMAND_T_PER_A,
+    "h2_min_soc": GEH_H2_MIN_SOC, "soc_start": GEH_SOC_START,
+}
+
+GEH_VARIANTS: dict[str, dict] = {
+    "Basis": {
+        **_GEH_COMMON,
+        "ac_kwh": 0.0,                                   # Parkhaus entfällt
+        "pv_kwp": 1_245.0 - GEH_PV_KWP_PARKHAUSDACH,     # 745 kWp
+    },
+    "Erweiterung": {
+        **_GEH_COMMON,
+        "ac_kwh": 560_000.0,
+        "pv_kwp": 1_245.0,
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Ergebnis-Datenklasse
