@@ -1,6 +1,7 @@
 import argparse
 import json
 import shutil
+from itertools import product
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -53,12 +54,11 @@ def canonicalize_input(raw_input: dict[str, Any]) -> dict[str, Any]:
         "el_tractor_turn_radius": round_float(raw_input.get("el_tractor_turn_radius"), 3),
         "i_heat_cooling_electric": bool(raw_input.get("i_heat_cooling_electric", False)),
         "i_companies": sort_unique_ints(raw_input.get("i_companies", [])),
-        "geh_h2_load_scenario": str(raw_input.get("geh_h2_load_scenario") or "Keine"),
-        "geh_e_load_scenario": str(raw_input.get("geh_e_load_scenario") or "Keine"),
+        "geh_variant": str(raw_input.get("geh_variant") or "Keine"),
         "bs_energy_kwh": bs_energy_kwh if battery_active else None,
         "bs_efficiency": round_float(raw_input.get("bs_efficiency"), 3) if battery_active else None,
         "bs_c_rate": round_float(raw_input.get("bs_c_rate"), 3) if battery_active else None,
-        "js_scenario": str(raw_input.get("js_scenario") or "Aus"),
+        "js_concept": str(raw_input.get("js_concept") or "Aus"),
     }
 
 
@@ -80,14 +80,14 @@ def build_permutation_space() -> list[GuiInput]:
     # Core axis 2: energy landscape stages
     landscape_stages = [
         {
-            "el_build_state": 0,
+            "el_build_state": 50,
             "el_pv_type": 5,
             "el_tractor_width": 12.0,
             "el_tractor_length": 15.0,
             "el_tractor_turn_radius": 9.0,
         },
         {
-            "el_build_state": 50,
+            "el_build_state": 0,
             "el_pv_type": 5,
             "el_tractor_width": 12.0,
             "el_tractor_length": 15.0,
@@ -123,11 +123,15 @@ def build_permutation_space() -> list[GuiInput]:
         {"bs_energy_kwh": None, "bs_efficiency": None, "bs_c_rate": None},
     ]
 
+    # Achse 5 und 6: Green-Energy-Hub-Variante und Jüchen-Süd-Versorgungskonzept (UI-Standard zuerst)
+    geh_variants = ["Basis", "Erweiterung", "Keine"]
+    js_concepts = ["Dezentral", "Warmes Netz", "Kaltes Netz", "Aus"]
+
     combinations: list[GuiInput] = []
     for solar in solar_combinations:
         for landscape in landscape_stages:
             for industry in industry_profiles:
-                for battery in battery_sizes:
+                for battery, geh_variant, js_concept in product(battery_sizes, geh_variants, js_concepts):
                     combinations.append(
                         GuiInput(
                             h_highways=list(solar["h_highways"]),
@@ -139,15 +143,8 @@ def build_permutation_space() -> list[GuiInput]:
                             el_tractor_turn_radius=float(landscape["el_tractor_turn_radius"]),
                             i_heat_cooling_electric=True,
                             i_companies=list(industry),
-                            geh_h2_load_scenario="2022",
-                            geh_e_load_scenario="2022",
-                            # H2-Prozesskette: Standardparameter für Webszenarien
-                            geh_electrolyzer_power_kw=1000.0,       # 1 MW Elektrolyseur
-                            geh_electrolyzer_efficiency=0.70,        # 70 % Systemwirkungsgrad
-                            geh_storage_capacity_kwh=10_000.0,       # 10 MWh H2-Speicher
-                            geh_storage_max_charge_kw=1000.0,        # Max. Ladeleistung = Elektrolyseur
-                            geh_dispenser_demand_kg_per_h=10.0,      # ~330 kW Dauerverbrauch
-                            js_scenario="1000 Bewohner",
+                            geh_variant=geh_variant,
+                            js_concept=js_concept,
                             bs_energy_kwh=battery["bs_energy_kwh"],
                             bs_efficiency=battery["bs_efficiency"],
                             bs_c_rate=battery["bs_c_rate"],

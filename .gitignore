@@ -17,6 +17,7 @@ env/
 
 # Generierte/vorberechnete Szenarien (zu groß für Git, mit generate_all_scenarios.py neu erzeugen)
 web_frontend/precomputed/
+web_frontend/precomputed_legacy_schema_1_0/
 data/outputs/precomputed/
 
 # Sonstige Output-Daten

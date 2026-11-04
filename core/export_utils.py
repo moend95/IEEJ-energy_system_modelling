@@ -180,6 +180,16 @@ def export_scenario_flows_to_json(
             "direction": "right",
         },
         {
+            "id": "hub_pv_to_system",
+            "source": "hub",
+            "target": "system",
+            "flow_type": "generation",
+            "annual_kwh": geh_pv_kwh,
+            "peak_kw": max(_safe_float(getattr(sim_output, "geh_pv_max_power_kw", 0.0)), 0.0),
+            "color": "#10B35A",
+            "direction": "left",
+        },
+        {
             "id": "system_to_hub",
             "source": "system",
             "target": "hub",

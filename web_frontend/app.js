@@ -119,12 +119,11 @@ function canonicalizeInput(rawInput) {
     el_tractor_turn_radius: roundFloat(tractorTurnRadius, 3),
     i_heat_cooling_electric: true,
     i_companies: sortUniqueInts(rawInput.i_companies || []),
-    geh_h2_load_scenario: String(rawInput.geh_h2_load_scenario || "Keine"),
-    geh_e_load_scenario: String(rawInput.geh_e_load_scenario || "Keine"),
+    geh_variant: String(rawInput.geh_variant || "Keine"),
     bs_energy_kwh: null,
     bs_efficiency: null,
     bs_c_rate: null,
-    js_scenario: String(rawInput.js_scenario || "Aus"),
+    js_concept: String(rawInput.js_concept || "Aus"),
   };
 }
 
@@ -166,9 +165,8 @@ function collectRawInput() {
     el_pv_type: getNumberValue("el-pv-type", 5),
     el_tractor_width: getNumberValue("el-tractor-width", 12),
     i_companies: getIndustryCompanyValues(),
-    geh_h2_load_scenario: document.getElementById("geh-h2")?.value || "Keine",
-    geh_e_load_scenario: document.getElementById("geh-e")?.value || "Keine",
-    js_scenario: document.getElementById("js-scenario")?.value || "Aus",
+    geh_variant: document.getElementById("geh-variant")?.value || "Keine",
+    js_concept: document.getElementById("js-concept")?.value || "Aus",
   };
 }
 
@@ -206,8 +204,8 @@ function updateModuleFeedback(cInput) {
   const solarActive = cInput.h_highways.length > 0 && cInput.h_pv_types.length > 0;
   const landscapeActive = Number(cInput.el_build_state) > 0;
   const industryActive = cInput.i_companies.length > 0;
-  const gehActive = cInput.geh_h2_load_scenario !== "Keine" || cInput.geh_e_load_scenario !== "Keine";
-  const jsActive = cInput.js_scenario !== "Aus";
+  const gehActive = cInput.geh_variant !== "Keine";
+  const jsActive = cInput.js_concept !== "Aus";
 
   setInfoHidden("info-solar", solarActive);
   setInfoHidden("info-industry", industryActive);
@@ -733,9 +731,8 @@ function setupReactiveInputHandlers() {
     "#i-company-3",
     "#i-company-4",
     "#i-company-5",
-    "#geh-h2",
-    "#geh-e",
-    "#js-scenario",
+    "#geh-variant",
+    "#js-concept",
   ];
 
   selectors.forEach((selector) => {
