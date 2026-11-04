@@ -75,7 +75,7 @@ DEFAULT_FLOW_EDGES = [
 ]
 
 GEH_VARIANT_OPTIONS = ["Keine", "Basis", "Erweiterung"]
-JS_SCENARIO_OPTIONS = ["Aus", "1000 Bewohner", "2000 Bewohner", "3000 Bewohner"]
+JS_CONCEPT_OPTIONS = ["Aus", "Warmes Netz", "Kaltes Netz", "Dezentral"]
 
 
 def _sort_unique_ints(values: list[Any]) -> list[int]:
@@ -119,7 +119,7 @@ def _canonicalize_input(raw_input: dict[str, Any]) -> dict[str, Any]:
         "bs_energy_kwh": bs_energy_kwh if battery_active else None,
         "bs_efficiency": _round_float(raw_input.get("bs_efficiency"), 3) if battery_active else None,
         "bs_c_rate": _round_float(raw_input.get("bs_c_rate"), 3) if battery_active else None,
-        "js_scenario": str(raw_input.get("js_scenario") or "Aus"),
+        "js_concept": str(raw_input.get("js_concept") or "Aus"),
     }
 
 
@@ -642,12 +642,12 @@ def _render_selector_form() -> dict[str, Any]:
                 st.info(f"Green Energy Hub aktiv: {geh_variant}")
 
         with tab_con3:
-            js_scenario = st.segmented_control("Szenario", options=JS_SCENARIO_OPTIONS, default="1000 Bewohner")
-            js_scenario = "Aus" if js_scenario is None else str(js_scenario)
-            if js_scenario == "Aus":
+            js_concept = st.segmented_control("Versorgungskonzept", options=JS_CONCEPT_OPTIONS, default="Dezentral")
+            js_concept = "Aus" if js_concept is None else str(js_concept)
+            if js_concept == "Aus":
                 st.info("Juechen Sued deaktiviert.")
             else:
-                st.info(f"Juechen Sued aktiv: {js_scenario}")
+                st.info(f"Juechen Sued aktiv: {js_concept}")
 
     st.write("### Batterieauswahl")
     with st.container(border=True):
@@ -702,7 +702,7 @@ def _render_selector_form() -> dict[str, Any]:
         "bs_efficiency": float(bs_efficiency) if bs_energy_kwh > 0 else None,
         "bs_energy_kwh": float(bs_energy_kwh) if bs_energy_kwh > 0 else None,
         "bs_c_rate": float(bs_c_rate) if bs_energy_kwh > 0 else None,
-        "js_scenario": js_scenario,
+        "js_concept": js_concept,
     }
 
 
@@ -744,7 +744,7 @@ def _render_catalog_overview(catalog: list[dict[str, Any]]) -> None:
                 "companies": ", ".join(str(v) for v in inp.get("i_companies", [])) or "-",
                 "geh": inp.get("geh_variant", "-"),
                 "battery_kwh": inp.get("bs_energy_kwh", "-"),
-                "js": inp.get("js_scenario", "-"),
+                "js": inp.get("js_concept", "-"),
             }
         )
     st.dataframe(rows, use_container_width=True)

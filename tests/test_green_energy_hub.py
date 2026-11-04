@@ -219,13 +219,13 @@ LOADS = ["Last_Industrie [kW]", "Last_Juechen_Sued [kW]", "Last_Green_Energy_Hub
 
 
 def standard_input(variant: str) -> GuiInput:
-    """Standardkonfiguration: A46 + Wand, Energielandschaft 50 %, Unternehmen [2–6], Jüchen-Süd 1000."""
+    """Standardkonfiguration: A46 + Wand, Energielandschaft 50 %, Unternehmen [2–6], Jüchen-Süd dezentral."""
     return GuiInput(
         h_highways=["A46"], h_pv_types=[0],
         el_build_state=50, el_pv_type=5,
         el_tractor_width=12.0, el_tractor_length=15.0, el_tractor_turn_radius=9.0,
         i_heat_cooling_electric=True, i_companies=[2, 3, 4, 5, 6],
-        js_scenario="1000 Bewohner",
+        js_concept="Dezentral",
         geh_variant=variant,
     )
 

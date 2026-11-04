@@ -50,8 +50,13 @@ class GuiInput:
     bs_energy_kwh: Optional[float] = None               # Capacity [kWh]
     bs_c_rate: Optional[float] = None                   # C-rate
 
-    # Jüchen Süd
-    js_scenario: Optional[str] = None
+    # Jüchen Süd – Versorgungskonzept aus dem Energiekonzept (Fraunhofer IEG, Basis-Variante)
+    js_concept: Optional[str] = None                    # "Aus", "Warmes Netz", "Kaltes Netz", "Dezentral"
+
+    # Jüchen Süd – optionale Overrides (None = Wert aus JS_CONCEPTS)
+    js_hp_kw: Optional[float] = None                    # Wärmepumpenleistung (thermisch) [kW]
+    js_heater_kw: Optional[float] = None                # Heizstableistung [kW]
+    js_tank_kwh: Optional[float] = None                 # Tankspeicher (thermisch) [kWh]
 
 
 # =========================
@@ -102,6 +107,19 @@ class SimOutput:
     geh_battery_discharge_kwh: float | None = None   # Batterie-Entladung [kWh/a]
     geh_battery_full_cycles: float | None = None     # Batterie-Vollzyklen [1/a]
     geh_battery_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe Batterie
+
+    # Jüchen Süd – Bedarfe und Wärmeversorgung
+    js_household_kwh: float | None = None            # Nutzerstrom [kWh/a]
+    js_emob_kwh: float | None = None                 # Ladestrom E-Mobilität [kWh/a]
+    js_space_heat_kwh: float | None = None           # Raumwärmebedarf [kWh_th/a]
+    js_dhw_kwh: float | None = None                  # Trinkwarmwasserbedarf [kWh_th/a]
+    js_cooling_kwh: float | None = None              # Kältebedarf [kWh_th/a]
+    js_hp_el_kwh: float | None = None                # Strombedarf Wärmepumpen [kWh/a]
+    js_heater_el_kwh: float | None = None            # Strombedarf Heizstab [kWh/a]
+    js_cooling_el_kwh: float | None = None           # Strombedarf Kälte [kWh/a]
+    js_heat_unmet_kwh: float | None = None           # Ungedeckter Wärmebedarf [kWh_th/a]
+    js_hp_scop: float | None = None                  # Jahresarbeitszahl Wärmepumpen [-]
+    js_tank_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe Tankspeicher
 
     # Netzaustausch des Parks (nach allen Speichern)
     grid_import_kwh: float | None = None             # Netzbezug [kWh/a]
