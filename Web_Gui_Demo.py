@@ -32,14 +32,13 @@ PV_NAME_TO_ID = {
 
 INDUSTRY_OPTIONS = {
     0: "Entsorgung",
-    1: "Stahl, 5-Tage-Woche, 3-Schicht",
+    1: "Stahl (5-Tage-Woche, 3-Schicht)",
     2: "Logistik und Lagerung",
     3: "Schrott- und Metallhandel",
-    4: "Lagerung",
     5: "Buero",
-    6: "Logistik Lebensmittel",
-    7: "Stahl, 7-Tage-Woche, 2-Schicht",
 }
+ELSBACHTAL_BASIS_COMPANIES = [0, 1, 2, 3, 5]
+INDUSTRY_MODES = ["Basis-Variante Elsbachtal", "Unternehmen selbst zusammenstellen"]
 
 NODE_ICON_BY_ID = {
     "solar": "solar",
@@ -611,16 +610,29 @@ def _render_selector_form() -> dict[str, Any]:
             col1, col2 = st.columns(2)
             selected_companies: list[int] = []
             with col1:
-                st.write("Bis zu 5 Unternehmen auswaehlen (Duplikate moeglich):")
-                for idx in range(5):
-                    selected = st.selectbox(
-                        f"Unternehmen {idx + 1}",
-                        options=[None] + list(INDUSTRY_OPTIONS.keys()),
-                        format_func=lambda x: "Keine" if x is None else INDUSTRY_OPTIONS[x],
-                        key=f"demo_company_{idx}",
-                    )
-                    if selected is not None:
-                        selected_companies.append(int(selected))
+                industry_mode = st.segmented_control(
+                    "Unternehmensauswahl",
+                    options=INDUSTRY_MODES,
+                    default=INDUSTRY_MODES[0],
+                    key="demo_industry_mode",
+                )
+                if industry_mode == INDUSTRY_MODES[1]:
+                    st.write("Bis zu 5 Unternehmen auswaehlen (Duplikate moeglich):")
+                    slot_options = [None] + list(INDUSTRY_OPTIONS.keys())
+                    for idx in range(5):
+                        selected = st.selectbox(
+                            f"Unternehmen {idx + 1}",
+                            options=slot_options,
+                            index=slot_options.index(ELSBACHTAL_BASIS_COMPANIES[idx]),
+                            format_func=lambda x: "Keine" if x is None else INDUSTRY_OPTIONS[x],
+                            key=f"demo_company_{idx}",
+                        )
+                        if selected is not None:
+                            selected_companies.append(int(selected))
+                else:
+                    selected_companies = list(ELSBACHTAL_BASIS_COMPANIES)
+                    st.write("Je ein Unternehmen jedes Typs:")
+                    st.markdown("\n".join(f"- {INDUSTRY_OPTIONS[i]}" for i in ELSBACHTAL_BASIS_COMPANIES))
             with col2:
                 i_heat_cooling_electric = st.toggle("Mit Waerme/Kaelte Stromverbrauch?", value=True)
                 if not selected_companies:

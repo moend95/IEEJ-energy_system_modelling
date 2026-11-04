@@ -11,6 +11,7 @@ import pandas as pd
 from Simulation import run_simulation
 from core.export_utils import export_scenario_flows_to_json
 from core.io_types import GuiInput
+from core.module_industrial_area import ELSBACHTAL_BASIS_COMPANIES
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -102,20 +103,11 @@ def build_permutation_space() -> list[GuiInput]:
         },
     ]
 
-    # Core axis 3: industry profiles (5-company style as in UI)
-    industry_profiles = [
-        [2, 3, 4, 5, 6],
-        [1, 3, 5, 6, 7],
-        [0, 1, 2, 3, 4],
-        [0, 2, 4, 6, 7],
-        [0, 1, 5, 6, 7],
-        [1, 2, 3, 4, 7],
-        [0, 3, 4, 5, 6],
-        [0, 2, 3, 5, 7],
-        [1, 2, 4, 5, 6],
-        [0, 1, 3, 6, 7],
-        [0, 2, 3, 4, 6],
-        [1, 3, 4, 5, 7],
+    # Core axis 3: industry profiles – Basis-Variante Elsbachtal zuerst (UI-Standard),
+    # danach die Basis ohne jeweils einen Unternehmenstyp
+    industry_profiles = [list(ELSBACHTAL_BASIS_COMPANIES)] + [
+        [c for c in ELSBACHTAL_BASIS_COMPANIES if c != removed]
+        for removed in ELSBACHTAL_BASIS_COMPANIES
     ]
 
     # Core axis 4: battery (kein Speicher — Batterie wird in der Web-App nicht unterstützt)

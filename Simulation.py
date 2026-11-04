@@ -236,7 +236,7 @@ class Simulator:
         """
         industry_aggregator = IndustryLoadAggregator()
 
-        if inp.i_companies is []:
+        if not inp.i_companies:
             out.i_error_text = "INDUSTRIEGEBIET --- Kein Unternehmen ausgewählt."
         elif inp.i_companies:
             out.i_error_text = "Hier könnte ihre Industriegebiet Fehlermeldung stehen!"

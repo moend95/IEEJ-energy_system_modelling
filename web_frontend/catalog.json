@@ -1,7 +1,7 @@
 [
   {
     "scenario_id": "s_auto_0001",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Dezentral\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Dezentral\"}",
     "flow_path": "./precomputed/s_auto_0001/flow_data.json",
     "input": {
       "h_highways": [
@@ -17,11 +17,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Basis",
       "geh_pv_kwp": null,
@@ -43,7 +43,7 @@
   },
   {
     "scenario_id": "s_auto_0002",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Warmes Netz\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Warmes Netz\"}",
     "flow_path": "./precomputed/s_auto_0002/flow_data.json",
     "input": {
       "h_highways": [
@@ -59,11 +59,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Basis",
       "geh_pv_kwp": null,
@@ -85,7 +85,7 @@
   },
   {
     "scenario_id": "s_auto_0003",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Kaltes Netz\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Kaltes Netz\"}",
     "flow_path": "./precomputed/s_auto_0003/flow_data.json",
     "input": {
       "h_highways": [
@@ -101,11 +101,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Basis",
       "geh_pv_kwp": null,
@@ -127,7 +127,7 @@
   },
   {
     "scenario_id": "s_auto_0004",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Aus\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Basis\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Aus\"}",
     "flow_path": "./precomputed/s_auto_0004/flow_data.json",
     "input": {
       "h_highways": [
@@ -143,11 +143,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Basis",
       "geh_pv_kwp": null,
@@ -169,7 +169,7 @@
   },
   {
     "scenario_id": "s_auto_0005",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Dezentral\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Dezentral\"}",
     "flow_path": "./precomputed/s_auto_0005/flow_data.json",
     "input": {
       "h_highways": [
@@ -185,11 +185,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Erweiterung",
       "geh_pv_kwp": null,
@@ -211,7 +211,7 @@
   },
   {
     "scenario_id": "s_auto_0006",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Warmes Netz\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Warmes Netz\"}",
     "flow_path": "./precomputed/s_auto_0006/flow_data.json",
     "input": {
       "h_highways": [
@@ -227,11 +227,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Erweiterung",
       "geh_pv_kwp": null,
@@ -253,7 +253,7 @@
   },
   {
     "scenario_id": "s_auto_0007",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Kaltes Netz\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Kaltes Netz\"}",
     "flow_path": "./precomputed/s_auto_0007/flow_data.json",
     "input": {
       "h_highways": [
@@ -269,11 +269,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Erweiterung",
       "geh_pv_kwp": null,
@@ -295,7 +295,7 @@
   },
   {
     "scenario_id": "s_auto_0008",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Aus\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Erweiterung\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Aus\"}",
     "flow_path": "./precomputed/s_auto_0008/flow_data.json",
     "input": {
       "h_highways": [
@@ -311,11 +311,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Erweiterung",
       "geh_pv_kwp": null,
@@ -337,7 +337,7 @@
   },
   {
     "scenario_id": "s_auto_0009",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Dezentral\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Dezentral\"}",
     "flow_path": "./precomputed/s_auto_0009/flow_data.json",
     "input": {
       "h_highways": [
@@ -353,11 +353,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Keine",
       "geh_pv_kwp": null,
@@ -379,7 +379,7 @@
   },
   {
     "scenario_id": "s_auto_0010",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Warmes Netz\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Warmes Netz\"}",
     "flow_path": "./precomputed/s_auto_0010/flow_data.json",
     "input": {
       "h_highways": [
@@ -395,11 +395,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Keine",
       "geh_pv_kwp": null,
@@ -421,7 +421,7 @@
   },
   {
     "scenario_id": "s_auto_0011",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Kaltes Netz\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Kaltes Netz\"}",
     "flow_path": "./precomputed/s_auto_0011/flow_data.json",
     "input": {
       "h_highways": [
@@ -437,11 +437,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Keine",
       "geh_pv_kwp": null,
@@ -463,7 +463,7 @@
   },
   {
     "scenario_id": "s_auto_0012",
-    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [2, 3, 4, 5, 6], \"i_heat_cooling_electric\": true, \"js_concept\": \"Aus\"}",
+    "canonical_key": "{\"bs_c_rate\": null, \"bs_efficiency\": null, \"bs_energy_kwh\": null, \"el_build_state\": 50, \"el_pv_type\": 5, \"el_tractor_length\": 15.0, \"el_tractor_turn_radius\": 9.0, \"el_tractor_width\": 12.0, \"geh_variant\": \"Keine\", \"h_highways\": [\"A46\"], \"h_pv_types\": [0], \"i_companies\": [0, 1, 2, 3, 5], \"i_heat_cooling_electric\": true, \"js_concept\": \"Aus\"}",
     "flow_path": "./precomputed/s_auto_0012/flow_data.json",
     "input": {
       "h_highways": [
@@ -479,11 +479,11 @@
       "el_tractor_turn_radius": 9.0,
       "i_heat_cooling_electric": true,
       "i_companies": [
+        0,
+        1,
         2,
         3,
-        4,
-        5,
-        6
+        5
       ],
       "geh_variant": "Keine",
       "geh_pv_kwp": null,

@@ -224,7 +224,7 @@ def standard_input(variant: str) -> GuiInput:
         h_highways=["A46"], h_pv_types=[0],
         el_build_state=50, el_pv_type=5,
         el_tractor_width=12.0, el_tractor_length=15.0, el_tractor_turn_radius=9.0,
-        i_heat_cooling_electric=True, i_companies=[2, 3, 4, 5, 6],
+        i_heat_cooling_electric=True, i_companies=[0, 1, 2, 3, 5],
         js_concept="Dezentral",
         geh_variant=variant,
     )

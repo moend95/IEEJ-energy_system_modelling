@@ -16,6 +16,22 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import MonthLocator, DateFormatter
 
 
+# In den GUIs auswählbare Unternehmenstypen. Die IDs entsprechen den Indizes in
+# IndustryLoadAggregator.UNTERNEHMEN und bleiben stabil; „Lagerung“ (4),
+# „Logistik Lebensmittel“ (6) und „Stahl 7-Tage-Woche“ (7) sind nur noch
+# für ältere Szenarien vorhanden und werden nicht mehr angeboten.
+INDUSTRY_COMPANY_OPTIONS: Dict[int, str] = {
+    0: "Entsorgung",
+    1: "Stahl (5-Tage-Woche, 3-Schicht)",
+    2: "Logistik und Lagerung",
+    3: "Schrott- und Metallhandel",
+    5: "Büro",
+}
+
+# Basis-Variante Elsbachtal: je ein Unternehmen jedes Typs
+ELSBACHTAL_BASIS_COMPANIES: List[int] = [0, 1, 2, 3, 5]
+
+
 class IndustryLoadAggregator:
     """Aggregiert Lastgänge für ein Industriegebiet und erzeugt Ausgaben.
 

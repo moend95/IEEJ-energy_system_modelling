@@ -9,6 +9,7 @@ from core.io_types import GuiInput, SimOutput
 from Simulation import Simulator, run_simulation, industry_csv_mapping
 from core.module_green_energy_hub import GEH_VARIANTS
 from core.module_juechen_sued import JS_CONCEPTS
+from core.module_industrial_area import ELSBACHTAL_BASIS_COMPANIES, INDUSTRY_COMPANY_OPTIONS
 from core.js_profiles import build_js_profiles
 
 
@@ -35,16 +36,7 @@ pv_name_to_id = {
 
 
 # Industry columns order
-industry_order_all = [
-    "Entsorgung",
-    "Stahl_1",
-    "Logistik und Lagerung",
-    "Schrott Metallhandel",
-    "Lagerung",
-    "Buero",
-    "Logistik Lebensmittel",
-    "Stahl_2"
-]
+industry_order_all = [industry_csv_mapping[i] for i in INDUSTRY_COMPANY_OPTIONS]
 
 
 
@@ -237,33 +229,35 @@ with st.container(key="Verbrauch", width=1500, height='content'):
         col1_tab4, col2_tab4 = st.columns(2)
 
         with col1_tab4:
-            options = {
-                0: "Entsorgung",
-                1: "Stahl, 5-Tage-Woche, 3-Schicht",
-                2: "Logistik und Lagerung",
-                3: "Schrott- und Metallhandel",
-                4: "Lagerung",
-                5: "Büro",
-                6: "Logistik Lebensmittel",
-                7: "Stahl, 7-Tage-Woche, 2-Schicht"
-            }
+            industry_mode = st.segmented_control(
+                "Unternehmensauswahl",
+                options=["Basis-Variante Elsbachtal", "Unternehmen selbst zusammenstellen"],
+                default="Basis-Variante Elsbachtal",
+                key="industry_mode",
+            )
 
-            st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
-
-            Input.i_companies = []
-            for i in range(5):
-                choice = st.selectbox(
-                    f"Unternehmen {i + 1}",
-                    options=[None] + list(options.keys()),
-                    format_func=lambda x: "Keine" if x is None else options[x],
-                    key=f"selection_{i}"
-                )
-                if choice is not None:
-                    Input.i_companies.append(choice)
+            if industry_mode == "Unternehmen selbst zusammenstellen":
+                st.write("Wähle bis zu 5 Unternehmen (Duplikate möglich):")
+                slot_options = [None] + list(INDUSTRY_COMPANY_OPTIONS.keys())
+                Input.i_companies = []
+                for i in range(5):
+                    choice = st.selectbox(
+                        f"Unternehmen {i + 1}",
+                        options=slot_options,
+                        index=slot_options.index(ELSBACHTAL_BASIS_COMPANIES[i]),
+                        format_func=lambda x: "Keine" if x is None else INDUSTRY_COMPANY_OPTIONS[x],
+                        key=f"selection_{i}"
+                    )
+                    if choice is not None:
+                        Input.i_companies.append(choice)
+            else:
+                Input.i_companies = list(ELSBACHTAL_BASIS_COMPANIES)
+                st.write("Je ein Unternehmen jedes Typs:")
+                st.markdown("\n".join(f"- {INDUSTRY_COMPANY_OPTIONS[i]}" for i in ELSBACHTAL_BASIS_COMPANIES))
 
         # Explanation expander
         with col2_tab4:
-            Input.i_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?")
+            Input.i_heat_cooling_electric = st.toggle("Mit Wärme/Kälte Stromverbrauch?", value=True)
             expander = st.expander("Erklärung Wärme/Kälte")
             expander.write('''
     Bei Auswahl "ohne Wärme/Kälte Stromverbrauch" werden fossiler Energiequellen für Wärme benutzt und es gibt keine Kälte
@@ -293,7 +287,7 @@ with st.container(key="Verbrauch", width=1500, height='content'):
     5 1/2 Tage Woche, Kein Schichtbetrieb  
                         Jahresbedarf: 7,1 GWh, Anlehnung an Schönmackers Umweltdienste
 
-    2. **Stahl 1:**  
+    2. **Stahl:**  
     5 Tage Woche, 3-Schicht-Betrieb  
                         Jahresbedarf: 4,5 GWh, Anlehnung an TecPro
 
@@ -305,21 +299,9 @@ with st.container(key="Verbrauch", width=1500, height='content'):
     5 Tage Woche, Kein Schichtbetrieb  
                         Jahresbedarf: 1,5 GWh, Anlehnung an Willi Jenner
 
-    5. **Lagerung:**  
-    5 Tage Woche, Kein Schichtbetrieb  
-                        Jahresbedarf: 0,6 GWh, Anlehnung an Kleine Logistik
-
-    6. **Büro:**  
+    5. **Büro:**  
     5 Tage Woche, Kein Schichtbetrieb  
                         Jahresbedarf: 0,6 GWh, Anlehnung an Marvin Wickenhäuser
-
-    7. **Logistik Lebensmittel:**  
-    6 1/2 Tage Woche, Kein Schichtbetrieb  
-                        Jahresbedarf: 1,2 GWh, Anlehnung an CTJ Janssen
-
-    8. **Stahl 2:**  
-    7 Tage Woche, 2-Schicht-Betrieb  
-                        Jahresbedarf: 4,5 GWh, Anlehnung an TecPro
             ''')
 
             fig_annual_all = plot_industry_annual_energy(

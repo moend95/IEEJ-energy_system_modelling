@@ -131,7 +131,7 @@ I_CONFIGS = {
     0: {},
     1: {
         "is_heat_cooling_electric": True,
-        "companies": [2, 3, 4, 5, 6]
+        "companies": [0, 1, 2, 3, 5]
     },
 
     2: {

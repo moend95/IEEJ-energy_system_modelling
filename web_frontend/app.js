@@ -143,7 +143,25 @@ function getSelectedValues(selectId) {
   return Array.from(element.selectedOptions).map((opt) => opt.value);
 }
 
+// Basis-Variante Elsbachtal: je ein Unternehmen jedes Typs (wie ELSBACHTAL_BASIS_COMPANIES in Python)
+const ELSBACHTAL_BASIS_COMPANIES = [0, 1, 2, 3, 5];
+
+function isIndustryCustomMode() {
+  return document.getElementById("i-mode")?.value === "custom";
+}
+
+function syncIndustryModeDisplay() {
+  const custom = isIndustryCustomMode();
+  const customWrap = document.getElementById("i-custom");
+  const basisHint = document.getElementById("i-basis-hint");
+  if (customWrap) customWrap.hidden = !custom;
+  if (basisHint) basisHint.hidden = custom;
+}
+
 function getIndustryCompanyValues() {
+  if (!isIndustryCustomMode()) {
+    return [...ELSBACHTAL_BASIS_COMPANIES];
+  }
   const values = [];
   for (let slot = 1; slot <= 5; slot += 1) {
     const el = document.getElementById(`i-company-${slot}`);
@@ -726,6 +744,7 @@ function setupReactiveInputHandlers() {
     "#el-build-state",
     "#el-pv-type",
     "#el-tractor-width",
+    "#i-mode",
     "#i-company-1",
     "#i-company-2",
     "#i-company-3",
@@ -770,6 +789,8 @@ async function init() {
   setupReactiveInputHandlers();
   initLeafletMap();
   syncLandscapeTractorDisplay();
+  syncIndustryModeDisplay();
+  document.getElementById("i-mode")?.addEventListener("change", syncIndustryModeDisplay);
   const widthElement = document.getElementById("el-tractor-width");
   if (widthElement) {
     widthElement.addEventListener("change", syncLandscapeTractorDisplay);
