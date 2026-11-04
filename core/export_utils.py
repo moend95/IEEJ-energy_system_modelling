@@ -77,7 +77,7 @@ def export_scenario_flows_to_json(
     sim_output: Any,
     scenario_id: str,
     output_dir: str | Path,
-    schema_version: str = "1.1.0",
+    schema_version: str = "1.2.0",
     min_px: float = 2.0,
     max_px: float = 8.0,
     timeseries_mode: str = "inline",
@@ -124,7 +124,7 @@ def export_scenario_flows_to_json(
 
     grid_import_peak_kw, grid_export_peak_kw = _grid_peaks_kw(sim_output)
 
-    def geh(attr: str) -> float:
+    def nonneg(attr: str) -> float:
         return max(_safe_float(getattr(sim_output, attr, 0.0)), 0.0)
 
     nodes = [
@@ -253,25 +253,38 @@ def export_scenario_flows_to_json(
             "juechen_sued_kwh": js_kwh,
             "total_demand_kwh": total_demand_kwh,
         },
+        "juechen_sued": {
+            "concept": str(getattr(inp, "js_concept", None) or "Aus"),
+            "household_kwh": nonneg("js_household_kwh"),
+            "emob_kwh": nonneg("js_emob_kwh"),
+            "space_heat_kwh": nonneg("js_space_heat_kwh"),
+            "dhw_kwh": nonneg("js_dhw_kwh"),
+            "cooling_kwh": nonneg("js_cooling_kwh"),
+            "heat_pump_el_kwh": nonneg("js_hp_el_kwh"),
+            "heater_el_kwh": nonneg("js_heater_el_kwh"),
+            "cooling_el_kwh": nonneg("js_cooling_el_kwh"),
+            "heat_unmet_kwh": nonneg("js_heat_unmet_kwh"),
+            "heat_pump_scop": nonneg("js_hp_scop"),
+        },
         "green_energy_hub": {
             "variant": str(getattr(inp, "geh_variant", None) or "Keine"),
-            "charging_mcs_kwh": geh("geh_charging_mcs_kwh"),
-            "charging_ccs_kwh": geh("geh_charging_ccs_kwh"),
-            "charging_hpc_kwh": geh("geh_charging_hpc_kwh"),
-            "charging_ac_kwh": geh("geh_charging_ac_kwh"),
-            "building_kwh": geh("geh_building_kwh"),
+            "charging_mcs_kwh": nonneg("geh_charging_mcs_kwh"),
+            "charging_ccs_kwh": nonneg("geh_charging_ccs_kwh"),
+            "charging_hpc_kwh": nonneg("geh_charging_hpc_kwh"),
+            "charging_ac_kwh": nonneg("geh_charging_ac_kwh"),
+            "building_kwh": nonneg("geh_building_kwh"),
             "pv_kwh": geh_pv_kwh,
-            "pv_max_power_kw": geh("geh_pv_max_power_kw"),
-            "electrolyzer_kwh": geh("geh_electrolyzer_kwh"),
-            "electrolyzer_full_load_hours": geh("geh_electrolyzer_full_load_hours"),
-            "compressor_demand_kwh": geh("geh_compressor_demand_kwh"),
-            "h2_production_kwh": geh("geh_h2_production_kwh"),
-            "h2_demand_kwh": geh("geh_h2_demand_kwh"),
-            "h2_delivered_kwh": geh("geh_h2_delivered_kwh"),
-            "h2_unmet_kwh": geh("geh_h2_unmet_kwh"),
-            "battery_charge_kwh": geh("geh_battery_charge_kwh"),
-            "battery_discharge_kwh": geh("geh_battery_discharge_kwh"),
-            "battery_full_cycles": geh("geh_battery_full_cycles"),
+            "pv_max_power_kw": nonneg("geh_pv_max_power_kw"),
+            "electrolyzer_kwh": nonneg("geh_electrolyzer_kwh"),
+            "electrolyzer_full_load_hours": nonneg("geh_electrolyzer_full_load_hours"),
+            "compressor_demand_kwh": nonneg("geh_compressor_demand_kwh"),
+            "h2_production_kwh": nonneg("geh_h2_production_kwh"),
+            "h2_demand_kwh": nonneg("geh_h2_demand_kwh"),
+            "h2_delivered_kwh": nonneg("geh_h2_delivered_kwh"),
+            "h2_unmet_kwh": nonneg("geh_h2_unmet_kwh"),
+            "battery_charge_kwh": nonneg("geh_battery_charge_kwh"),
+            "battery_discharge_kwh": nonneg("geh_battery_discharge_kwh"),
+            "battery_full_cycles": nonneg("geh_battery_full_cycles"),
         },
         "balance": {
             "bal_energy_kwh": _safe_float(getattr(sim_output, "bal_energy_kwh", 0.0)),

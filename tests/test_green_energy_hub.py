@@ -321,7 +321,7 @@ def test_export_json(sim_erweiterung, tmp_path):
     path = export_scenario_flows_to_json(standard_input("Erweiterung"), sim_erweiterung, "t01", tmp_path,
                                          timeseries_mode="none")
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    assert payload["metadata"]["schema_version"] == "1.1.0"
+    assert payload["metadata"]["schema_version"] == "1.2.0"
     geh = payload["annual_summary"]["green_energy_hub"]
     assert "h2_curtailed_kwh" not in geh
     assert geh["variant"] == "Erweiterung"

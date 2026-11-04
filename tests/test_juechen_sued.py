@@ -182,3 +182,28 @@ def test_integration_reihenfolge_strombedarf(sims):
     heat_el = {c: sims[c].js_hp_el_kwh + sims[c].js_heater_el_kwh for c in JS_CONCEPTS}
     assert heat_el["Warmes Netz"] > heat_el["Kaltes Netz"]
     assert heat_el["Warmes Netz"] > heat_el["Dezentral"]
+
+
+# ---------------------------------------------------------------------------
+# Export und GUI-Helfer
+# ---------------------------------------------------------------------------
+
+def test_js_concept_table():
+    from core.functions_web_support import js_concept_table
+    table = js_concept_table(JS_CONCEPTS["Warmes Netz"])
+    assert "Luft-Wärmepumpe zentral" in table.index
+    assert table.loc["Studie: Autarkiegrad Strom", "Wert"] == "67 %"
+
+
+@pytest.mark.slow
+def test_export_und_tooltip(sims, tmp_path):
+    import json
+    from core.export_utils import export_scenario_flows_to_json
+    from core.functions_web_support import build_synergy_diagram
+    inp, o = js_input("Kaltes Netz"), sims["Kaltes Netz"]
+    path = export_scenario_flows_to_json(inp, o, "js01", tmp_path, timeseries_mode="none")
+    js = json.loads(Path(path).read_text(encoding="utf-8"))["annual_summary"]["juechen_sued"]
+    assert js["concept"] == "Kaltes Netz"
+    assert js["heat_pump_el_kwh"] == pytest.approx(o.js_hp_el_kwh)
+    hover = " ".join(str(t.hovertemplate or "") for t in build_synergy_diagram(inp, o).data)
+    assert "Konzept: Kaltes Netz" in hover and "JAZ" in hover

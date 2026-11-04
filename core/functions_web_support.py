@@ -319,6 +319,23 @@ def geh_variant_table(variant: dict) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["Komponente", "Auslegung", "Jahreswert / Kennzahl"]).set_index("Komponente")
 
 
+def js_concept_table(concept: dict) -> pd.DataFrame:
+    """Anlagenparameter und Studienkennwerte eines Jüchen-Süd-Versorgungskonzepts als Tabelle für die GUI."""
+    def kw(value):
+        return f"{value:,.0f} kW".replace(",", ".")
+
+    rows = [
+        (concept["hp_label"], kw(concept["hp_kw"]) + " (thermisch)"),
+        ("Heizstab dezentral", kw(concept["heater_kw"])),
+        ("Tankspeicher", f"{concept['tank_kwh']:,.0f} kWh".replace(",", ".") if concept["tank_kwh"] > 0 else "–"),
+    ]
+    if concept.get("sources"):
+        rows.append(("Wärmequellen Anergienetz", concept["sources"]))
+    rows.append(("Agri-PV zentral 5,56 MW", "über die Energielandschaft abgebildet"))
+    rows += [(f"Studie: {key}", value) for key, value in concept["study"].items()]
+    return pd.DataFrame(rows, columns=["Komponente", "Wert"]).set_index("Komponente")
+
+
 def build_synergy_diagram(inp, sim_output):
     """
     System visualization of energy flow balance:
@@ -476,6 +493,7 @@ def build_synergy_diagram(inp, sim_output):
     if geh_variant == "Keine":
         hub_text = "Status: nicht aktiv"
     else:
+        geh_flh = f"{_geh('geh_electrolyzer_full_load_hours'):,.0f}".replace(",", ".")
         hub_text = (
             f"Variante: {geh_variant}"
             f"<br>Laden Lkw MCS: {format_energy(_geh('geh_charging_mcs_kwh'))}"
@@ -487,18 +505,30 @@ def build_synergy_diagram(inp, sim_output):
             f"<br>H₂ produziert: {format_energy(_geh('geh_h2_production_kwh'))}"
             f"<br>H₂ geliefert: {format_energy(_geh('geh_h2_delivered_kwh'))}"
             f"<br>H₂ ungedeckt: {format_energy(_geh('geh_h2_unmet_kwh'))}"
-            f"<br>Elektrolyseur: {_geh('geh_electrolyzer_full_load_hours'):,.0f} Volllaststunden".replace(",", ".")
-            + f"<br>Gesamt-Strombedarf: {format_energy(green_hub_energy)}"
+            f"<br>Elektrolyseur: {geh_flh} Volllaststunden"
+            f"<br>Gesamt-Strombedarf: {format_energy(green_hub_energy)}"
         )
 
     # Jüchen-Süd Hover
-    js_active = inp.js_scenario not in [None, "Aus"]
+    js_concept = getattr(inp, "js_concept", None) or "Aus"
 
-    js_text = (
-        f"Status: {'aktiv' if js_active else 'nicht Aktiv'}"
-        f"<br>Szenario: {inp.js_scenario}"
-        f"<br>Jahresbedarf: {format_energy(juechen_sued_energy)}"
-    )
+    def _js(attr):
+        return max(float(getattr(sim_output, attr, None) or 0.0), 0.0)
+
+    if js_concept == "Aus":
+        js_text = "Status: nicht aktiv"
+    else:
+        js_scop = f"{_js('js_hp_scop'):.1f}"
+        js_text = (
+            f"Konzept: {js_concept}"
+            f"<br>Nutzerstrom: {format_energy(_js('js_household_kwh'))}"
+            f"<br>E-Mobilität: {format_energy(_js('js_emob_kwh'))}"
+            f"<br>Wärmebedarf: {format_energy(_js('js_space_heat_kwh') + _js('js_dhw_kwh'))}"
+            f"<br>Wärmepumpen: {format_energy(_js('js_hp_el_kwh'))} (JAZ {js_scop})"
+            f"<br>Heizstab: {format_energy(_js('js_heater_el_kwh'))}"
+            f"<br>Kälte: {format_energy(_js('js_cooling_el_kwh'))}"
+            f"<br>Jahresbedarf Strom: {format_energy(juechen_sued_energy)}"
+        )
 
     # Battery Hover
     battery_text = (

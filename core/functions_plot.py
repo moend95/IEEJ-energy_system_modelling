@@ -336,58 +336,41 @@ def plot_green_hub_annual_energy(base_dir, years=("2022", "2030", "2050")):
 # --------------------------------------------------
 # Jüchen Süd
 # --------------------------------------------------
-def plot_js_weekly_profile(csv_path, scale_factor=1, start="2022-03-05"):
+def plot_js_weekly_profile(profiles, start="2021-02-01"):
     """
-    Plot one representative week of the Jüchen Süd load profile.
+    Plot one representative week of the Jüchen Süd demand profiles.
 
     Parameters
     ----------
-    csv_path : str
-        Path to the CSV file.
-    scale_factor : float
-        Scaling factor applied to the load.
+    profiles : pd.DataFrame
+        Result of core.js_profiles.build_js_profiles (thermal and electric demands in kW).
     start : str
         Start date of the selected week.
 
     Returns
     -------
     matplotlib.figure.Figure
-        Figure with the scaled weekly load profile.
+        Figure with thermal (top) and electric (bottom) weekly demand profiles.
     """
+    week = profiles.loc[start:].iloc[:7 * 24 * 4]
 
-    df = pd.read_csv(csv_path, sep=",")
-    df.columns = df.columns.str.strip()
+    fig, (ax_th, ax_el) = plt.subplots(2, 1, figsize=(15, 8), sharex=True)
 
-    df["timestamp"] = pd.to_datetime(
-        "2022 " + df["Timestamp"].astype(str).str.strip(),
-        format="%Y %d.%m. %H:%M",
-        errors="coerce"
-    )
+    ax_th.plot(week.index, week["space_heat_kw"], label="Raumwärme")
+    ax_th.plot(week.index, week["dhw_kw"], label="Trinkwarmwasser")
+    ax_th.plot(week.index, week["cooling_kw"], label="Raumkälte")
+    ax_th.set_title("Beispielwoche Jüchen Süd – Wärme- und Kältebedarf")
+    ax_th.set_ylabel("Leistung [kW_th]")
+    ax_th.grid(True, alpha=0.3)
+    ax_th.legend(loc="upper right")
 
-    df["Strombezug (kW)"] = pd.to_numeric(
-        df["Strombezug (kW)"].astype(str).str.replace(",", ".", regex=False),
-        errors="coerce"
-    ).fillna(0)
-
-    df = df.set_index("timestamp").sort_index()
-
-    # Skalierung
-    series = df["Strombezug (kW)"] * scale_factor
-
-    try:
-        week = series.loc[start:].iloc[:7 * 24 * 4]
-    except Exception:
-        week = series.iloc[:7 * 24 * 4]
-
-    fig, ax = plt.subplots(figsize=(15, 7))
-
-    ax.plot(week.index, week.values, label=f"Jüchen Süd x{scale_factor}")
-
-    ax.set_title("Beispielhafte Wochenprofile – Jüchen Süd")
-    ax.set_xlabel("Zeit")
-    ax.set_ylabel("Leistung [kW]")
-    ax.grid(True)
-    ax.legend()
+    ax_el.plot(week.index, week["household_kw"], label="Nutzerstrom")
+    ax_el.plot(week.index, week["emob_kw"], label="E-Mobilität")
+    ax_el.set_title("Beispielwoche Jüchen Süd – Strombedarf ohne Wärmeversorgung")
+    ax_el.set_xlabel("Zeit")
+    ax_el.set_ylabel("Leistung [kW]")
+    ax_el.grid(True, alpha=0.3)
+    ax_el.legend(loc="upper right")
 
     fig.tight_layout()
     return fig

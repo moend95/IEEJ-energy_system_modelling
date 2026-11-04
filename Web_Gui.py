@@ -8,6 +8,15 @@ import numpy as np
 from core.io_types import GuiInput, SimOutput
 from Simulation import Simulator, run_simulation, industry_csv_mapping
 from core.module_green_energy_hub import GEH_VARIANTS
+from core.module_juechen_sued import JS_CONCEPTS
+from core.js_profiles import build_js_profiles
+
+
+@st.cache_data
+def cached_js_profiles():
+    """Bedarfsprofile Jüchen Süd für die Vorschau (unabhängig vom Konzept)."""
+    weather_df = Simulator().weather_df
+    return build_js_profiles(weather_df.index, weather_df["temp_air"].to_numpy())
 from core.functions_web_support import *
 from core.functions_plot import *
 
@@ -416,54 +425,62 @@ with st.container(key="Verbrauch", width=1500, height='content'):
 
         # ---------------- Jüchen Süd ----------------
         with tab6:
-            st.write("Wähle das Szenario für das Neubaugebiet Jüchen Süd:")
+            expander = st.expander("Erklärung")
+            with expander:
+                st.write("""
+    Stadtteilentwicklung Jüchen Süd nach dem **Energiekonzept des Fraunhofer IEG**
+    (Abschlussveranstaltung 16.10.2026, vorläufige Ergebnisse), Basis-Variante:
+    Bedarfsszenario „moderat“, 3 Quartiere.
 
-            js_options = {
-                "Aus": 0,
-                "1000 Bewohner": 1,
-                "2000 Bewohner": 2,
-                "3000 Bewohner": 3
-            }
+    - **Warmes Netz:** zentrale Luft-Wärmepumpe speist ein Wärmenetz mit 40–50 °C,
+      Tankspeicher in der Energiezentrale, Heizstab zur Warmwasser-Nachheizung.
+    - **Kaltes Netz:** Anergienetz mit 10–25 °C verteilt Umweltwärme, Booster-Wärmepumpen
+      in den Gebäuden heben auf Heiz- und Warmwassertemperatur.
+    - **Dezentral:** jedes Gebäude hat eine eigene Grundwasser-Wärmepumpe.
 
-            Input.js_scenario = st.segmented_control(
-                "Szenario",
-                options=list(js_options.keys()),
-                default="Aus"
+    Modelliert werden Nutzerstrom, E-Mobilität und der Strombedarf der Wärme- und
+    Kälteversorgung. Wärmeprofile entstehen aus den Wetterdaten, die Wärmepumpen-
+    Effizienz hängt von Quell- und Zieltemperatur ab. Die Agri-PV der Studie (5,56 MW)
+    ist Teil der Energielandschaft und wird hier nicht doppelt gezählt.
+                """)
+
+            js_concept = st.segmented_control(
+                "Versorgungskonzept",
+                options=["Aus", "Warmes Netz", "Kaltes Netz", "Dezentral"],
+                default="Aus",
             )
+            Input.js_concept = "Aus" if js_concept is None else js_concept
 
-            Input.js_scenario = "Aus" if Input.js_scenario is None else Input.js_scenario
-
-            js_factor = js_options[Input.js_scenario]
-
-            # Dynamic info box
-            if js_factor == 0:
+            if Input.js_concept == "Aus":
                 st.info("Jüchen Süd ist deaktiviert.")
             else:
-                st.info(
-                    f"""
-                    **Jüchen Süd aktiv:**  
-                    Szenario: **{Input.js_scenario}**  
-                    Skalierungsfaktor Lastgang: **x{js_factor}**
-                    """
-                )
+                js_c = JS_CONCEPTS[Input.js_concept]
 
-                # 👉 Plot
-                js_csv_path = os.path.join(
-                    script_dir,
-                    "data",
-                    "inputs",
-                    "Strombezug_Stadtentwicklung_15min.csv"
-                )
+                with st.expander("Anlagenparameter (Energiekonzept, Basis-Variante)"):
+                    st.table(js_concept_table(js_c))
 
-                st.write("#### Beispielhafte Wochenlastprofile Jüchen Süd")
+                # Widget-Keys je Konzept, damit die Vorbelegung beim Wechsel mitwechselt
+                k = Input.js_concept
+                with st.expander("Parameter anpassen"):
+                    col_js1, col_js2 = st.columns(2)
+                    with col_js1:
+                        Input.js_hp_kw = float(st.number_input(
+                            f"{js_c['hp_label']} [kW_th]", min_value=0.0, max_value=20_000.0,
+                            value=float(js_c["hp_kw"]), step=50.0, key=f"js_hp_kw_{k}",
+                        ))
+                        Input.js_heater_kw = float(st.number_input(
+                            "Heizstab dezentral [kW]", min_value=0.0, max_value=20_000.0,
+                            value=float(js_c["heater_kw"]), step=50.0, key=f"js_heater_kw_{k}",
+                        ))
+                    with col_js2:
+                        Input.js_tank_kwh = float(st.number_input(
+                            "Tankspeicher [kWh_th]", min_value=0.0, max_value=100_000.0,
+                            value=float(js_c["tank_kwh"]), step=100.0, key=f"js_tank_kwh_{k}",
+                            help="Thermischer Speicher, puffert Spitzen oberhalb der Wärmepumpenleistung.",
+                        ))
 
-                fig_js = plot_js_weekly_profile(
-                    js_csv_path,
-                    scale_factor=js_factor,
-                    start="2022-03-05"
-                )
-
-                st.pyplot(fig_js)
+                st.write("#### Beispielwoche der Bedarfe Jüchen Süd")
+                st.pyplot(plot_js_weekly_profile(cached_js_profiles()))
 
 
 # Separation line
