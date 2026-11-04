@@ -307,7 +307,7 @@ def migrate_legacy_scenarios() -> dict[str, int]:
     return {"copied": copied, "skipped_battery": skipped_battery, "failed": failed}
 
 
-def generate_scenarios(max_scenarios: int, overwrite: bool) -> dict[str, int]:
+def generate_scenarios(max_scenarios: int, overwrite: bool, resume: bool = False) -> dict[str, int]:
     PRECOMPUTED_DIR.mkdir(parents=True, exist_ok=True)
 
     all_candidates = build_permutation_space()
@@ -327,6 +327,13 @@ def generate_scenarios(max_scenarios: int, overwrite: bool) -> dict[str, int]:
 
         scenario_id = f"s_auto_{generated + 1:04d}"
         scenario_dir = PRECOMPUTED_DIR / scenario_id
+
+        # Fortsetzen: vollständig geschriebene Szenarien (flow_data.json + timeseries.csv.gz) überspringen
+        if resume and (scenario_dir / "flow_data.json").exists() and (scenario_dir / "timeseries.csv.gz").exists():
+            generated += 1
+            if max_scenarios > 0 and generated >= max_scenarios:
+                break
+            continue
 
         if overwrite and scenario_dir.exists():
             shutil.rmtree(scenario_dir)
@@ -390,6 +397,12 @@ def parse_args() -> argparse.Namespace:
         help="Null-Batterie-Szenarien aus data/outputs/precomputed/ nach web_frontend/precomputed/ kopieren.",
     )
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        default=False,
+        help="Bereits vollständig berechnete Szenarien überspringen (abgebrochenen Lauf fortsetzen).",
+    )
+    parser.add_argument(
         "--catalog-only",
         action="store_true",
         default=False,
@@ -414,7 +427,7 @@ def main() -> None:
         return
 
     if not args.migrate_legacy:
-        stats = generate_scenarios(max_scenarios=max(0, int(args.max_scenarios)), overwrite=bool(args.overwrite))
+        stats = generate_scenarios(max_scenarios=max(0, int(args.max_scenarios)), overwrite=bool(args.overwrite), resume=bool(args.resume))
         print("\nDone.")
         print(f"generated: {stats['generated']}")
         print(f"failed: {stats['failed']}")
