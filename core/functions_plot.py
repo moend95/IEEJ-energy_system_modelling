@@ -435,8 +435,11 @@ def plot_generation(sim_output):
     return fig
 
 def plot_consumption(sim_output):
-    # Last_GEH_* sind bereits in Last_Green_Energy_Hub [kW] enthalten
-    demand_cols = [col for col in sim_output.res_df.columns if "Last" in col and not col.startswith("Last_GEH_")]
+    # Teillasten Last_GEH_* und Last_JS_* sind bereits in den Summenspalten enthalten
+    demand_cols = [
+        col for col in sim_output.res_df.columns
+        if "Last" in col and not col.startswith(("Last_GEH_", "Last_JS_"))
+    ]
     demand = sim_output.res_df[demand_cols].sum(axis=1)
     if not isinstance(demand.index, pd.DatetimeIndex):
         demand.index = pd.date_range(

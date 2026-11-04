@@ -16,6 +16,8 @@ from core.module_green_energy_hub import (
     simulate_geh_pv,
 )
 from core.geh_profiles import build_geh_load_profiles
+from core.js_profiles import build_js_profiles
+from core.module_juechen_sued import JSParams, concept_cops, resolve_js_concept, run_js_heat_dispatch
 
 #TYPE MAPPING
 industry_csv_mapping = {
@@ -54,6 +56,15 @@ GEH_GENERATION_COLUMNS = [
 ]
 GEH_PARK_LOAD_COLUMNS = ["Last_Industrie [kW]", "Last_Juechen_Sued [kW]", *GEH_LOAD_COLUMNS.values()]
 DT_H = 0.25
+
+# Jüchen Süd: elektrische Teillasten, Summe in Last_Juechen_Sued [kW]
+JS_LOAD_COLUMNS = [
+    "Last_JS_Nutzerstrom [kW]",
+    "Last_JS_EMob [kW]",
+    "Last_JS_Waermepumpe [kW]",
+    "Last_JS_Heizstab [kW]",
+    "Last_JS_Kaelte [kW]",
+]
 
 
 class Simulator:
@@ -342,72 +353,61 @@ class Simulator:
 
     def run_juechen_sued(self, inp: GuiInput, out: SimOutput) -> SimOutput:
         """
-        Jüchen-Süd development area load simulation module.
-        This function loads the predefined residential demand profile and scales it
-        according to the selected population scenario.
-        The resulting load time series and energy statistics are written to the
-        output object and added to the overall simulation results.
+        Jüchen Süd – Stadtteilentwicklung nach dem Energiekonzept (Fraunhofer IEG, Basis-Variante).
+        Erzeugt Nutzerstrom, E-Mobilität und Wärme-/Kältebedarf, berechnet die Wärmeversorgung
+        des gewählten Versorgungskonzepts (warmes Netz, kaltes Netz, dezentral) und schreibt
+        alle elektrischen Lasten in out.res_df. Ohne Konzept sind alle Lasten 0.
         """
-        out.res_df["Last_Juechen_Sued [kW]"] = 0.0
-        out.js_max_power_kw = 0.0
-        out.js_sum_energy_kwh = 0.0
+        n = len(out.res_df)
+        assert len(self.weather_df.index) == n, (
+            f"Wetterdaten ({len(self.weather_df.index)}) und res_df ({n}) sind nicht gleich lang."
+        )
         out.js_error_text = ""
+        concept = resolve_js_concept(inp)
 
-        js_scale_map = {
-            "Aus": 0,
-            "1000 Bewohner": 1,
-            "2000 Bewohner": 2,
-            "3000 Bewohner": 3,
-        }
+        for column in JS_LOAD_COLUMNS:
+            out.res_df[column] = 0.0
+        out.js_tank_soc_df = pd.DataFrame({"soc_kwh": np.zeros(n)}, index=out.res_df.index)
+        out.js_household_kwh = out.js_emob_kwh = 0.0
+        out.js_space_heat_kwh = out.js_dhw_kwh = out.js_cooling_kwh = 0.0
+        out.js_hp_el_kwh = out.js_heater_el_kwh = out.js_cooling_el_kwh = 0.0
+        out.js_heat_unmet_kwh = out.js_hp_scop = 0.0
 
-        js_factor = js_scale_map.get(inp.js_scenario, 0)
-
-        if js_factor > 0:
-            js_path = os.path.join(
-                base_input,
-                "Strombezug_Stadtentwicklung_15min.csv"
+        if concept is not None:
+            temp_air = self.weather_df["temp_air"].to_numpy()
+            profiles = build_js_profiles(self.weather_df.index, temp_air)
+            cop_space, cop_dhw = concept_cops(concept, temp_air)
+            r = run_js_heat_dispatch(
+                profiles["space_heat_kw"].to_numpy(),
+                profiles["dhw_kw"].to_numpy(),
+                profiles["cooling_kw"].to_numpy(),
+                cop_space,
+                cop_dhw,
+                JSParams.from_concept(concept),
+                dt_h=DT_H,
             )
 
-            if os.path.exists(js_path):
-                try:
-                    df_js = pd.read_csv(js_path, sep=",")
-                    df_js.columns = df_js.columns.str.strip()
+            out.res_df["Last_JS_Nutzerstrom [kW]"] = profiles["household_kw"].values
+            out.res_df["Last_JS_EMob [kW]"] = profiles["emob_kw"].values
+            out.res_df["Last_JS_Waermepumpe [kW]"] = r.hp_el_kw
+            out.res_df["Last_JS_Heizstab [kW]"] = r.heater_kw
+            out.res_df["Last_JS_Kaelte [kW]"] = r.cooling_el_kw
+            out.js_tank_soc_df = pd.DataFrame({"soc_kwh": r.tank_soc_kwh}, index=out.res_df.index)
 
-                    if "Timestamp" not in df_js.columns or "Strombezug (kW)" not in df_js.columns:
-                        raise ValueError(
-                            f"Unerwartete Spalten in Jüchen-Süd-Datei: {list(df_js.columns)}"
-                        )
+            out.js_household_kwh = float(profiles["household_kw"].sum() * DT_H)
+            out.js_emob_kwh = float(profiles["emob_kw"].sum() * DT_H)
+            out.js_space_heat_kwh = float(profiles["space_heat_kw"].sum() * DT_H)
+            out.js_dhw_kwh = float(profiles["dhw_kw"].sum() * DT_H)
+            out.js_cooling_kwh = float(profiles["cooling_kw"].sum() * DT_H)
+            out.js_hp_el_kwh = r.hp_el_kwh
+            out.js_heater_el_kwh = r.heater_kwh
+            out.js_cooling_el_kwh = r.cooling_el_kwh
+            out.js_heat_unmet_kwh = r.unmet_kwh
+            out.js_hp_scop = r.scop
 
-                    df_js["timestamp"] = pd.to_datetime(
-                        "2022 " + df_js["Timestamp"].astype(str).str.strip(),
-                        format="%Y %d.%m. %H:%M",
-                        errors="coerce"
-                    )
-
-                    df_js["Strombezug (kW)"] = pd.to_numeric(
-                        df_js["Strombezug (kW)"].astype(str).str.replace(",", ".", regex=False),
-                        errors="coerce"
-                    ).fillna(0)
-
-                    df_js = df_js.set_index("timestamp").sort_index()
-
-                    js_series = df_js["Strombezug (kW)"].clip(lower=0) * js_factor
-
-                    if len(js_series) == len(out.res_df.index):
-                        js_series = pd.Series(js_series.to_numpy(), index=out.res_df.index)
-                    else:
-                        js_series = js_series.reset_index(drop=True)
-                        js_series.index = out.res_df.index[:len(js_series)]
-                        js_series = js_series.reindex(out.res_df.index, fill_value=0.0)
-
-                    out.res_df["Last_Juechen_Sued [kW]"] = js_series
-                    out.js_max_power_kw = out.res_df["Last_Juechen_Sued [kW]"].max()
-                    out.js_sum_energy_kwh = (out.res_df["Last_Juechen_Sued [kW]"] * 0.25).sum()
-
-                except Exception as e:
-                    out.js_error_text = f"JÜCHEN SÜD --- Fehler beim Laden: {e}"
-            else:
-                out.js_error_text = f"JÜCHEN SÜD --- Datei nicht gefunden: {js_path}"
+        out.res_df["Last_Juechen_Sued [kW]"] = out.res_df[JS_LOAD_COLUMNS].sum(axis=1)
+        out.js_max_power_kw = float(out.res_df["Last_Juechen_Sued [kW]"].max())
+        out.js_sum_energy_kwh = float(out.res_df["Last_Juechen_Sued [kW]"].sum() * DT_H)
 
         return out
 

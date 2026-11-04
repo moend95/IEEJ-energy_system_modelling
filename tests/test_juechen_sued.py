@@ -123,3 +123,62 @@ def test_dispatch_warmes_netz_nachheizung():
     r = run_js_heat_dispatch(np.zeros(n), dhw, np.zeros(n), cop, cop, p, DT_H)
     np.testing.assert_allclose(r.heater_kw, dhw * p.dhw_lift_share)
     np.testing.assert_allclose(r.hp_th_kw, dhw * (1 - p.dhw_lift_share) / (1 - p.net_loss))
+
+
+# ---------------------------------------------------------------------------
+# Integration (vollständige run_simulation)
+# ---------------------------------------------------------------------------
+
+JS_COLUMNS = ["Last_JS_Nutzerstrom [kW]", "Last_JS_EMob [kW]", "Last_JS_Waermepumpe [kW]",
+              "Last_JS_Heizstab [kW]", "Last_JS_Kaelte [kW]"]
+
+
+def js_input(concept: str):
+    from core.io_types import GuiInput
+    return GuiInput(
+        h_highways=["A46"], h_pv_types=[0],
+        el_build_state=50, el_pv_type=5,
+        el_tractor_width=12.0, el_tractor_length=15.0, el_tractor_turn_radius=9.0,
+        i_heat_cooling_electric=True, i_companies=[2, 3, 4, 5, 6],
+        geh_variant="Keine", js_concept=concept,
+    )
+
+
+@pytest.fixture(scope="module")
+def sims():
+    import contextlib
+    import io
+    from Simulation import run_simulation
+    with contextlib.redirect_stdout(io.StringIO()):
+        return {c: run_simulation(js_input(c)) for c in ["Aus", *JS_CONCEPTS]}
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("concept", list(JS_CONCEPTS))
+def test_integration_konzept(sims, concept):
+    o = sims[concept]
+    df = o.res_df
+    np.testing.assert_allclose(df[JS_COLUMNS].sum(axis=1), df["Last_Juechen_Sued [kW]"], atol=1e-9)
+    assert o.js_sum_energy_kwh == pytest.approx(
+        o.js_household_kwh + o.js_emob_kwh + o.js_hp_el_kwh + o.js_heater_el_kwh + o.js_cooling_el_kwh, rel=1e-9)
+    assert o.js_heat_unmet_kwh < 0.01 * (o.js_space_heat_kwh + o.js_dhw_kwh)
+    # Netzbilanz schließt
+    gen = df[[c for c in df.columns if c.startswith("Erzeugung")]].sum(axis=1)
+    loads = df[["Last_Industrie [kW]", "Last_Green_Energy_Hub [kW]", "Last_Juechen_Sued [kW]"]].sum(axis=1)
+    np.testing.assert_allclose(gen + df["Netzbezug [kW]"], loads + df["Netzeinspeisung [kW]"], atol=1e-6)
+
+
+@pytest.mark.slow
+def test_integration_aus(sims):
+    o = sims["Aus"]
+    for column in [*JS_COLUMNS, "Last_Juechen_Sued [kW]"]:
+        assert (o.res_df[column] == 0).all(), column
+    assert o.js_sum_energy_kwh == 0
+
+
+@pytest.mark.slow
+def test_integration_reihenfolge_strombedarf(sims):
+    """Warmes Netz braucht wegen Netzverlusten und Nachheizung am meisten Strom für Wärme."""
+    heat_el = {c: sims[c].js_hp_el_kwh + sims[c].js_heater_el_kwh for c in JS_CONCEPTS}
+    assert heat_el["Warmes Netz"] > heat_el["Kaltes Netz"]
+    assert heat_el["Warmes Netz"] > heat_el["Dezentral"]
