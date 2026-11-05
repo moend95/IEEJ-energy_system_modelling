@@ -1,15 +1,4 @@
-const ICON_PATHS = {
-  solar: "./icons/solar_highway.png",
-  landscape: "./icons/energy_landscape.png",
-  industry: "./icons/industrial_area.png",
-  hub: "./icons/green_energy_hub.png",
-  grid: "./icons/grid_supply.png",
-  battery: "./icons/battery_storage.png",
-  js: "./icons/juechen_sued.png",
-};
-
 const CATALOG_PATH = "./catalog.json";
-const PRECOMPUTED_BASE = "./precomputed";
 
 const LANDSCAPE_TRACTOR_LENGTH_M = 15;
 const LANDSCAPE_TRACTOR_WIDTH_OPTIONS = {
@@ -19,15 +8,11 @@ const LANDSCAPE_TRACTOR_WIDTH_OPTIONS = {
   27: 20.25,
 };
 
-const NODE_ICON_BY_ID = {
-  solar: "solar",
-  landscape: "landscape",
-  grid: "grid",
-  battery: "battery",
-  industry: "industry",
-  hub: "hub",
-  js: "js",
-};
+// Basis-Variante Elsbachtal: je ein Unternehmen jedes Typs (wie ELSBACHTAL_BASIS_COMPANIES in Python)
+const ELSBACHTAL_BASIS_COMPANIES = [0, 1, 2, 3, 5];
+
+// Karte und Kennzahlen aktualisieren sich bei jeder Änderung, leicht entprellt
+const UPDATE_DEBOUNCE_MS = 150;
 
 const GEOJSON_PATHS = {
   A44: "./geometries/a44_beide.geojson",
@@ -45,9 +30,14 @@ const LANDSCAPE_LAYER_KEYS = [
   "landscape_horizontal_100",
 ];
 
-const EDGE_COLOR_FALLBACK = "#10B35A";
-
-let catalogEntries = [];
+const catalogIndex = new Map();
+const payloadCache = new Map();
+const viewState = {
+  updateTimer: null,
+  updateSeq: 0,
+  lastInput: null,
+  hasRendered: false,
+};
 const mapState = {
   map: null,
   geojsonCache: {},
@@ -55,18 +45,7 @@ const mapState = {
   defaultView: { center: [51.0628, 6.49554], zoom: 12 },
 };
 
-function setStatus(text, match = "") {
-  const statusText = document.getElementById("status-text");
-  const statusMatch = document.getElementById("status-match");
-  if (statusText) statusText.textContent = text;
-  if (statusMatch) statusMatch.textContent = match;
-}
-
-function getNumberValue(id, fallback = 0) {
-  const element = document.getElementById(id);
-  const value = Number(element?.value);
-  return Number.isFinite(value) ? value : fallback;
-}
+// ---------------- Kanonischer Szenarioschlüssel (muss zu generate_all_scenarios.py passen) ----------------
 
 function roundFloat(value, digits = 3, fallback = 0) {
   const num = Number(value);
@@ -127,221 +106,186 @@ function canonicalizeInput(rawInput) {
   };
 }
 
-function canonicalKey(rawInput) {
-  return stableStringify(canonicalizeInput(rawInput));
-}
+// ---------------- Eingaben lesen ----------------
 
 function getCheckedValues(name) {
   return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map((el) => el.value);
 }
 
-function getSelectedValues(selectId) {
-  const element = document.getElementById(selectId);
-  if (!element) {
-    return [];
-  }
-  return Array.from(element.selectedOptions).map((opt) => opt.value);
+function getRadioValue(name, fallback) {
+  return document.querySelector(`input[name="${name}"]:checked`)?.value ?? fallback;
 }
-
-// Basis-Variante Elsbachtal: je ein Unternehmen jedes Typs (wie ELSBACHTAL_BASIS_COMPANIES in Python)
-const ELSBACHTAL_BASIS_COMPANIES = [0, 1, 2, 3, 5];
 
 function isIndustryCustomMode() {
-  return document.getElementById("i-mode")?.value === "custom";
-}
-
-function syncIndustryModeDisplay() {
-  const custom = isIndustryCustomMode();
-  const customWrap = document.getElementById("i-custom");
-  const basisHint = document.getElementById("i-basis-hint");
-  if (customWrap) customWrap.hidden = !custom;
-  if (basisHint) basisHint.hidden = custom;
+  return getRadioValue("i_mode", "basis") === "custom";
 }
 
 function getIndustryCompanyValues() {
   if (!isIndustryCustomMode()) {
     return [...ELSBACHTAL_BASIS_COMPANIES];
   }
-  const values = [];
-  for (let slot = 1; slot <= 5; slot += 1) {
-    const el = document.getElementById(`i-company-${slot}`);
-    const raw = String(el?.value || "").trim();
-    if (raw === "") continue;
-    const parsed = Number.parseInt(raw, 10);
-    if (Number.isFinite(parsed)) {
-      values.push(parsed);
-    }
-  }
-  return values;
+  return getCheckedValues("i_company").map((v) => Number.parseInt(v, 10));
 }
 
 function collectRawInput() {
   return {
     h_highways: getCheckedValues("h_highways"),
     h_pv_types: getCheckedValues("h_pv_types"),
-    el_build_state: getNumberValue("el-build-state", 50),
-    el_pv_type: getNumberValue("el-pv-type", 5),
-    el_tractor_width: getNumberValue("el-tractor-width", 12),
+    el_build_state: Number(getRadioValue("el_build_state", 50)),
+    el_pv_type: Number(getRadioValue("el_pv_type", 5)),
+    el_tractor_width: Number(getRadioValue("el_tractor_width", 12)),
     i_companies: getIndustryCompanyValues(),
-    geh_variant: document.getElementById("geh-variant")?.value || "Keine",
-    js_concept: document.getElementById("js-concept")?.value || "Aus",
+    geh_variant: getRadioValue("geh_variant", "Keine"),
+    js_concept: getRadioValue("js_concept", "Aus"),
   };
 }
 
-function getLandscapeTractorRadius(width) {
-  const parsedWidth = Number.parseInt(String(width || 12), 10) || 12;
-  return LANDSCAPE_TRACTOR_WIDTH_OPTIONS[parsedWidth] ?? LANDSCAPE_TRACTOR_WIDTH_OPTIONS[12];
+function syncSidebarDisplay(cInput) {
+  const custom = isIndustryCustomMode();
+  document.getElementById("i-custom").hidden = !custom;
+  document.getElementById("note-industry-basis").hidden = custom;
+  document.getElementById("note-industry-none").hidden = !custom || cInput.i_companies.length > 0;
+  document.getElementById("note-solar").hidden = cInput.h_highways.length > 0 && cInput.h_pv_types.length > 0;
+
+  const radius = cInput.el_tractor_turn_radius;
+  document.getElementById("el-tractor-turn-radius-value").textContent =
+    `${radius.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} m`;
 }
 
-function syncLandscapeTractorDisplay() {
-  const widthElement = document.getElementById("el-tractor-width");
-  const displayElement = document.getElementById("el-tractor-turn-radius-value");
-  if (!displayElement) return;
+// ---------------- Akkordeons und Reiter ----------------
 
-  const radius = getLandscapeTractorRadius(widthElement?.value);
-  const formattedRadius = Number.isInteger(radius * 10) ? radius.toFixed(1) : radius.toFixed(2);
-  displayElement.textContent = `${formattedRadius} m`;
-}
-
-function findCatalogMatch(selectedCanonicalKey) {
-  for (const entry of catalogEntries) {
-    if ((entry?.canonical_key_normalized || entry?.canonical_key) === selectedCanonicalKey) {
-      return entry;
-    }
-  }
-  return null;
-}
-
-function setInfoHidden(id, isHidden) {
-  const element = document.getElementById(id);
-  if (!element) return;
-  element.hidden = isHidden;
-}
-
-function updateModuleFeedback(cInput) {
-  const solarActive = cInput.h_highways.length > 0 && cInput.h_pv_types.length > 0;
-  const landscapeActive = Number(cInput.el_build_state) > 0;
-  const industryActive = cInput.i_companies.length > 0;
-  const gehActive = cInput.geh_variant !== "Keine";
-  const jsActive = cInput.js_concept !== "Aus";
-
-  setInfoHidden("info-solar", solarActive);
-  setInfoHidden("info-industry", industryActive);
-  setInfoHidden("info-geh", gehActive);
-  setInfoHidden("info-js", jsActive);
-}
-
-function setAccordionOpen(accordion, open) {
-  if (!accordion) return;
-  const toggle = accordion.querySelector(".accordion-toggle");
-  const wrap = accordion.querySelector(".accordion-content-wrap");
-  accordion.classList.toggle("open", open);
-  if (toggle) {
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-  }
-  if (wrap) {
-    wrap.style.gridTemplateRows = open ? "1fr" : "0fr";
-  }
-}
-
-function setupTabGroup(config) {
-  const buttons = Array.from(document.querySelectorAll(config.buttonSelector));
-  const panels = Array.from(document.querySelectorAll(config.panelSelector));
-  if (!buttons.length) return;
-
-  const setActiveTab = (targetId) => {
-    buttons.forEach((btn) => {
-      const isActive = btn.dataset.tabTarget === targetId;
-      btn.classList.toggle("active", isActive);
-      btn.setAttribute("aria-selected", isActive ? "true" : "false");
-      btn.setAttribute("tabindex", isActive ? "0" : "-1");
-    });
-
-    panels.forEach((panel) => {
-      const isActive = panel.id === targetId;
-      panel.classList.toggle("active", isActive);
-      panel.hidden = !isActive;
-      panel.setAttribute("aria-hidden", isActive ? "false" : "true");
-    });
-
-    if (typeof config.onChange === "function") {
-      config.onChange(targetId);
-    }
-  };
-
-  buttons.forEach((btn, idx) => {
-    btn.addEventListener("click", () => {
-      const target = btn.dataset.tabTarget;
-      if (target) setActiveTab(target);
-    });
-
-    btn.addEventListener("keydown", (event) => {
-      if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) {
-        return;
-      }
-      event.preventDefault();
-      let nextIndex = idx;
-      if (event.key === "ArrowRight") nextIndex = (idx + 1) % buttons.length;
-      if (event.key === "ArrowLeft") nextIndex = (idx - 1 + buttons.length) % buttons.length;
-      if (event.key === "Home") nextIndex = 0;
-      if (event.key === "End") nextIndex = buttons.length - 1;
-      buttons[nextIndex].focus();
-      const target = buttons[nextIndex].dataset.tabTarget;
-      if (target) setActiveTab(target);
-    });
-  });
-
-  const activeBtn = buttons.find((btn) => btn.classList.contains("active"));
-  const initialTarget = activeBtn?.dataset.tabTarget || buttons[0]?.dataset.tabTarget;
-  if (initialTarget) setActiveTab(initialTarget);
-}
-
-function setupGenerationTabs() {
-  setupTabGroup({
-    buttonSelector: ".tab-btn-generation",
-    panelSelector: ".generation-tab-panel",
-  });
-}
-
-function setupConsumptionTabs() {
-  setupTabGroup({
-    buttonSelector: ".tab-btn-consumption",
-    panelSelector: ".consumption-tab-panel",
-    onChange: (targetId) => {
-      const panel = document.getElementById(targetId);
-      if (!panel) return;
-
-      const allPanels = Array.from(document.querySelectorAll(".consumption-tab-panel"));
-      allPanels.forEach((p) => {
-        if (p !== panel) {
-          p.querySelectorAll(".accordion").forEach((accordion) => setAccordionOpen(accordion, false));
-        }
-      });
-
-      const firstAccordion = panel.querySelector(".accordion");
-      if (firstAccordion) {
-        setAccordionOpen(firstAccordion, true);
-      }
-    },
-  });
+function setAccordionOpen(button, open) {
+  const panel = document.getElementById(button.getAttribute("aria-controls"));
+  button.setAttribute("aria-expanded", open ? "true" : "false");
+  if (panel) panel.classList.toggle("is-open", open);
 }
 
 function setupAccordions() {
-  const accordions = Array.from(document.querySelectorAll(".accordion"));
-  accordions.forEach((accordion) => {
-    const toggle = accordion.querySelector(".accordion-toggle");
-    const wrap = accordion.querySelector(".accordion-content-wrap");
-    if (!toggle || !wrap) return;
-
-    const isOpen = accordion.classList.contains("open");
-    setAccordionOpen(accordion, isOpen);
-
-    toggle.addEventListener("click", () => {
-      const open = !accordion.classList.contains("open");
-      setAccordionOpen(accordion, open);
+  document.querySelectorAll(".acc-btn").forEach((button) => {
+    setAccordionOpen(button, button.getAttribute("aria-expanded") === "true");
+    button.addEventListener("click", () => {
+      setAccordionOpen(button, button.getAttribute("aria-expanded") !== "true");
     });
   });
 }
+
+function setupViewTabs() {
+  const tabs = Array.from(document.querySelectorAll(".view-tab"));
+
+  const activate = (tab, focus) => {
+    tabs.forEach((t) => {
+      const active = t === tab;
+      t.setAttribute("aria-selected", active ? "true" : "false");
+      t.tabIndex = active ? 0 : -1;
+      document.getElementById(t.getAttribute("aria-controls")).hidden = !active;
+    });
+    if (focus) tab.focus();
+    if (tab.id === "tab-map") showSitePlan();
+  };
+
+  tabs.forEach((tab, idx) => {
+    tab.addEventListener("click", () => activate(tab, false));
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      let next = idx;
+      if (event.key === "ArrowRight") next = (idx + 1) % tabs.length;
+      if (event.key === "ArrowLeft") next = (idx - 1 + tabs.length) % tabs.length;
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = tabs.length - 1;
+      activate(tabs[next], true);
+    });
+  });
+}
+
+function isSitePlanVisible() {
+  return !document.getElementById("view-map").hidden;
+}
+
+// Leaflet erst beim ersten Öffnen des Lageplans starten (im verborgenen Reiter hätte die Karte keine Größe)
+function showSitePlan() {
+  if (!mapState.map) initLeafletMap();
+  if (!mapState.map) return;
+  mapState.map.invalidateSize();
+  if (viewState.lastInput) updateMapHighlights(viewState.lastInput);
+}
+
+// ---------------- Szenario laden und anzeigen ----------------
+
+function setScenarioHint(text) {
+  const hint = document.getElementById("scenario-hint");
+  hint.textContent = text;
+  hint.hidden = !text;
+}
+
+async function loadCatalog() {
+  const res = await fetch(CATALOG_PATH);
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const entries = await res.json();
+  for (const entry of entries) {
+    let normalized = String(entry?.canonical_key || "");
+    try {
+      normalized = stableStringify(JSON.parse(normalized || "{}"));
+    } catch {
+      // Schlüssel unverändert übernehmen
+    }
+    catalogIndex.set(normalized, entry);
+  }
+  window.__IEEJ_CATALOG__ = entries;
+}
+
+async function loadFlowPayload(flowPath) {
+  if (payloadCache.has(flowPath)) return payloadCache.get(flowPath);
+  const res = await fetch(flowPath);
+  if (!res.ok) {
+    throw new Error(`flow_data fetch failed (${res.status})`);
+  }
+  const payload = await res.json();
+  payloadCache.set(flowPath, payload);
+  return payload;
+}
+
+function scheduleUpdate() {
+  clearTimeout(viewState.updateTimer);
+  viewState.updateTimer = setTimeout(updateScenario, UPDATE_DEBOUNCE_MS);
+}
+
+async function updateScenario() {
+  const seq = ++viewState.updateSeq;
+  const cInput = canonicalizeInput(collectRawInput());
+  viewState.lastInput = cInput;
+  syncSidebarDisplay(cInput);
+  if (isSitePlanVisible()) updateMapHighlights(cInput);
+
+  const results = document.getElementById("results");
+  const entry = catalogIndex.get(stableStringify(cInput));
+  if (!entry) {
+    setScenarioHint(
+      viewState.hasRendered
+        ? "Diese Kombination ist nicht vorberechnet. Angezeigt wird weiterhin das zuletzt verfügbare Szenario."
+        : "Diese Kombination ist nicht vorberechnet. Bitte eine andere Auswahl treffen."
+    );
+    results.classList.add("is-stale");
+    return;
+  }
+
+  try {
+    const payload = await loadFlowPayload(entry.flow_path);
+    if (seq !== viewState.updateSeq) return; // inzwischen neuere Auswahl
+    renderParkKpis(document.getElementById("park-kpis"), payload);
+    renderParkMap(document.getElementById("park-stage"), payload);
+    document.getElementById("scenario-meta").textContent = `Szenario ${entry.scenario_id}`;
+    viewState.hasRendered = true;
+    setScenarioHint("");
+    results.classList.remove("is-stale");
+  } catch (err) {
+    if (seq === viewState.updateSeq) setScenarioHint(`Szenario konnte nicht geladen werden (${err.message}).`);
+  }
+}
+
+// ---------------- Lageplan (Leaflet) ----------------
 
 function getLandscapeGeoKey(cInput) {
   const buildState = Number(cInput.el_build_state || 0);
@@ -394,11 +338,11 @@ function setMapHint(cInput) {
   const landscapeKey = getLandscapeGeoKey(cInput);
   if (landscapeKey) {
     const orientation = Number(cInput.el_pv_type || 0) === 6 ? "Horizontal" : "Vertikal";
-    active.push(`Energielandschaft ${Number(cInput.el_build_state)}% (${orientation})`);
+    active.push(`Energielandschaft ${Number(cInput.el_build_state)} % (${orientation})`);
   }
 
   mapHint.textContent = active.length
-    ? `Aktiv hervorgehoben: ${active.join(", ")}`
+    ? `Hervorgehoben: ${active.join(", ")}`
     : "Keine aktive Kartenhervorhebung.";
 }
 
@@ -511,295 +455,25 @@ async function updateMapHighlights(cInput) {
     }
   } catch (err) {
     setMapHint({ h_highways: [], el_build_state: 0 });
-    setStatus("Karte konnte nicht aktualisiert werden", String(err));
+    document.getElementById("map-active-hint").textContent = `Lageplan konnte nicht aktualisiert werden (${err.message}).`;
   }
 }
 
-function setLoadButtonBusy(isBusy) {
-  const btn = document.getElementById("btn-load");
-  if (!btn) return;
-  btn.setAttribute("aria-busy", isBusy ? "true" : "false");
-  btn.disabled = isBusy;
-  btn.textContent = isBusy ? "Lade Szenario..." : "Szenario laden";
-}
-
-function formatEnergy(kwh) {
-  const val = Number(kwh) || 0;
-  if (Math.abs(val) >= 1_000_000) return `${(val / 1_000_000).toFixed(2)} GWh`;
-  if (Math.abs(val) >= 1_000) return `${(val / 1_000).toFixed(2)} MWh`;
-  return `${val.toFixed(2)} kWh`;
-}
-
-function renderSummaryCards(payload) {
-  const container = document.getElementById("summary-cards");
-  if (!container) return;
-  const summary = payload?.annual_summary || {};
-  const generation = summary.generation || {};
-  const demand = summary.demand || {};
-  const balance = summary.balance || {};
-  const grid = summary.grid || {};
-
-  const cards = [
-    { label: "Erzeugung", value: formatEnergy(generation.total_generation_kwh) },
-    { label: "Verbrauch", value: formatEnergy(demand.total_demand_kwh) },
-    { label: "Bilanz", value: formatEnergy(balance.bal_energy_kwh) },
-    { label: "Netzimport", value: formatEnergy(grid.import_kwh) },
-  ];
-
-  container.innerHTML = "";
-  for (const card of cards) {
-    const cardEl = document.createElement("div");
-    cardEl.className = "summary-card";
-    cardEl.innerHTML = `<div class="summary-label">${card.label}</div><div class="summary-value">${card.value}</div>`;
-    container.appendChild(cardEl);
-  }
-}
-
-function nodePosition(node, width, height, padding) {
-  const x = padding + Number(node.x || 0) * (width - 2 * padding);
-  const y = padding + (1 - Number(node.y || 0)) * (height - 2 * padding);
-  return { x, y };
-}
-
-function buildPolylinePath(points) {
-  if (!points.length) return "";
-  const [first, ...rest] = points;
-  let d = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
-  for (const p of rest) {
-    d += ` L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`;
-  }
-  return d;
-}
-
-function computeEdgeRoute(source, target) {
-  const dx = target.x - source.x;
-  const dy = target.y - source.y;
-  if (Math.abs(dx) >= Math.abs(dy)) {
-    const mx = source.x + dx * 0.5;
-    return [source, { x: mx, y: source.y }, { x: mx, y: target.y }, target];
-  }
-  const my = source.y + dy * 0.5;
-  return [source, { x: source.x, y: my }, { x: target.x, y: my }, target];
-}
-
-function renderFlowSvg(payload) {
-  const stage = document.getElementById("flow-stage");
-  if (!stage) return;
-
-  const nodes = Array.isArray(payload?.flow_nodes) ? payload.flow_nodes : [];
-  const edges = Array.isArray(payload?.flow_edges) ? payload.flow_edges : [];
-  const width = 1200;
-  const height = 680;
-  const padding = 70;
-
-  const nodeById = {};
-  for (const node of nodes) {
-    nodeById[node.id] = node;
-  }
-
-  const svgParts = [];
-  svgParts.push(`<svg viewBox="0 0 ${width} ${height}" class="flow-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Energiefluss">`);
-  svgParts.push("<defs>");
-  svgParts.push('<marker id="arrow-head" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#475569" /></marker>');
-  svgParts.push("</defs>");
-
-  for (const edge of edges) {
-    const annual = Number(edge.annual_kwh) || 0;
-    if (annual <= 0) continue;
-
-    const sourceNode = nodeById[edge.source];
-    const targetNode = nodeById[edge.target];
-    if (!sourceNode || !targetNode) continue;
-
-    const source = nodePosition(sourceNode, width, height, padding);
-    const target = nodePosition(targetNode, width, height, padding);
-    const route = computeEdgeRoute(source, target);
-    const path = buildPolylinePath(route);
-    const stroke = Math.max(1.8, Number(edge.stroke_px) || 2);
-    const color = String(edge.color || EDGE_COLOR_FALLBACK);
-
-    const title = `${edge.id} | ${formatEnergy(edge.annual_kwh)} | peak ${(Number(edge.peak_kw) || 0).toFixed(2)} kW`;
-    svgParts.push(`<path d="${path}" fill="none" stroke="${color}" stroke-width="${stroke.toFixed(2)}" marker-end="url(#arrow-head)"><title>${title}</title></path>`);
-  }
-
-  for (const node of nodes) {
-    const pos = nodePosition(node, width, height, padding);
-    const isSystem = node.id === "system";
-    const label = String(node.label || node.id || "node");
-
-    if (isSystem) {
-      svgParts.push(`<circle cx="${pos.x.toFixed(2)}" cy="${pos.y.toFixed(2)}" r="16" fill="#ffffff" stroke="#475569" stroke-width="2" />`);
-      svgParts.push(`<text x="${pos.x.toFixed(2)}" y="${(pos.y + 30).toFixed(2)}" text-anchor="middle" class="node-label">${label}</text>`);
-      continue;
-    }
-
-    const boxW = 148;
-    const boxH = 84;
-    const x = pos.x - boxW / 2;
-    const y = pos.y - boxH / 2;
-    const iconKey = NODE_ICON_BY_ID[node.id];
-    const iconPath = ICON_PATHS[iconKey];
-
-    svgParts.push(`<rect x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${boxW}" height="${boxH}" rx="12" fill="#ffffff" stroke="#94a3b8" stroke-width="2" />`);
-    if (iconPath) {
-      svgParts.push(`<image href="${iconPath}" x="${(pos.x - 17).toFixed(2)}" y="${(pos.y - 17).toFixed(2)}" width="34" height="34" preserveAspectRatio="xMidYMid meet" />`);
-    }
-    svgParts.push(`<text x="${pos.x.toFixed(2)}" y="${(y - 10).toFixed(2)}" text-anchor="middle" class="node-label">${label}</text>`);
-  }
-
-  svgParts.push("</svg>");
-  stage.innerHTML = svgParts.join("");
-}
-
-async function loadFlowPayload(flowPath) {
-  const res = await fetch(flowPath);
-  if (!res.ok) {
-    throw new Error(`flow_data fetch failed (${res.status})`);
-  }
-  return res.json();
-}
-
-async function loadCatalog() {
-  try {
-    const res = await fetch(CATALOG_PATH);
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
-
-    catalogEntries = await res.json();
-    catalogEntries = catalogEntries.map((entry) => {
-      let normalized = entry?.canonical_key;
-      try {
-        normalized = stableStringify(JSON.parse(String(entry?.canonical_key || "{}")));
-      } catch {
-        normalized = String(entry?.canonical_key || "");
-      }
-      return {
-        ...entry,
-        canonical_key_normalized: normalized,
-      };
-    });
-    setStatus("catalog.json erfolgreich geladen.", `Szenarien im Index: ${catalogEntries.length}`);
-
-    window.__IEEJ_CATALOG__ = catalogEntries;
-  } catch (err) {
-    setStatus("Fehler beim Laden von catalog.json", String(err));
-  }
-}
-
-async function runScenarioLoad() {
-  setLoadButtonBusy(true);
-  if (!Array.isArray(catalogEntries) || catalogEntries.length === 0) {
-    setStatus("Noch kein Katalog geladen.", "Bitte Seite neu laden.");
-    setLoadButtonBusy(false);
-    return;
-  }
-
-  const rawInput = collectRawInput();
-  const cInput = canonicalizeInput(rawInput);
-  updateModuleFeedback(cInput);
-  await updateMapHighlights(cInput);
-
-  const key = stableStringify(cInput);
-  const match = findCatalogMatch(key);
-
-  if (!match) {
-    renderSummaryCards({ annual_summary: {} });
-    const flowStage = document.getElementById("flow-stage");
-    if (flowStage) {
-      flowStage.textContent = "Diese Kombination ist im Precomputed-Katalog noch nicht verfuegbar.";
-    }
-    setStatus("Kein Match im Katalog.", key);
-    setLoadButtonBusy(false);
-    return;
-  }
-
-  try {
-    const payload = await loadFlowPayload(match.flow_path);
-    renderSummaryCards(payload);
-    renderFlowSvg(payload);
-
-    // Use the payload input to keep map highlight in sync with loaded scenario.
-    const payloadInput = canonicalizeInput(payload?.input || rawInput);
-    await updateMapHighlights(payloadInput);
-
-    setStatus("Szenario geladen.", `${match.scenario_id} | ${match.flow_path}`);
-  } catch (err) {
-    setStatus("Fehler beim Laden von flow_data.json", String(err));
-  } finally {
-    setLoadButtonBusy(false);
-  }
-}
-
-function setupLoadButton() {
-  const btn = document.getElementById("btn-load");
-  if (!btn) return;
-  btn.addEventListener("click", runScenarioLoad);
-}
-
-function setupReactiveInputHandlers() {
-  const selectors = [
-    "input[name='h_highways']",
-    "input[name='h_pv_types']",
-    "#el-build-state",
-    "#el-pv-type",
-    "#el-tractor-width",
-    "#i-mode",
-    "#i-company-1",
-    "#i-company-2",
-    "#i-company-3",
-    "#i-company-4",
-    "#i-company-5",
-    "#geh-variant",
-    "#js-concept",
-  ];
-
-  selectors.forEach((selector) => {
-    document.querySelectorAll(selector).forEach((el) => {
-      el.addEventListener("change", async () => {
-        const cInput = canonicalizeInput(collectRawInput());
-        updateModuleFeedback(cInput);
-        await updateMapHighlights(cInput);
-      });
-    });
-  });
-}
-
-function setupKeyboardShortcuts() {
-  document.addEventListener("keydown", (event) => {
-    const loadShortcut = (event.ctrlKey || event.metaKey) && event.key === "Enter";
-    if (!loadShortcut) return;
-
-    const tag = (document.activeElement?.tagName || "").toLowerCase();
-    const isEditable = ["input", "select", "textarea"].includes(tag);
-    if (isEditable) {
-      event.preventDefault();
-    }
-
-    runScenarioLoad();
-  });
-}
+// ---------------- Start ----------------
 
 async function init() {
-  setupGenerationTabs();
   setupAccordions();
-  setupConsumptionTabs();
-  setupLoadButton();
-  setupKeyboardShortcuts();
-  setupReactiveInputHandlers();
-  initLeafletMap();
-  syncLandscapeTractorDisplay();
-  syncIndustryModeDisplay();
-  document.getElementById("i-mode")?.addEventListener("change", syncIndustryModeDisplay);
-  const widthElement = document.getElementById("el-tractor-width");
-  if (widthElement) {
-    widthElement.addEventListener("change", syncLandscapeTractorDisplay);
-  }
-  await loadCatalog();
+  setupViewTabs();
+  document.getElementById("park-legend").innerHTML = parkMapLegendHtml();
+  document.querySelector(".sidebar").addEventListener("change", scheduleUpdate);
 
-  const initialInput = canonicalizeInput(collectRawInput());
-  updateModuleFeedback(initialInput);
-  await updateMapHighlights(initialInput);
+  try {
+    await loadCatalog();
+  } catch (err) {
+    setScenarioHint(`Szenariokatalog konnte nicht geladen werden (${err.message}).`);
+    return;
+  }
+  await updateScenario();
 }
 
 if (document.readyState === "loading") {

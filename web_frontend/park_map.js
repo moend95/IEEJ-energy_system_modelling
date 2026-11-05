@@ -34,10 +34,10 @@ const PARK_NODE_NAMES = {
 // kind: "self" = Eigenstrom Erzeuger → Verbraucher, "export" = Park → Netz, "import" = Netz → Park.
 const PARK_ROUTES = [
   { id: "solar-js", kind: "self", from: "solar", to: "js", start: [242, 215], end: [374, 215] },
-  { id: "solar-industry", kind: "self", from: "solar", to: "industry", start: [214, 196], ctrl: [420, -40], end: [574, 104] },
+  { id: "solar-industry", kind: "self", from: "solar", to: "industry", start: [232, 262], ctrl: [450, 300], end: [622, 236] },
   { id: "solar-hub", kind: "self", from: "solar", to: "hub", start: [168, 352], end: [168, 652] },
   { id: "landscape-js", kind: "self", from: "landscape", to: "js", start: [372, 314], end: [410, 252] },
-  { id: "landscape-industry", kind: "self", from: "landscape", to: "industry", start: [532, 322], end: [588, 220] },
+  { id: "landscape-industry", kind: "self", from: "landscape", to: "industry", start: [580, 355], end: [650, 230] },
   { id: "landscape-hub", kind: "self", from: "landscape", to: "hub", start: [336, 566], end: [282, 656] },
   { id: "export", kind: "export", from: "landscape", to: "grid", start: [548, 578], end: [600, 729] },
   { id: "import", kind: "import", from: "grid", to: "landscape", start: [650, 701], end: [600, 548] },
@@ -168,7 +168,7 @@ function parkMapBackground() {
     .join("");
 
   const signs = [
-    { label: "A46", x: 150, y: 97 },
+    { label: "A46", x: 432, y: 59 },
     { label: "A44n", x: 306, y: 305 },
     { label: "A61", x: 108, y: 800 },
   ]
@@ -373,7 +373,7 @@ function parkNodeSvg(id, summary, parkFlows) {
   const hexClass = id === "grid" ? "park-hex park-hex-grid" : active ? "park-hex" : "park-hex park-hex-inactive";
 
   const parts = [`<polygon class="${hexClass}" points="${parkHexPoints(cx, cy, r)}"/>`];
-  const titleTop = id === "landscape" ? cy - 70 : id === "hub" ? cy - 46 : cy - 38;
+  const titleTop = id === "landscape" ? cy - 70 : id === "hub" ? cy - 52 : cy - 38;
   node.title.forEach((line, i) => parts.push(parkText(tx, titleTop + i * 17, line, "park-title")));
   parts.push(parkText(tx, cy + 8, node.short, "park-short"));
 
@@ -388,7 +388,7 @@ function parkNodeSvg(id, summary, parkFlows) {
     detail.push(parkText(tx, base + 39, `davon Einspeisung ${parkFormatEnergy(p.export, false)}`, "park-label"));
   } else if (node.role === "consumer") {
     const c = parkFlows.consumers[id];
-    const base = id === "hub" ? cy - 8 : cy;
+    const base = id === "hub" ? cy - 16 : cy;
     detail.push(parkText(tx, base, "Bedarf", "park-label"));
     detail.push(parkText(tx, base + 19, parkFormatEnergy(c.demand), "park-value"));
     detail.push(parkText(tx, base + 35, `Eigenstrom ${parkFormatPercent(c.selfShare)}`, "park-label"));
@@ -403,15 +403,15 @@ function parkNodeSvg(id, summary, parkFlows) {
     if (id === "hub") {
       const h = summary?.green_energy_hub || {};
       const badges = [
-        parkAbs(h.pv_kwh) > 0 ? "PV" : null,
+        parkAbs(h.pv_kwh) > 0 ? `PV ${parkFormatEnergy(h.pv_kwh, false)}` : null,
         parkAbs(h.battery_charge_kwh) > 0 ? "Batterie" : null,
         parkAbs(h.electrolyzer_kwh) > 0 ? "H₂" : null,
       ].filter(Boolean);
-      const widths = badges.map((b) => 14 + b.length * 6);
+      const widths = badges.map((b) => 12 + b.length * 5.2);
       let bx = tx - (widths.reduce((a, w) => a + w, 0) + 4 * (badges.length - 1)) / 2;
       badges.forEach((b, i) => {
-        detail.push(`<rect class="park-badge" x="${bx.toFixed(1)}" y="${barY + 12}" width="${widths[i]}" height="16" rx="8"/>`);
-        detail.push(parkText((bx + widths[i] / 2).toFixed(1), barY + 24, b, "park-badge-text"));
+        detail.push(`<rect class="park-badge" x="${bx.toFixed(1)}" y="${barY + 10}" width="${widths[i].toFixed(1)}" height="16" rx="8"/>`);
+        detail.push(parkText((bx + widths[i] / 2).toFixed(1), barY + 21.5, b, "park-badge-text"));
         bx += widths[i] + 4;
       });
     }

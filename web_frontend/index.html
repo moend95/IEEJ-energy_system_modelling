@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IEEJ Precomputed Demo</title>
+  <title>Innovationspark Jüchen – Energiesystem</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap">
@@ -13,245 +13,214 @@
 <body>
   <div class="page">
     <header class="hero">
-      <img class="hero-logo" src="./assets/iee_logo.png" alt="IEE" style="height:42px">
+      <img class="hero-logo" src="./assets/iee_logo.png" alt="IEE">
       <div class="hero-text">
-        <h1>Innovationspark Erneuerbare Energien &mdash; J&uuml;chen</h1>
-        <p>Energiesystem interaktiv zusammenstellen und Energiefl&uuml;sse erkunden</p>
+        <h1>Innovationspark Erneuerbare Energien – Jüchen</h1>
+        <p>Energiesystem interaktiv zusammenstellen und Energieflüsse erkunden</p>
       </div>
     </header>
 
-    <div class="layout">
-      <section class="workbench">
-        <aside class="sidebar">
-          <h2>Eingaben</h2>
+    <div class="app-layout">
+      <aside class="sidebar" aria-label="Szenarioauswahl">
+        <p id="scenario-hint" class="scenario-hint" role="status" aria-live="polite" hidden></p>
 
-          <section class="panel">
-            <h3>Energie-Erzeugung</h3>
-            <div class="tab-list" role="tablist" aria-label="Erzeugung">
-              <button class="tab-btn tab-btn-generation active" role="tab" aria-selected="true" aria-controls="tab-solar" id="tab-btn-solar" data-tab-target="tab-solar">Solarautobahn</button>
-              <button class="tab-btn tab-btn-generation" role="tab" aria-selected="false" aria-controls="tab-landscape" id="tab-btn-landscape" data-tab-target="tab-landscape">Energielandschaft</button>
-            </div>
+        <button type="button" class="acc-btn sidebar-toggle" aria-expanded="false" aria-controls="sidebar-body">
+          <span class="acc-icon" aria-hidden="true"></span>Szenario anpassen
+        </button>
 
-            <div id="tab-solar" class="tab-panel generation-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-solar">
-              <label><input type="checkbox" name="h_highways" value="A44"> A44</label>
-              <label><input type="checkbox" name="h_highways" value="A46" checked> A46</label>
+        <div id="sidebar-body" class="acc-panel sidebar-body">
+          <div class="acc-inner">
 
-              <label><input type="checkbox" name="h_pv_types" value="0" checked> Laerm-/Windschutzwand</label>
-              <label><input type="checkbox" name="h_pv_types" value="3"> Boeschung</label>
-              <div id="info-solar" class="info-box" hidden>Solarautobahn deaktiviert.</div>
-            </div>
+            <!-- ============ Erzeugung ============ -->
+            <section class="acc">
+              <h2 class="acc-heading">
+                <button type="button" class="acc-btn" aria-expanded="true" aria-controls="acc-generation">
+                  <span class="acc-icon" aria-hidden="true"></span>Erzeugung
+                </button>
+              </h2>
+              <div id="acc-generation" class="acc-panel">
+                <div class="acc-inner">
 
-            <div id="tab-landscape" class="tab-panel generation-tab-panel" role="tabpanel" aria-labelledby="tab-btn-landscape" hidden>
-              <label for="el-build-state">Ausbaugrad [%]</label>
-              <select id="el-build-state">
-                <option value="0">0</option>
-                <option value="50" selected>50</option>
-                <option value="100">100</option>
-              </select>
-
-              <label for="el-pv-type">PV-Typ</label>
-              <select id="el-pv-type">
-                <option value="5" selected>Vertikal (Zaun, Nord-Sued)</option>
-                <option value="6">Horizontal (aufgestaendert, Ost-West)</option>
-                <option value="4">Horizontal mit Single-Axis-Tracking</option>
-              </select>
-
-              <label for="el-tractor-width">Traktorbreite [m]</label>
-              <select id="el-tractor-width">
-                <option value="12" selected>12</option>
-                <option value="18">18</option>
-                <option value="24">24</option>
-                <option value="27">27</option>
-              </select>
-
-              <p class="field-hint">Traktorlaenge ist fest auf 15 m gesetzt. Wenderadius: <strong id="el-tractor-turn-radius-value">9.0 m</strong>.</p>
-            </div>
-          </section>
-
-          <section class="panel">
-            <h3>Verbrauch</h3>
-
-            <div class="tab-list" role="tablist" aria-label="Verbraucher">
-              <button class="tab-btn tab-btn-consumption active" role="tab" aria-selected="true" aria-controls="cons-tab-industry" id="tab-btn-cons-industry" data-tab-target="cons-tab-industry">Industriegebiet Elsbachtal</button>
-              <button class="tab-btn tab-btn-consumption" role="tab" aria-selected="false" aria-controls="cons-tab-geh" id="tab-btn-cons-geh" data-tab-target="cons-tab-geh">Green Energy Hub</button>
-              <button class="tab-btn tab-btn-consumption" role="tab" aria-selected="false" aria-controls="cons-tab-js" id="tab-btn-cons-js" data-tab-target="cons-tab-js">Stadtteil Juechen-Sued</button>
-            </div>
-
-            <div id="cons-tab-industry" class="tab-panel consumption-tab-panel active" role="tabpanel" aria-labelledby="tab-btn-cons-industry">
-              <div class="accordion" id="acc-industry" data-accordion-id="industry">
-                <button type="button" class="accordion-toggle" id="acc-toggle-industry" aria-expanded="false" aria-controls="acc-panel-industry">Industriegebiet Elsbachtal</button>
-                <div class="accordion-content-wrap" id="acc-panel-industry">
-                  <div class="accordion-content">
-                    <label for="i-mode">Unternehmensauswahl</label>
-                    <select id="i-mode">
-                      <option value="basis" selected>Basis-Variante Elsbachtal</option>
-                      <option value="custom">Unternehmen selbst zusammenstellen</option>
-                    </select>
-                    <p class="field-hint" id="i-basis-hint">Je ein Unternehmen jedes Typs: Entsorgung, Stahl, Logistik und Lagerung, Schrott- und Metallhandel, Buero.</p>
-
-                    <div id="i-custom" hidden>
-                    <p class="field-hint">Waehle bis zu 5 Unternehmen (Duplikate moeglich)</p>
-
-                    <div class="company-grid">
-                      <div class="company-slot">
-                        <label for="i-company-1">Unternehmen 1</label>
-                        <select id="i-company-1">
-                          <option value="">Keine</option>
-                          <option value="0" selected>Entsorgung</option>
-                          <option value="1">Stahl (5-Tage-Woche, 3-Schicht)</option>
-                          <option value="2">Logistik und Lagerung</option>
-                          <option value="3">Schrott- und Metallhandel</option>
-                          <option value="5">Buero</option>
-                        </select>
-                      </div>
-
-                      <div class="company-slot">
-                        <label for="i-company-2">Unternehmen 2</label>
-                        <select id="i-company-2">
-                          <option value="">Keine</option>
-                          <option value="0">Entsorgung</option>
-                          <option value="1" selected>Stahl (5-Tage-Woche, 3-Schicht)</option>
-                          <option value="2">Logistik und Lagerung</option>
-                          <option value="3">Schrott- und Metallhandel</option>
-                          <option value="5">Buero</option>
-                        </select>
-                      </div>
-
-                      <div class="company-slot">
-                        <label for="i-company-3">Unternehmen 3</label>
-                        <select id="i-company-3">
-                          <option value="">Keine</option>
-                          <option value="0">Entsorgung</option>
-                          <option value="1">Stahl (5-Tage-Woche, 3-Schicht)</option>
-                          <option value="2" selected>Logistik und Lagerung</option>
-                          <option value="3">Schrott- und Metallhandel</option>
-                          <option value="5">Buero</option>
-                        </select>
-                      </div>
-
-                      <div class="company-slot">
-                        <label for="i-company-4">Unternehmen 4</label>
-                        <select id="i-company-4">
-                          <option value="">Keine</option>
-                          <option value="0">Entsorgung</option>
-                          <option value="1">Stahl (5-Tage-Woche, 3-Schicht)</option>
-                          <option value="2">Logistik und Lagerung</option>
-                          <option value="3" selected>Schrott- und Metallhandel</option>
-                          <option value="5">Buero</option>
-                        </select>
-                      </div>
-
-                      <div class="company-slot">
-                        <label for="i-company-5">Unternehmen 5</label>
-                        <select id="i-company-5">
-                          <option value="">Keine</option>
-                          <option value="0">Entsorgung</option>
-                          <option value="1">Stahl (5-Tage-Woche, 3-Schicht)</option>
-                          <option value="2">Logistik und Lagerung</option>
-                          <option value="3">Schrott- und Metallhandel</option>
-                          <option value="5" selected>Buero</option>
-                        </select>
+                  <section class="acc acc-sub">
+                    <h3 class="acc-heading">
+                      <button type="button" class="acc-btn" aria-expanded="true" aria-controls="acc-solar">
+                        <span class="acc-icon" aria-hidden="true"></span>Solarautobahn
+                      </button>
+                    </h3>
+                    <div id="acc-solar" class="acc-panel">
+                      <div class="acc-inner">
+                        <fieldset class="opt-group">
+                          <legend>Autobahnen</legend>
+                          <label class="opt"><input type="checkbox" name="h_highways" value="A44"><span class="opt-text">A44</span></label>
+                          <label class="opt"><input type="checkbox" name="h_highways" value="A46" checked><span class="opt-text">A46</span></label>
+                        </fieldset>
+                        <fieldset class="opt-group">
+                          <legend>PV-Flächen</legend>
+                          <label class="opt"><input type="checkbox" name="h_pv_types" value="0" checked><span class="opt-text">Lärm- und Windschutzwand</span></label>
+                          <label class="opt"><input type="checkbox" name="h_pv_types" value="3"><span class="opt-text">Böschung</span></label>
+                        </fieldset>
+                        <p id="note-solar" class="opt-note" hidden>Ohne Autobahn oder PV-Fläche ist die Solarautobahn nicht aktiv.</p>
                       </div>
                     </div>
+                  </section>
+
+                  <section class="acc acc-sub">
+                    <h3 class="acc-heading">
+                      <button type="button" class="acc-btn" aria-expanded="false" aria-controls="acc-landscape">
+                        <span class="acc-icon" aria-hidden="true"></span>Energielandschaft
+                      </button>
+                    </h3>
+                    <div id="acc-landscape" class="acc-panel">
+                      <div class="acc-inner">
+                        <fieldset class="opt-group">
+                          <legend>Ausbaugrad</legend>
+                          <label class="opt"><input type="radio" name="el_build_state" value="0"><span class="opt-text">0 % (nicht aktiv)</span></label>
+                          <label class="opt"><input type="radio" name="el_build_state" value="50" checked><span class="opt-text">50 %</span></label>
+                          <label class="opt"><input type="radio" name="el_build_state" value="100"><span class="opt-text">100 %</span></label>
+                        </fieldset>
+                        <fieldset class="opt-group">
+                          <legend>PV-Typ</legend>
+                          <label class="opt"><input type="radio" name="el_pv_type" value="5" checked><span class="opt-text">Vertikal (Zaun, Nord-Süd)</span></label>
+                          <label class="opt"><input type="radio" name="el_pv_type" value="6"><span class="opt-text">Horizontal (aufgeständert, Ost-West)</span></label>
+                          <label class="opt"><input type="radio" name="el_pv_type" value="4"><span class="opt-text">Horizontal mit Single-Axis-Tracking</span></label>
+                        </fieldset>
+                        <fieldset class="opt-group">
+                          <legend>Traktorbreite</legend>
+                          <label class="opt"><input type="radio" name="el_tractor_width" value="12" checked><span class="opt-text">12 m</span></label>
+                          <label class="opt"><input type="radio" name="el_tractor_width" value="18"><span class="opt-text">18 m</span></label>
+                          <label class="opt"><input type="radio" name="el_tractor_width" value="24"><span class="opt-text">24 m</span></label>
+                          <label class="opt"><input type="radio" name="el_tractor_width" value="27"><span class="opt-text">27 m</span></label>
+                        </fieldset>
+                        <p class="opt-note">Traktorlänge fest 15 m, Wenderadius <span id="el-tractor-turn-radius-value">9,0 m</span>.</p>
+                      </div>
                     </div>
+                  </section>
 
-                    <p class="field-hint">Waerme/Kaelte wird im Industriegebiet immer mit betrachtet.</p>
-                    <div id="info-industry" class="info-box" hidden>Industriegebiet deaktiviert.</div>
-                  </div>
                 </div>
               </div>
+            </section>
 
-              <div class="accordion" id="acc-industry-help" data-accordion-id="industry-help">
-                <button type="button" class="accordion-toggle" id="acc-toggle-industry-help" aria-expanded="false" aria-controls="acc-panel-industry-help">Erklaerung Unternehmen</button>
-                <div class="accordion-content-wrap" id="acc-panel-industry-help">
-                  <div class="accordion-content">
-                    <ol class="company-explainer">
-                      <li><strong>Entsorgung:</strong> 5 1/2 Tage Woche, kein Schichtbetrieb, Jahresbedarf 7,1 GWh, Anlehnung an Schoenmackers Umweltdienste.</li>
-                      <li><strong>Stahl:</strong> 5 Tage Woche, 3-Schicht-Betrieb, Jahresbedarf 4,5 GWh, Anlehnung an TecPro.</li>
-                      <li><strong>Logistik und Lagerung:</strong> 5 Tage Woche, teilweise Samstag und Sonntag Betrieb, kein Schichtbetrieb, Jahresbedarf 1,2 GWh, Anlehnung an CTJ Janssen.</li>
-                      <li><strong>Schrott- und Metallhandel:</strong> 5 Tage Woche, kein Schichtbetrieb, Jahresbedarf 1,5 GWh, Anlehnung an Willi Jenner.</li>
-                      <li><strong>Buero:</strong> 5 Tage Woche, kein Schichtbetrieb, Jahresbedarf 0,6 GWh, Anlehnung an Marvin Wickenhaeuser.</li>
-                    </ol>
-                  </div>
+            <!-- ============ Verbrauch ============ -->
+            <section class="acc">
+              <h2 class="acc-heading">
+                <button type="button" class="acc-btn" aria-expanded="true" aria-controls="acc-consumption">
+                  <span class="acc-icon" aria-hidden="true"></span>Verbrauch
+                </button>
+              </h2>
+              <div id="acc-consumption" class="acc-panel">
+                <div class="acc-inner">
+
+                  <section class="acc acc-sub">
+                    <h3 class="acc-heading">
+                      <button type="button" class="acc-btn" aria-expanded="true" aria-controls="acc-industry">
+                        <span class="acc-icon" aria-hidden="true"></span>Industriegebiet Elsbachtal
+                      </button>
+                    </h3>
+                    <div id="acc-industry" class="acc-panel">
+                      <div class="acc-inner">
+                        <fieldset class="opt-group">
+                          <legend>Unternehmensauswahl</legend>
+                          <label class="opt"><input type="radio" name="i_mode" value="basis" checked><span class="opt-text">Basis-Variante Elsbachtal</span></label>
+                          <label class="opt"><input type="radio" name="i_mode" value="custom"><span class="opt-text">Unternehmen selbst zusammenstellen</span></label>
+                        </fieldset>
+                        <p id="note-industry-basis" class="opt-note">Je ein Unternehmen jedes Typs.</p>
+                        <fieldset id="i-custom" class="opt-group" hidden>
+                          <legend>Unternehmen</legend>
+                          <label class="opt"><input type="checkbox" name="i_company" value="0" checked><span class="opt-text">Entsorgung</span></label>
+                          <label class="opt"><input type="checkbox" name="i_company" value="1" checked><span class="opt-text">Stahl (5-Tage-Woche, 3-Schicht)</span></label>
+                          <label class="opt"><input type="checkbox" name="i_company" value="2" checked><span class="opt-text">Logistik und Lagerung</span></label>
+                          <label class="opt"><input type="checkbox" name="i_company" value="3" checked><span class="opt-text">Schrott- und Metallhandel</span></label>
+                          <label class="opt"><input type="checkbox" name="i_company" value="5" checked><span class="opt-text">Büro</span></label>
+                        </fieldset>
+                        <p id="note-industry-none" class="opt-note" hidden>Ohne Unternehmen ist das Industriegebiet nicht aktiv.</p>
+                        <ul class="opt-explain">
+                          <li><strong>Entsorgung:</strong> 5½-Tage-Woche, kein Schichtbetrieb, 7,1 GWh/a, angelehnt an Schönmackers Umweltdienste.</li>
+                          <li><strong>Stahl:</strong> 5-Tage-Woche, 3-Schicht-Betrieb, 4,5 GWh/a, angelehnt an TecPro.</li>
+                          <li><strong>Logistik und Lagerung:</strong> 5-Tage-Woche, teils Wochenendbetrieb, 1,2 GWh/a, angelehnt an CTJ Janssen.</li>
+                          <li><strong>Schrott- und Metallhandel:</strong> 5-Tage-Woche, kein Schichtbetrieb, 1,5 GWh/a, angelehnt an Willi Jenner.</li>
+                          <li><strong>Büro:</strong> 5-Tage-Woche, kein Schichtbetrieb, 0,6 GWh/a, angelehnt an Marvin Wickenhäuser.</li>
+                        </ul>
+                        <p class="opt-note">Wärme und Kälte werden im Industriegebiet elektrisch bereitgestellt.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="acc acc-sub">
+                    <h3 class="acc-heading">
+                      <button type="button" class="acc-btn" aria-expanded="false" aria-controls="acc-geh">
+                        <span class="acc-icon" aria-hidden="true"></span>Green Energy Hub
+                      </button>
+                    </h3>
+                    <div id="acc-geh" class="acc-panel">
+                      <div class="acc-inner">
+                        <fieldset class="opt-group">
+                          <legend>Variante (Machbarkeitsstudie)</legend>
+                          <label class="opt"><input type="radio" name="geh_variant" value="Keine"><span class="opt-text">Keine</span></label>
+                          <label class="opt"><input type="radio" name="geh_variant" value="Basis" checked><span class="opt-text">Basis</span></label>
+                          <label class="opt"><input type="radio" name="geh_variant" value="Erweiterung"><span class="opt-text">Erweiterung (mit Parkhaus)</span></label>
+                        </fieldset>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="acc acc-sub">
+                    <h3 class="acc-heading">
+                      <button type="button" class="acc-btn" aria-expanded="false" aria-controls="acc-js">
+                        <span class="acc-icon" aria-hidden="true"></span>Stadtteilentwicklung Jüchen Süd
+                      </button>
+                    </h3>
+                    <div id="acc-js" class="acc-panel">
+                      <div class="acc-inner">
+                        <fieldset class="opt-group">
+                          <legend>Versorgungskonzept (Energiekonzept)</legend>
+                          <label class="opt"><input type="radio" name="js_concept" value="Aus"><span class="opt-text">Aus</span></label>
+                          <label class="opt"><input type="radio" name="js_concept" value="Warmes Netz"><span class="opt-text">Warmes Netz</span></label>
+                          <label class="opt"><input type="radio" name="js_concept" value="Kaltes Netz"><span class="opt-text">Kaltes Netz</span></label>
+                          <label class="opt"><input type="radio" name="js_concept" value="Dezentral" checked><span class="opt-text">Dezentral</span></label>
+                        </fieldset>
+                      </div>
+                    </div>
+                  </section>
+
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div id="cons-tab-geh" class="tab-panel consumption-tab-panel" role="tabpanel" aria-labelledby="tab-btn-cons-geh" hidden>
-              <div class="accordion" id="acc-geh" data-accordion-id="geh">
-                <button type="button" class="accordion-toggle" id="acc-toggle-geh" aria-expanded="false" aria-controls="acc-panel-geh">Green Energy Hub</button>
-                <div class="accordion-content-wrap" id="acc-panel-geh">
-                  <div class="accordion-content">
-                    <label for="geh-variant">Variante (Machbarkeitsstudie)</label>
-                    <select id="geh-variant">
-                      <option value="Keine">Keine</option>
-                      <option value="Basis" selected>Basis</option>
-                      <option value="Erweiterung">Erweiterung (mit Parkhaus)</option>
-                    </select>
-                    <div id="info-geh" class="info-box" hidden>Green Energy Hub deaktiviert.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </aside>
 
-            <div id="cons-tab-js" class="tab-panel consumption-tab-panel" role="tabpanel" aria-labelledby="tab-btn-cons-js" hidden>
-              <div class="accordion" id="acc-js" data-accordion-id="js">
-                <button type="button" class="accordion-toggle" id="acc-toggle-js" aria-expanded="false" aria-controls="acc-panel-js">Stadtteil Juechen-Sued</button>
-                <div class="accordion-content-wrap" id="acc-panel-js">
-                  <div class="accordion-content">
-                    <label for="js-concept">Versorgungskonzept (Energiekonzept)</label>
-                    <select id="js-concept">
-                      <option value="Aus">Aus</option>
-                      <option value="Warmes Netz">Warmes Netz</option>
-                      <option value="Kaltes Netz">Kaltes Netz</option>
-                      <option value="Dezentral" selected>Dezentral</option>
-                    </select>
-                    <div id="info-js" class="info-box" hidden>Juechen-Sued deaktiviert.</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+      <main class="results" id="results">
+        <section aria-label="Kennzahlen">
+          <div id="park-kpis" class="park-kpi-grid"></div>
+        </section>
 
-          <button id="btn-load" type="button">Szenario laden</button>
-        </aside>
+        <div class="view-tabs" role="tablist" aria-label="Ansicht">
+          <button type="button" class="view-tab" role="tab" id="tab-flows" aria-selected="true" aria-controls="view-flows">Energieflüsse</button>
+          <button type="button" class="view-tab" role="tab" id="tab-map" aria-selected="false" aria-controls="view-map" tabindex="-1">Lageplan</button>
+        </div>
 
-        <section class="map-panel">
-          <h2>Geodatenansicht</h2>
-          <p class="map-sub">Autobahn- und Energielandschaft-Auswahl werden farblich hervorgehoben.</p>
+        <section id="view-flows" class="view-panel" role="tabpanel" aria-labelledby="tab-flows">
+          <div id="park-stage"></div>
+          <div id="park-legend"></div>
+          <p id="scenario-meta" class="scenario-meta"></p>
+        </section>
+
+        <section id="view-map" class="view-panel" role="tabpanel" aria-labelledby="tab-map" hidden>
           <p id="map-active-hint" class="map-active-hint" aria-live="polite">Keine aktive Kartenhervorhebung.</p>
-          <div id="leaflet-map" aria-label="Projektkarte"></div>
+          <div id="leaflet-map" aria-label="Lageplan der Teilprojekte"></div>
           <div class="map-legend">
             <span><i class="swatch a44"></i>A44</span>
             <span><i class="swatch a46"></i>A46</span>
             <span><i class="swatch landscape"></i>Energielandschaft</span>
           </div>
         </section>
-      </section>
-
-      <main class="content">
-        <section class="status">
-          <h2>Status</h2>
-          <p id="status-text" role="status" aria-live="polite">Initialisierung...</p>
-          <p id="status-match" aria-live="polite"></p>
-        </section>
-
-        <section class="summary">
-          <h2>Jahreswerte</h2>
-          <div id="summary-cards" class="summary-grid"></div>
-        </section>
-
-        <section class="diagram">
-          <h2>Synergiefluss (SVG)</h2>
-          <div id="flow-stage" class="flow-stage">Noch kein Szenario geladen.</div>
-        </section>
-
-
       </main>
     </div>
   </div>
 
   <script src="./vendor/leaflet/leaflet.js"></script>
+  <script src="./park_map.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
