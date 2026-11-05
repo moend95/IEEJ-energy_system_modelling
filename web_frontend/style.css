@@ -58,39 +58,50 @@ body {
   overflow-x: hidden;
 }
 
-.page {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 22px;
+/* Container für alle Breakpoints der Seite: reagiert auf die Breite des Fensters bzw. iframes */
+.page-shell {
+  container: page / inline-size;
 }
 
+.page {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Kopfzeile im Website-Stil: weiß, Logo links, grüne Linie */
 .hero {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  background: linear-gradient(100deg, var(--accent-deep) 0%, var(--accent) 80%, #6cc4a6 100%);
-  color: #fff;
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
+  gap: 24px;
+  padding: 0 0 16px;
   margin-bottom: 24px;
+  border-bottom: 1px solid var(--site-green);
 }
 
 .hero-logo {
-  height: 42px;
+  height: 40px;
   width: auto;
   display: block;
   flex: 0 0 auto;
 }
 
+.hero-text {
+  padding-left: 24px;
+  border-left: 1px solid var(--site-line);
+}
+
 .hero h1 {
-  margin: 0 0 4px 0;
-  font-size: 1.5rem;
-  color: #fff;
+  margin: 0 0 2px 0;
+  color: #000;
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
 .hero p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--site-text);
+  font-size: 0.95rem;
 }
 
 /* ---------------- Layout: Seitenleiste links, Ergebnisse rechts ---------------- */
@@ -137,14 +148,6 @@ body {
   border-bottom: 1px solid var(--site-green);
 }
 
-.acc-sub {
-  margin-left: 4px;
-}
-
-.acc-sub:last-child {
-  border-bottom: 0;
-}
-
 .acc-heading {
   margin: 0;
 }
@@ -161,11 +164,6 @@ body {
   font: 700 18px/1.3 "Open Sans", Arial, Helvetica, sans-serif;
   text-align: left;
   cursor: pointer;
-}
-
-.acc-sub .acc-btn {
-  padding: 12px 0;
-  font-size: 16px;
 }
 
 .acc-btn:hover,
@@ -218,15 +216,6 @@ body {
   color: var(--site-icon-hover);
 }
 
-.acc-sub .acc-icon {
-  flex-basis: 16px;
-  width: 16px;
-  height: 16px;
-}
-
-.acc-sub .acc-icon::before { width: 14px; }
-.acc-sub .acc-icon::after { height: 14px; }
-
 .acc-panel {
   display: grid;
   grid-template-rows: 0fr;
@@ -245,8 +234,12 @@ body {
   min-height: 0;
 }
 
-.acc-sub .acc-inner > :last-child {
-  margin-bottom: 16px;
+.sub-panel {
+  padding-bottom: 16px;
+}
+
+.sub-panel[hidden] {
+  display: none;
 }
 
 .sidebar-toggle {
@@ -285,6 +278,17 @@ body {
   border-top: 1px solid var(--site-line);
 }
 
+/* Unternehmen-Checkboxen in zwei Spalten */
+.opt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 8px;
+}
+
+.opt-grid > .opt:nth-child(2) {
+  border-top: 1px solid var(--site-line);
+}
+
 /* Input visuell versteckt, bleibt aber fokussierbar und per Pfeiltasten bedienbar */
 .opt input {
   position: absolute;
@@ -299,14 +303,14 @@ body {
 .opt-text {
   display: flex;
   align-items: center;
-  min-height: 44px;
-  padding: 10px 40px 10px 16px;
+  min-height: 36px;
+  padding: 6px 34px 6px 16px;
   color: var(--site-text);
-  font: 400 15px/1.35 "Open Sans", Arial, Helvetica, sans-serif;
+  font: 400 14px/1.3 "Open Sans", Arial, Helvetica, sans-serif;
   transition: background-color var(--motion-fast) ease;
 }
 
-.opt:hover .opt-text {
+.opt:hover input:not(:disabled) + .opt-text {
   background: #f4faf6;
 }
 
@@ -324,13 +328,32 @@ body {
 .opt input[type="checkbox"]:checked + .opt-text::after {
   content: "";
   position: absolute;
-  right: 18px;
+  right: 14px;
   top: 50%;
-  width: 6px;
-  height: 11px;
+  width: 5px;
+  height: 10px;
   border: solid var(--site-green);
   border-width: 0 2px 2px 0;
   transform: translateY(-65%) rotate(45deg);
+}
+
+/* Nicht vorberechnet: ausgegraut und nicht wählbar (auch eine gewählte Option, die sich nicht abwählen lässt) */
+.opt:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.opt input:disabled + .opt-text {
+  color: #b4b7bc;
+}
+
+/* Gewählt, aber nicht abwählbar: bleibt als gewählt lesbar, nur Balken und Haken grau */
+.opt input:disabled:checked + .opt-text {
+  box-shadow: inset 3px 0 0 #c9ccd0;
+  color: #2a2a2a;
+}
+
+.opt input:disabled:checked + .opt-text::after {
+  border-color: #c9ccd0;
 }
 
 /* Für längere Listen: schlichtes natives Auswahlfeld */
@@ -367,6 +390,46 @@ body {
   padding-left: 18px;
 }
 
+/* Kleiner Umschalter "Erläuterung +" für längere Erklärtexte */
+.explain-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--site-text);
+  font: 600 13px "Open Sans", Arial, Helvetica, sans-serif;
+  cursor: pointer;
+}
+
+.explain-toggle:hover,
+.explain-toggle:focus-visible {
+  color: var(--site-hover);
+}
+
+.explain-toggle:focus-visible {
+  outline: 2px solid var(--site-green);
+  outline-offset: 2px;
+}
+
+.explain-icon::before {
+  content: "+";
+  color: var(--site-green);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.explain-toggle[aria-expanded="true"] .explain-icon::before {
+  content: "\2013";
+}
+
+.explain-body[hidden] {
+  display: none;
+}
+
 .opt-explain li + li {
   margin-top: 4px;
 }
@@ -380,14 +443,15 @@ body {
   margin-bottom: 20px;
 }
 
-.view-tabs {
+/* Reiter: Ansicht und Teilprojekte */
+.tabs {
   display: flex;
   gap: 24px;
   margin-bottom: 14px;
   border-bottom: 1px solid var(--site-line);
 }
 
-.view-tab {
+.tab {
   padding: 8px 0;
   margin-bottom: -1px;
   border: 0;
@@ -395,21 +459,31 @@ body {
   background: none;
   color: var(--site-text);
   font: 600 15px "Open Sans", Arial, Helvetica, sans-serif;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.view-tab:hover {
+.tab:hover {
   color: var(--site-hover);
 }
 
-.view-tab[aria-selected="true"] {
+.tab[aria-selected="true"] {
   border-bottom-color: var(--site-green);
   color: #000;
 }
 
-.view-tab:focus-visible {
+.tab:focus-visible {
   outline: 2px solid var(--site-green);
   outline-offset: 2px;
+}
+
+.sub-tabs {
+  gap: 18px;
+  margin: 0 0 14px;
+}
+
+.sub-tabs .tab {
+  font-size: 14px;
 }
 
 .view-panel[hidden] {
@@ -462,19 +536,52 @@ body {
 .swatch.a46 { background: var(--orange); }
 .swatch.landscape { background: #16a34a; }
 
-/* ---------------- Schmale Bildschirme: Auswahl oben, aufklappbar ---------------- */
-@media (max-width: 899px) {
+/* ---------------- Breit: Erzeugung und Verbrauch nebeneinander ---------------- */
+@container page (min-width: 1400px) {
+  .app-layout {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .sidebar {
+    max-height: none;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .sidebar-columns {
+    display: grid;
+    grid-template-columns: repeat(2, 320px);
+    gap: 24px;
+    align-items: start;
+  }
+
+  /* Jede Spalte hat ihren eigenen Scrollbereich; die ganze Seitenleiste bleibt stehen */
+  .acc-col {
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+  }
+}
+
+/* ---------------- Schmal: Auswahl oben, aufklappbar ---------------- */
+@container page (max-width: 899px) {
   .page {
     padding: 12px;
   }
 
   .hero {
     flex-wrap: wrap;
-    padding: 14px;
+    gap: 10px;
+  }
+
+  .hero-text {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .hero h1 {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
 
   .app-layout {
@@ -499,7 +606,7 @@ body {
   }
 }
 
-@media (min-width: 900px) {
+@container page (min-width: 900px) {
   /* Auf breiten Bildschirmen ist die Auswahl immer offen */
   .sidebar-body.acc-panel {
     grid-template-rows: 1fr;
@@ -699,7 +806,7 @@ body {
   color: var(--sub);
 }
 
-@media (max-width: 600px) {
+@container page (max-width: 600px) {
   .park-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .park-kpi-value { font-size: 1.2rem; }
 

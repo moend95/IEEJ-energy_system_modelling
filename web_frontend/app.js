@@ -169,8 +169,9 @@ function setupAccordions() {
   });
 }
 
-function setupViewTabs() {
-  const tabs = Array.from(document.querySelectorAll(".view-tab"));
+// Reiter: Ansicht (Energieflüsse | Lageplan) und Teilprojekte in der Seitenleiste
+function setupTabs(tablist, onActivate) {
+  const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
 
   const activate = (tab, focus) => {
     tabs.forEach((t) => {
@@ -180,7 +181,7 @@ function setupViewTabs() {
       document.getElementById(t.getAttribute("aria-controls")).hidden = !active;
     });
     if (focus) tab.focus();
-    if (tab.id === "tab-map") showSitePlan();
+    if (onActivate) onActivate(tab);
   };
 
   tabs.forEach((tab, idx) => {
@@ -194,6 +195,17 @@ function setupViewTabs() {
       if (event.key === "Home") next = 0;
       if (event.key === "End") next = tabs.length - 1;
       activate(tabs[next], true);
+    });
+  });
+}
+
+function setupExplainToggles() {
+  document.querySelectorAll(".explain-toggle").forEach((button) => {
+    const body = document.getElementById(button.getAttribute("aria-controls"));
+    button.addEventListener("click", () => {
+      const open = button.getAttribute("aria-expanded") !== "true";
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      body.hidden = !open;
     });
   });
 }
@@ -234,6 +246,158 @@ async function loadCatalog() {
     catalogIndex.set(normalized, entry);
   }
   window.__IEEJ_CATALOG__ = entries;
+  buildGroupIndex(entries);
+}
+
+// ---------------- Nicht vorberechnete Optionen deaktivieren ----------------
+
+// Felder je Teilprojekt. Eine Option bleibt wählbar, wenn ein Katalogeintrag existiert, der sich vom
+// aktuellen Szenario nur in diesem Feld unterscheidet. Beim führenden Feld eines Teilprojekts (erstes
+// Feld der Liste) darf er zusätzlich in den übrigen Feldern des Teilprojekts abweichen; diese werden
+// dann mitgezogen (z. B. Energielandschaft 100 % → PV-Typ horizontal).
+const FIELD_GROUPS = {
+  solar: ["h_highways", "h_pv_types"],
+  landscape: ["el_build_state", "el_pv_type", "el_tractor_width", "el_tractor_length", "el_tractor_turn_radius"],
+  industry: ["i_companies"],
+  geh: ["geh_variant"],
+  js: ["js_concept"],
+};
+
+// Name des Eingabefelds → Feld im kanonischen Schlüssel
+const INPUT_FIELDS = {
+  h_highways: "h_highways",
+  h_pv_types: "h_pv_types",
+  el_build_state: "el_build_state",
+  el_pv_type: "el_pv_type",
+  el_tractor_width: "el_tractor_width",
+  i_mode: "i_companies",
+  i_company: "i_companies",
+  geh_variant: "geh_variant",
+  js_concept: "js_concept",
+};
+
+const UNAVAILABLE_TEXT = "nicht vorberechnet";
+const groupIndex = new Map();
+
+function groupOfField(field) {
+  return Object.keys(FIELD_GROUPS).find((group) => FIELD_GROUPS[group].includes(field));
+}
+
+function restKey(key, group) {
+  const rest = { ...key };
+  for (const field of FIELD_GROUPS[group]) delete rest[field];
+  return stableStringify(rest);
+}
+
+function buildGroupIndex(entries) {
+  for (const group of Object.keys(FIELD_GROUPS)) {
+    const byRest = new Map();
+    for (const entry of entries) {
+      let key;
+      try {
+        key = JSON.parse(entry.canonical_key);
+      } catch {
+        continue;
+      }
+      const rk = restKey(key, group);
+      if (!byRest.has(rk)) byRest.set(rk, []);
+      byRest.get(rk).push(key);
+    }
+    groupIndex.set(group, byRest);
+  }
+}
+
+// Katalogschlüssel mit gleichem Wert in `field`, der sonst höchstens im eigenen Teilprojekt abweicht
+// (nur beim führenden Feld); bei mehreren der mit den wenigsten Abweichungen
+function findClosestKey(cInput, field) {
+  const group = groupOfField(field);
+  const candidates = groupIndex.get(group)?.get(restKey(cInput, group)) || [];
+  const wanted = stableStringify(cInput[field]);
+  let best = null;
+  let bestDiff = FIELD_GROUPS[group][0] === field ? Infinity : 1;
+  for (const key of candidates) {
+    if (stableStringify(key[field]) !== wanted) continue;
+    const diff = FIELD_GROUPS[group].filter((f) => stableStringify(key[f]) !== stableStringify(cInput[f])).length;
+    if (diff < bestDiff) {
+      best = key;
+      bestDiff = diff;
+    }
+  }
+  return best;
+}
+
+// Kanonische Eingabe, wenn die Option `input` gewählt (Radio) bzw. umgeschaltet (Checkbox) würde
+function inputWithOption(input) {
+  const raw = collectRawInput();
+  if (input.name === "i_mode") {
+    raw.i_companies = input.value === "basis"
+      ? [...ELSBACHTAL_BASIS_COMPANIES]
+      : getCheckedValues("i_company").map((v) => Number.parseInt(v, 10));
+  } else if (input.name === "i_company") {
+    const values = new Set(getCheckedValues("i_company"));
+    if (values.has(input.value)) values.delete(input.value);
+    else values.add(input.value);
+    raw.i_companies = Array.from(values);
+  } else if (input.type === "checkbox") {
+    const values = new Set(raw[input.name]);
+    if (values.has(input.value)) values.delete(input.value);
+    else values.add(input.value);
+    raw[input.name] = Array.from(values);
+  } else {
+    raw[input.name] = input.value;
+  }
+  return canonicalizeInput(raw);
+}
+
+function setOptionAvailable(input, available) {
+  input.disabled = !available;
+  const label = input.closest(".opt");
+  if (available) {
+    input.removeAttribute("aria-description");
+    label?.removeAttribute("title");
+  } else {
+    input.setAttribute("aria-description", UNAVAILABLE_TEXT);
+    label?.setAttribute("title", UNAVAILABLE_TEXT);
+  }
+}
+
+function refreshOptionAvailability() {
+  const inputs = document.querySelectorAll(".sidebar input[name]");
+  const currentValid = catalogIndex.has(stableStringify(canonicalizeInput(collectRawInput())));
+  inputs.forEach((input) => {
+    const field = INPUT_FIELDS[input.name];
+    // Ist die aktuelle Auswahl selbst nicht vorberechnet, bleibt alles wählbar, damit man herausfindet
+    if (!field || !currentValid || (input.type === "radio" && input.checked)) {
+      setOptionAvailable(input, true);
+      return;
+    }
+    setOptionAvailable(input, findClosestKey(inputWithOption(input), field) !== null);
+  });
+}
+
+// Übrige Felder eines Teilprojekts im Formular auf den gefundenen Katalogschlüssel setzen
+function applyKeyToForm(key, group) {
+  for (const field of FIELD_GROUPS[group]) {
+    document.querySelectorAll(`.sidebar input[name="${field}"]`).forEach((input) => {
+      input.checked = input.type === "checkbox"
+        ? key[field].map(String).includes(input.value)
+        : Number(input.value) === Number(key[field]);
+    });
+  }
+}
+
+function onSidebarChange(event) {
+  const field = INPUT_FIELDS[event.target?.name];
+  if (field && catalogIndex.size > 0) {
+    const cInput = canonicalizeInput(collectRawInput());
+    if (!catalogIndex.has(stableStringify(cInput))) {
+      const key = findClosestKey(cInput, field);
+      if (key) applyKeyToForm(key, groupOfField(field));
+    }
+    refreshOptionAvailability();
+  }
+  syncSidebarDisplay(canonicalizeInput(collectRawInput()));
+  scheduleUpdate();
 }
 
 async function loadFlowPayload(flowPath) {
@@ -463,9 +627,14 @@ async function updateMapHighlights(cInput) {
 
 async function init() {
   setupAccordions();
-  setupViewTabs();
+  document.querySelectorAll('[role="tablist"]').forEach((tablist) => {
+    setupTabs(tablist, (tab) => {
+      if (tab.id === "tab-map") showSitePlan();
+    });
+  });
+  setupExplainToggles();
   document.getElementById("park-legend").innerHTML = parkMapLegendHtml();
-  document.querySelector(".sidebar").addEventListener("change", scheduleUpdate);
+  document.querySelector(".sidebar").addEventListener("change", onSidebarChange);
 
   try {
     await loadCatalog();
@@ -473,6 +642,7 @@ async function init() {
     setScenarioHint(`Szenariokatalog konnte nicht geladen werden (${err.message}).`);
     return;
   }
+  refreshOptionAvailability();
   await updateScenario();
 }
 
