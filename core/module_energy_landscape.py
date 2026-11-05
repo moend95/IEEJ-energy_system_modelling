@@ -198,6 +198,18 @@ from shapely.ops import transform
 import pyproj
 import math
 
+# Auswahl für Website, Streamlit-GUI und Szenariogenerator (Typ 6 „horizontal aufgeständert“
+# bleibt technisch im Simulationskern, wird aber nicht mehr angeboten)
+LANDSCAPE_PV_TYPE_OPTIONS: Dict[int, str] = {
+	5: "Vertikal (Zaun, Nord-Süd)",
+	4: "Horizontal mit Single-Axis-Tracking (Nord-Süd)",
+}
+
+# Landmaschinen: feste Auslegung der Reihenabstände (keine Auswahl mehr)
+LANDSCAPE_TRACTOR_WIDTH_M: float = 27.0
+LANDSCAPE_TRACTOR_LENGTH_M: float = 15.0
+LANDSCAPE_TRACTOR_TURN_RADIUS_M: float = 20.25
+
 
 class GeoJSONReader:
 	"""Lädt eine GeoJSON-FeatureCollection (WGS84) und liefert Shapely-Objekte.

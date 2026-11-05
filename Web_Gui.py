@@ -10,6 +10,12 @@ from Simulation import Simulator, run_simulation, industry_csv_mapping
 from core.module_green_energy_hub import GEH_VARIANTS
 from core.module_juechen_sued import JS_CONCEPTS
 from core.module_industrial_area import ELSBACHTAL_BASIS_COMPANIES, INDUSTRY_COMPANY_OPTIONS
+from core.module_energy_landscape import (
+    LANDSCAPE_PV_TYPE_OPTIONS,
+    LANDSCAPE_TRACTOR_LENGTH_M,
+    LANDSCAPE_TRACTOR_TURN_RADIUS_M,
+    LANDSCAPE_TRACTOR_WIDTH_M,
+)
 from core.js_profiles import build_js_profiles
 
 
@@ -29,9 +35,6 @@ pv_name_to_id = {
     "Lärmschutzwand": 1,
     "Dach": 2,
     "Böschung": 3,
-    "Vertikal (Zaun, Nord-Süd)": 5,
-    "Horizontal (aufgeständert, Ost-West)": 6,
-    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": 4
 }
 
 
@@ -136,35 +139,20 @@ with st.container(key="Erzeugung", width=1000, height='content'):
                 format_func=lambda x: f"{x:.0f}%"
             )
 
-            el_selected_names = st.selectbox(
+            Input.el_pv_type = st.selectbox(
                 "PV-Typ",
-                [
-                    "Vertikal (Zaun, Nord-Süd)",
-                    "Horizontal (aufgeständert, Ost-West)",
-                    "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)"
-                ]
-            )
-            Input.el_pv_type = pv_name_to_id[el_selected_names]
-
-            Input.el_tractor_width = st.segmented_control(
-                "Traktorbreite",
-                options=[9.0, 12.0, 15.0],
-                default=12.0,
-                format_func=lambda x: f"{x:.0f}m"
+                list(LANDSCAPE_PV_TYPE_OPTIONS),
+                format_func=lambda pv_type: LANDSCAPE_PV_TYPE_OPTIONS[pv_type],
             )
 
-            Input.el_tractor_length = st.segmented_control(
-                "Traktorlänge",
-                options=[12.0, 15.0, 18.0],
-                default=15.0,
-                format_func=lambda x: f"{x:.0f}m"
-            )
-
-            Input.el_tractor_turn_radius = st.segmented_control(
-                "Traktor-Wenderadius",
-                options=[6.0, 9.0, 12.0],
-                default=9.0,
-                format_func=lambda x: f"{x:.0f}m"
+            Input.el_tractor_width = LANDSCAPE_TRACTOR_WIDTH_M
+            Input.el_tractor_length = LANDSCAPE_TRACTOR_LENGTH_M
+            Input.el_tractor_turn_radius = LANDSCAPE_TRACTOR_TURN_RADIUS_M
+            st.caption(
+                f"Die Reihenabstände sind für landwirtschaftliche Maschinen mit "
+                f"{LANDSCAPE_TRACTOR_WIDTH_M:.0f} m Arbeitsbreite ausgelegt (Länge "
+                f"{LANDSCAPE_TRACTOR_LENGTH_M:.0f} m, Wenderadius "
+                f"{LANDSCAPE_TRACTOR_TURN_RADIUS_M:.2f} m)".replace(".", ",") + "."
             )
 
             # dynamic info box
@@ -178,22 +166,18 @@ with st.container(key="Erzeugung", width=1000, height='content'):
         # Dynamic Input visualization via folium
         with col2_tab2:
             pv_geojson_mapping_col2_tab2 = {
-                "Vertikal (Zaun, Nord-Süd)": {
+                5: {
                     50: "Geometry_Vertikal_50_Prozent_20m.geojson",
                     100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
                 },
-                "Horizontal (aufgeständert, Ost-West)": {
-                    50: "Geometry_Horizontal_50_Prozent_20m.geojson",
-                    100: "Geometry_Horizontal_Traktorbreite_20m.geojson",
-                },
-                "Horizontal mit Single-Axis-Tracking (aufgeständert, Nord-Süd)": {
+                4: {
                     50: "Geometry_Vertikal_50_Prozent_20m.geojson",
                     100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
                 },
             }
 
             if Input.el_build_state != 0 and Input.el_build_state is not None:
-                selected_file = pv_geojson_mapping_col2_tab2[el_selected_names][Input.el_build_state]
+                selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type][Input.el_build_state]
                 geojson_path = os.path.join(script_dir,"data", "inputs", "geometry", selected_file)
 
                 with open(geojson_path, "r", encoding="utf-8") as f:

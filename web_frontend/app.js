@@ -1,12 +1,9 @@
 const CATALOG_PATH = "./catalog.json";
 
+// Feste Auslegung der Landmaschinen (wie LANDSCAPE_TRACTOR_* in core/module_energy_landscape.py)
+const LANDSCAPE_TRACTOR_WIDTH_M = 27;
 const LANDSCAPE_TRACTOR_LENGTH_M = 15;
-const LANDSCAPE_TRACTOR_WIDTH_OPTIONS = {
-  12: 9,
-  18: 13.5,
-  24: 18,
-  27: 20.25,
-};
+const LANDSCAPE_TRACTOR_TURN_RADIUS_M = 20.25;
 
 // Basis-Variante Elsbachtal: je ein Unternehmen jedes Typs (wie ELSBACHTAL_BASIS_COMPANIES in Python)
 const ELSBACHTAL_BASIS_COMPANIES = [0, 1, 2, 3, 5];
@@ -85,17 +82,14 @@ function stableStringify(value) {
 }
 
 function canonicalizeInput(rawInput) {
-  const tractorWidth = Number.parseInt(String(rawInput.el_tractor_width || 12), 10) || 12;
-  const tractorTurnRadius = LANDSCAPE_TRACTOR_WIDTH_OPTIONS[tractorWidth] ?? LANDSCAPE_TRACTOR_WIDTH_OPTIONS[12];
-
   return {
     h_highways: sortUniqueStrings(rawInput.h_highways || []),
     h_pv_types: sortUniqueInts(rawInput.h_pv_types || []),
     el_build_state: Number.parseInt(String(rawInput.el_build_state || 0), 10) || 0,
     el_pv_type: Number.parseInt(String(rawInput.el_pv_type || 0), 10) || 0,
-    el_tractor_width: tractorWidth,
+    el_tractor_width: LANDSCAPE_TRACTOR_WIDTH_M,
     el_tractor_length: LANDSCAPE_TRACTOR_LENGTH_M,
-    el_tractor_turn_radius: roundFloat(tractorTurnRadius, 3),
+    el_tractor_turn_radius: roundFloat(LANDSCAPE_TRACTOR_TURN_RADIUS_M, 3),
     i_heat_cooling_electric: true,
     i_companies: sortUniqueInts(rawInput.i_companies || []),
     geh_variant: String(rawInput.geh_variant || "Keine"),
@@ -133,7 +127,6 @@ function collectRawInput() {
     h_pv_types: getCheckedValues("h_pv_types"),
     el_build_state: Number(getRadioValue("el_build_state", 50)),
     el_pv_type: Number(getRadioValue("el_pv_type", 5)),
-    el_tractor_width: Number(getRadioValue("el_tractor_width", 12)),
     i_companies: getIndustryCompanyValues(),
     geh_variant: getRadioValue("geh_variant", "Keine"),
     js_concept: getRadioValue("js_concept", "Aus"),
@@ -146,10 +139,6 @@ function syncSidebarDisplay(cInput) {
   document.getElementById("note-industry-basis").hidden = custom;
   document.getElementById("note-industry-none").hidden = !custom || cInput.i_companies.length > 0;
   document.getElementById("note-solar").hidden = cInput.h_highways.length > 0 && cInput.h_pv_types.length > 0;
-
-  const radius = cInput.el_tractor_turn_radius;
-  document.getElementById("el-tractor-turn-radius-value").textContent =
-    `${radius.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} m`;
 }
 
 // ---------------- Akkordeons und Reiter ----------------
@@ -269,7 +258,6 @@ const INPUT_FIELDS = {
   h_pv_types: "h_pv_types",
   el_build_state: "el_build_state",
   el_pv_type: "el_pv_type",
-  el_tractor_width: "el_tractor_width",
   i_mode: "i_companies",
   i_company: "i_companies",
   geh_variant: "geh_variant",

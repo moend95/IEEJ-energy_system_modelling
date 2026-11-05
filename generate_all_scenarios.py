@@ -12,6 +12,11 @@ from Simulation import run_simulation
 from core.export_utils import export_scenario_flows_to_json
 from core.io_types import GuiInput
 from core.module_industrial_area import ELSBACHTAL_BASIS_COMPANIES
+from core.module_energy_landscape import (
+    LANDSCAPE_TRACTOR_LENGTH_M,
+    LANDSCAPE_TRACTOR_TURN_RADIUS_M,
+    LANDSCAPE_TRACTOR_WIDTH_M,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -50,9 +55,10 @@ def canonicalize_input(raw_input: dict[str, Any]) -> dict[str, Any]:
         "h_pv_types": sort_unique_ints(raw_input.get("h_pv_types", [])),
         "el_build_state": int(raw_input.get("el_build_state") or 0),
         "el_pv_type": int(raw_input.get("el_pv_type") or 0),
-        "el_tractor_width": round_float(raw_input.get("el_tractor_width"), 3),
-        "el_tractor_length": round_float(raw_input.get("el_tractor_length"), 3),
-        "el_tractor_turn_radius": round_float(raw_input.get("el_tractor_turn_radius"), 3),
+        # Feste Landmaschinen-Auslegung, wie canonicalizeInput in web_frontend/app.js
+        "el_tractor_width": round_float(LANDSCAPE_TRACTOR_WIDTH_M, 3),
+        "el_tractor_length": round_float(LANDSCAPE_TRACTOR_LENGTH_M, 3),
+        "el_tractor_turn_radius": round_float(LANDSCAPE_TRACTOR_TURN_RADIUS_M, 3),
         "i_heat_cooling_electric": bool(raw_input.get("i_heat_cooling_electric", False)),
         "i_companies": sort_unique_ints(raw_input.get("i_companies", [])),
         "geh_variant": str(raw_input.get("geh_variant") or "Keine"),
