@@ -320,8 +320,8 @@ function parkNodeTooltip(id, summary, parkFlows) {
       name,
       `Bezug: ${parkFormatEnergy(t.gridImport)}`,
       `Einspeisung: ${parkFormatEnergy(t.gridExport)}`,
-      `max. Bezug: ${parkFormatPower(t.maxImportKw)}`,
-      `max. Einspeisung: ${parkFormatPower(t.maxExportKw)}`,
+      `max. Netzbezug (Park gesamt): ${parkFormatPower(t.maxImportKw)}`,
+      `max. Einspeisung (Park gesamt): ${parkFormatPower(t.maxExportKw)}`,
     ].join("\n");
   }
   if (!parkIsActive(id, summary, parkFlows)) return `${name}: nicht aktiv`;
@@ -351,10 +351,24 @@ function parkNodeTooltip(id, summary, parkFlows) {
       `Laden MCS / CCS / HPC / AC: ${[h.charging_mcs_kwh, h.charging_ccs_kwh, h.charging_hpc_kwh, h.charging_ac_kwh]
         .map((v) => parkFormatEnergy(v, false))
         .join(" / ")}`,
-      `PV am Hub: ${parkFormatEnergy(pv.generation)} (im Eigenstrom enthalten)`,
-      `Batterie: ${PARK_NF0.format(parkAbs(h.battery_full_cycles))} Vollzyklen`,
-      `H₂ produziert / geliefert: ${parkFormatEnergy(h.h2_production_kwh, false)} / ${parkFormatEnergy(h.h2_delivered_kwh, false)}`,
-      `Elektrolyseur: ${PARK_NF0.format(parkAbs(h.electrolyzer_full_load_hours))} Volllaststunden`
+      `PV am Hub: ${parkFormatEnergy(pv.generation)} (im Eigenstrom enthalten)`
+    );
+    // Netzanschluss des Hubs (ab Modellstand 2026-11; ältere Szenarien haben die Felder nicht)
+    if (parkAbs(h.grid_limit_kw) > 0) {
+      const hours = parkAbs(h.grid_limit_exceed_hours);
+      lines.push(
+        `Netzspitze Hub: ${parkFormatPower(h.grid_peak_kw)} (Grenze ${parkFormatPower(h.grid_limit_kw)}` +
+          (hours > 0 ? `, ${PARK_NF0.format(hours)} h darüber)` : ")")
+      );
+    }
+    const cycles = parkAbs(h.battery_full_cycles);
+    lines.push(`Batterie-Vollzyklen: ${(cycles < 10 ? PARK_NF1 : PARK_NF0).format(cycles)} pro Jahr`);
+    if (parkAbs(h.electrolyzer_base_kw) > 0) {
+      lines.push(`Elektrolyseur Grundlast: ${parkFormatPower(h.electrolyzer_base_kw)}`);
+    }
+    lines.push(
+      `Elektrolyseur: ${PARK_NF0.format(parkAbs(h.electrolyzer_full_load_hours))} Volllaststunden`,
+      `H₂ produziert / geliefert: ${parkFormatEnergy(h.h2_production_kwh, false)} / ${parkFormatEnergy(h.h2_delivered_kwh, false)}`
     );
   }
   return lines.join("\n");
@@ -419,7 +433,7 @@ function parkNodeSvg(id, summary, parkFlows) {
     const t = parkFlows.totals;
     detail.push(parkText(tx, cy - 12, `Bezug ${parkFormatEnergy(t.gridImport, false)}`, "park-label park-label-strong"));
     detail.push(parkText(tx, cy + 6, `Einspeisung ${parkFormatEnergy(t.gridExport, false)}`, "park-label park-label-strong"));
-    detail.push(parkText(tx, cy + 24, `max. Bezug ${parkFormatPower(t.maxImportKw)}`, "park-label"));
+    detail.push(parkText(tx, cy + 24, `max. Bezug Park ${parkFormatPower(t.maxImportKw)}`, "park-label"));
   }
   parts.push(`<g class="park-detail">${detail.join("")}</g>`);
 

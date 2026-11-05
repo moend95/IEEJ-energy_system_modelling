@@ -24,8 +24,8 @@
       <label for="preview-scenario">Szenario</label>
       <select id="preview-scenario">
         <option value="s_auto_0001">s_auto_0001 – Standard: GEH Basis, Jüchen Süd dezentral</option>
-        <option value="s_auto_1253">s_auto_1253 – Mittel: alle Module, GEH Erweiterung, ca. 41 % Autarkie</option>
-        <option value="s_auto_1296">s_auto_1296 – GEH „Keine“, Jüchen Süd „Aus“</option>
+        <option value="s_auto_2117">s_auto_2117 – Mittel: alle Module, GEH Erweiterung, Landschaft 100 % Tracking</option>
+        <option value="s_auto_2160">s_auto_2160 – GEH „Keine“, Jüchen Süd „Aus“</option>
       </select>
       <span id="preview-status" class="preview-status" aria-live="polite"></span>
     </div>
@@ -61,8 +61,17 @@
 
     async function init() {
       document.getElementById("park-legend").innerHTML = parkMapLegendHtml();
-      catalog = await (await fetch("./catalog.json")).json();
-      const requested = new URLSearchParams(location.search).get("s");
+      // Wie app.js: Katalog des aktuellen Modellstands, für Probeläufe per ?catalog= überschreibbar
+      const params = new URLSearchParams(location.search);
+      const override = params.get("catalog");
+      const catalogPath = override && /^\.\/[\w-]+(\/[\w-]+)*\.json$/.test(override)
+        ? override
+        : "./precomputed_v2/catalog.json";
+      catalog = await (await fetch(catalogPath)).json();
+      const requested = params.get("s");
+      if (requested && !Array.from(select.options).some((o) => o.value === requested)) {
+        select.add(new Option(requested, requested));
+      }
       if (requested) select.value = requested;
       select.addEventListener("change", () => showScenario(select.value));
       await showScenario(select.value);

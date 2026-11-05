@@ -139,8 +139,34 @@ body {
   font-size: 0.85rem;
 }
 
-.scenario-hint[hidden] {
+.scenario-hint[hidden],
+.snap-hint[hidden] {
   display: none;
+}
+
+/* Hinweis direkt unter einer Auswahl, wenn abhängige Felder mitgezogen wurden */
+.snap-hint {
+  margin: -6px 0 14px;
+  padding: 6px 10px 6px 16px;
+  box-shadow: inset 3px 0 0 var(--site-green);
+  background: #f4faf6;
+  color: var(--site-text);
+  font-size: 13px;
+}
+
+/* Einbettung per iframe (?embed=1): Elternseite hat Logo und Menü, iframe wächst mit dem Inhalt */
+.is-embed .hero {
+  display: none;
+}
+
+.is-embed .page {
+  padding: 8px;
+}
+
+.is-embed .sidebar,
+.is-embed .acc-col {
+  max-height: none;
+  overflow: visible;
 }
 
 /* ---------------- Akkordeons im Website-Stil ---------------- */

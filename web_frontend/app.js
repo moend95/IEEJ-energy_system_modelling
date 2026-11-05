@@ -1,4 +1,21 @@
-const CATALOG_PATH = "./catalog.json";
+// Katalog des aktuellen Modellstands (generate_all_scenarios.py schreibt ihn am Laufende);
+// für Probeläufe per ?catalog=./precomputed_test/catalog.json überschreibbar
+const CATALOG_PATH = "./precomputed_v2/catalog.json";
+const CATALOG_OVERRIDE_PATTERN = /^\.\/[\w-]+(\/[\w-]+)*\.json$/;
+
+// Einbettung per iframe (?embed=1): ohne eigenen Header, Höhe an die Elternseite melden
+const PAGE_PARAMS = new URLSearchParams(window.location.search);
+const EMBED_MODE = PAGE_PARAMS.get("embed") === "1";
+const EMBED_MESSAGE_TYPE = "ieej-height";
+
+// Hinweis, wenn abhängige Felder automatisch angepasst wurden
+const SNAP_HINT_MS = 5000;
+const FIELD_LABELS = {
+  h_highways: "Autobahnen",
+  h_pv_types: "PV-Flächen",
+  el_build_state: "Ausbaugrad",
+  el_pv_type: "PV-Typ",
+};
 
 // Feste Auslegung der Landmaschinen (wie LANDSCAPE_TRACTOR_* in core/module_energy_landscape.py)
 const LANDSCAPE_TRACTOR_WIDTH_M = 27;
@@ -226,8 +243,13 @@ function setScenarioHint(text) {
   hint.hidden = !text;
 }
 
+function getCatalogPath() {
+  const override = PAGE_PARAMS.get("catalog");
+  return override && CATALOG_OVERRIDE_PATTERN.test(override) ? override : CATALOG_PATH;
+}
+
 async function loadCatalog() {
-  const res = await fetch(CATALOG_PATH);
+  const res = await fetch(getCatalogPath());
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
@@ -370,24 +392,49 @@ function refreshOptionAvailability() {
   });
 }
 
-// Übrige Felder eines Teilprojekts im Formular auf den gefundenen Katalogschlüssel setzen
-function applyKeyToForm(key, group) {
+// Übrige Felder eines Teilprojekts im Formular auf den gefundenen Katalogschlüssel setzen;
+// liefert die Felder, die sich dabei geändert haben
+function applyKeyToForm(key, group, cInput) {
+  const changed = [];
   for (const field of FIELD_GROUPS[group]) {
+    if (stableStringify(key[field]) !== stableStringify(cInput[field])) changed.push(field);
     document.querySelectorAll(`.sidebar input[name="${field}"]`).forEach((input) => {
       input.checked = input.type === "checkbox"
         ? key[field].map(String).includes(input.value)
         : Number(input.value) === Number(key[field]);
     });
   }
+  return changed;
+}
+
+let snapHintTimer = null;
+
+function hideSnapHint() {
+  clearTimeout(snapHintTimer);
+  const hint = document.getElementById("snap-hint");
+  hint.textContent = "";
+  hint.hidden = true;
+}
+
+// Kurzer Hinweis direkt unter der geänderten Auswahl
+function showSnapHint(target, fields) {
+  const hint = document.getElementById("snap-hint");
+  const labels = fields.map((f) => FIELD_LABELS[f]).filter(Boolean);
+  if (!labels.length) return;
+  target.closest(".opt-group")?.after(hint);
+  hint.hidden = false;
+  hint.textContent = `${labels.join(", ")} angepasst – nur diese Kombination ist berechnet.`;
+  snapHintTimer = setTimeout(hideSnapHint, SNAP_HINT_MS);
 }
 
 function onSidebarChange(event) {
+  hideSnapHint();
   const field = INPUT_FIELDS[event.target?.name];
   if (field && catalogIndex.size > 0) {
     const cInput = canonicalizeInput(collectRawInput());
     if (!catalogIndex.has(stableStringify(cInput))) {
       const key = findClosestKey(cInput, field);
-      if (key) applyKeyToForm(key, groupOfField(field));
+      if (key) showSnapHint(event.target, applyKeyToForm(key, groupOfField(field), cInput));
     }
     refreshOptionAvailability();
   }
@@ -617,9 +664,33 @@ async function updateMapHighlights(cInput) {
   }
 }
 
+// ---------------- Einbettung ----------------
+
+// Meldet die Dokumenthöhe an die einbettende Seite (siehe docs/einbettung.md)
+function setupEmbedMode() {
+  if (!EMBED_MODE) return;
+  document.documentElement.classList.add("is-embed");
+  if (window.parent === window) return;
+
+  let lastHeight = 0;
+  const report = () => {
+    // Höhe des Inhalts (scrollHeight des Dokuments wird nie kleiner als der iframe selbst)
+    const height = Math.ceil(document.body.getBoundingClientRect().height);
+    if (height === lastHeight) return;
+    lastHeight = height;
+    window.parent.postMessage({ type: EMBED_MESSAGE_TYPE, height }, "*");
+  };
+  window.addEventListener("load", report);
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(report).observe(document.body);
+  }
+  report();
+}
+
 // ---------------- Start ----------------
 
 async function init() {
+  setupEmbedMode();
   setupAccordions();
   document.querySelectorAll('[role="tablist"]').forEach((tablist) => {
     setupTabs(tablist, (tab) => {
