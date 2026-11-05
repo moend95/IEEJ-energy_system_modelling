@@ -40,6 +40,8 @@ const GEOJSON_PATHS = {
   geh_area: "./geometries/geh_standort.geojson",
   js_area: "./geometries/juechen_sued.geojson",
   industry_area: "./geometries/elsbachtal.geojson",
+  // Gesamtfläche der Energielandschaft (nur für die Markerposition)
+  landscape_area: "./geometries/Energielandschaft_Map_Grosse_Flaeche_Detailiert.geojson",
 };
 
 // Verbraucher-Flächen im Lageplan; inaktive Teilprojekte werden blass dargestellt
@@ -68,6 +70,27 @@ const SITE_AREAS = [
 
 const INACTIVE_AREA_STYLE = { color: "#8a9a93", fillColor: "#8a9a93", opacity: 0.25, fillOpacity: 0.08 };
 const AREA_NUMBER_FORMAT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
+
+const siteAreaActive = (key) => SITE_AREAS.find((area) => area.key === key).isActive;
+
+// Marker je Teilprojekt (Klick/Enter öffnet die Fotos); Position aus Linienmitte, Flächenschwerpunkt
+// oder marker_lat/marker_lon der Fläche
+const MARKER_ICON_DIR = "./assets/markers";
+const SITE_MARKERS = [
+  { id: "solar_a44", photo: "solar", name: "Solarautobahn A44", photoName: "Solarautobahn", icon: "solar_highway",
+    position: { lineMid: "A44" }, isActive: (c) => c.h_highways.includes("A44") },
+  { id: "solar_a46", photo: "solar", name: "Solarautobahn A46", photoName: "Solarautobahn", icon: "solar_highway",
+    // westlicher Abschnitt: der längste liegt direkt neben Jüchen Süd und würde dessen Marker verdecken
+    position: { lineMid: "A46", pick: "west" }, isActive: (c) => c.h_highways.includes("A46") },
+  { id: "landscape", photo: "landscape", name: "Energielandschaft", photoName: "Energielandschaft", icon: "energy_landscape",
+    position: { centroid: "landscape_area" }, isActive: (c) => Number(c.el_build_state) > 0 },
+  { id: "hub", photo: "hub", name: "Green Energy Hub", photoName: "Green Energy Hub", icon: "green_energy_hub",
+    position: { property: "geh_area" }, isActive: siteAreaActive("geh_area") },
+  { id: "js", photo: "js", name: "Stadtteilentwicklung Jüchen Süd", photoName: "Jüchen Süd", icon: "juechen_sued",
+    position: { property: "js_area" }, isActive: siteAreaActive("js_area") },
+  { id: "industry", photo: "industry", name: "Industriegebiet Elsbachtal", photoName: "Industriegebiet Elsbachtal", icon: "industrial_area",
+    position: { property: "industry_area" }, isActive: siteAreaActive("industry_area") },
+];
 
 function siteAreaTooltip(area, feature) {
   if (area.tooltip) return area.tooltip(feature);
@@ -656,6 +679,122 @@ function deactivateGeoLayer(key) {
   }
 }
 
+// ---------------- Marker der Teilprojekte ----------------
+
+function geoLines(data) {
+  const lines = [];
+  for (const feature of data.features || []) {
+    const g = feature.geometry || {};
+    if (g.type === "LineString") lines.push(g.coordinates);
+    if (g.type === "MultiLineString") lines.push(...g.coordinates);
+  }
+  return lines;
+}
+
+function lineLength(coords) {
+  let total = 0;
+  for (let i = 1; i < coords.length; i += 1) {
+    total += Math.hypot(coords[i][0] - coords[i - 1][0], coords[i][1] - coords[i - 1][1]);
+  }
+  return total;
+}
+
+// Punkt auf halber Länge der längsten (bzw. mit pick "west" der westlichsten) Linie;
+// planar in Grad genügt für die Markerposition
+function lineMidpoint(data, pick = "longest") {
+  const meanLon = (c) => c.reduce((sum, pt) => sum + pt[0], 0) / c.length;
+  const sorted = pick === "west"
+    ? geoLines(data).sort((a, b) => meanLon(a) - meanLon(b))
+    : geoLines(data).sort((a, b) => lineLength(b) - lineLength(a));
+  const coords = sorted[0];
+  if (!coords) return null;
+  let rest = lineLength(coords) / 2;
+  for (let i = 1; i < coords.length; i += 1) {
+    const step = Math.hypot(coords[i][0] - coords[i - 1][0], coords[i][1] - coords[i - 1][1]);
+    if (step >= rest && step > 0) {
+      const t = rest / step;
+      return [coords[i - 1][1] + t * (coords[i][1] - coords[i - 1][1]), coords[i - 1][0] + t * (coords[i][0] - coords[i - 1][0])];
+    }
+    rest -= step;
+  }
+  return [coords[coords.length - 1][1], coords[coords.length - 1][0]];
+}
+
+// Flächenschwerpunkt des äußeren Rings des ersten Polygons
+function polygonCentroid(data) {
+  const g = (data.features || []).map((f) => f.geometry).find((geom) => geom && /Polygon/.test(geom.type));
+  if (!g) return null;
+  const ring = g.type === "Polygon" ? g.coordinates[0] : g.coordinates[0][0];
+  let area = 0;
+  let cx = 0;
+  let cy = 0;
+  for (let i = 0; i < ring.length - 1; i += 1) {
+    const [x0, y0] = ring[i];
+    const [x1, y1] = ring[i + 1];
+    const cross = x0 * y1 - x1 * y0;
+    area += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  return area ? [cy / (3 * area), cx / (3 * area)] : [ring[0][1], ring[0][0]];
+}
+
+async function siteMarkerPosition(position) {
+  if (position.lineMid) return lineMidpoint(await fetchGeoJsonCached(position.lineMid), position.pick);
+  if (position.centroid) return polygonCentroid(await fetchGeoJsonCached(position.centroid));
+  const props = (await fetchGeoJsonCached(position.property)).features?.[0]?.properties || {};
+  return [Number(props.marker_lat), Number(props.marker_lon)];
+}
+
+function openSitePhoto(photoId, trigger) {
+  if (typeof openPhotoLightbox === "function") openPhotoLightbox(photoId, trigger);
+}
+
+// Einmal anlegen; parallele Aufrufe warten auf dieselbe Erzeugung
+function createSiteMarkers() {
+  mapState.markersReady ??= buildSiteMarkers();
+  return mapState.markersReady;
+}
+
+async function buildSiteMarkers() {
+  const markers = {};
+  for (const def of SITE_MARKERS) {
+    const latlng = await siteMarkerPosition(def.position);
+    if (!latlng || !latlng.every(Number.isFinite)) continue;
+    const label = `Foto ${def.photoName} öffnen`;
+    const marker = L.marker(latlng, {
+      keyboard: true,
+      title: label,
+      riseOnHover: true,
+      icon: L.divIcon({
+        className: "site-marker",
+        html: `<span class="site-marker-badge"><img src="${MARKER_ICON_DIR}/${def.icon}.png" alt="" width="28" height="28"></span>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        tooltipAnchor: [0, -24],
+      }),
+    }).addTo(mapState.map);
+    marker.bindTooltip(def.name, { direction: "top" });
+    const el = marker.getElement();
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-label", label);
+    marker.on("click", () => openSitePhoto(def.photo, el));
+    el.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      openSitePhoto(def.photo, el);
+    });
+    markers[def.id] = marker;
+  }
+  mapState.markers = markers;
+}
+
+function updateSiteMarkers(cInput) {
+  for (const def of SITE_MARKERS) {
+    mapState.markers?.[def.id]?.getElement()?.classList.toggle("is-inactive", !def.isActive(cInput));
+  }
+}
+
 // Beim ersten Öffnen auf alle Teilprojekte zoomen (unabhängig davon, welche aktiv sind)
 async function fitSitePlanOnce() {
   if (mapState.didFit) return;
@@ -705,6 +844,8 @@ async function updateMapHighlights(cInput) {
       await activateGeoLayer(area.key, style, (feature) => siteAreaTooltip(area, feature));
     }
 
+    await createSiteMarkers();
+    updateSiteMarkers(cInput);
     await fitSitePlanOnce();
   } catch (err) {
     setMapHint({ h_highways: [], el_build_state: 0 });

@@ -560,6 +560,48 @@ body {
 
 .swatch.a44 { background: #2563eb; }
 .swatch.a46 { background: var(--orange); }
+/* Marker der Teilprojekte im Lageplan (Leaflet positioniert das äußere Element per transform) */
+.site-marker {
+  background: none;
+  border: 0;
+  outline: none;
+}
+
+.site-marker-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--site-green);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(42, 42, 42, 0.28);
+  cursor: pointer;
+  transition: transform var(--motion-fast) ease, border-color var(--motion-fast) ease, opacity var(--motion-fast) ease;
+}
+
+.site-marker-badge img {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.site-marker:hover .site-marker-badge,
+.site-marker:focus-visible .site-marker-badge {
+  border-color: var(--site-hover);
+  transform: scale(1.12);
+}
+
+.site-marker:focus-visible .site-marker-badge {
+  box-shadow: 0 0 0 3px rgba(13, 72, 109, 0.35), 0 2px 6px rgba(42, 42, 42, 0.28);
+}
+
+.site-marker.is-inactive .site-marker-badge {
+  opacity: 0.5;
+}
+
 .swatch.landscape { background: #16a34a; }
 .swatch.geh { background: rgba(13, 72, 109, 0.14); border: 2px dashed #0d486d; }
 .swatch.js { background: rgba(35, 161, 176, 0.45); border: 2px solid #23a1b0; }
