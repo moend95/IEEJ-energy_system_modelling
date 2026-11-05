@@ -1,0 +1,54 @@
+{
+  "solar": [
+    {
+      "src": "./assets/photos/solarautobahn_laermschutzwand.webp",
+      "alt": "Visualisierung: Photovoltaik-Module an einer Lärm- und Windschutzwand entlang der Autobahn",
+      "titel": "Solarautobahn – PV an Lärm- und Windschutzwänden",
+      "beschreibung": "Photovoltaik-Module an Lärm- und Windschutzwänden entlang der Autobahn (Visualisierung).",
+      "bildnachweis": "[Bildnachweis offen]"
+    },
+    {
+      "src": "./assets/photos/solarautobahn_boeschung.webp",
+      "alt": "Visualisierung: Photovoltaik auf einer Böschung neben der Autobahn",
+      "titel": "Solarautobahn – PV auf Böschungen",
+      "beschreibung": "Photovoltaik auf den Böschungsflächen entlang der Autobahn (Visualisierung).",
+      "bildnachweis": "[Bildnachweis offen]"
+    }
+  ],
+  "landscape": [
+    {
+      "src": "./assets/photos/energielandschaft_agri_pv.webp",
+      "alt": "Visualisierung: Agri-PV-Anlage mit Modulreihen auf landwirtschaftlicher Fläche",
+      "titel": "Energielandschaft – Agri-PV",
+      "beschreibung": "Agri-Photovoltaik mit vertikalen und nachgeführten Modulreihen; die Fläche bleibt landwirtschaftlich nutzbar (Visualisierung).",
+      "bildnachweis": "[Bildnachweis offen]"
+    }
+  ],
+  "hub": [
+    {
+      "src": "./assets/photos/green_energy_hub.webp",
+      "alt": "Visualisierung: Autohof mit Ladeinfrastruktur, Wasserstofftankstelle und Photovoltaik",
+      "titel": "Green Energy Hub – Autohof der Zukunft",
+      "beschreibung": "Autohof mit Schnellladeinfrastruktur für Lkw und Pkw, Wasserstofftankstelle, Photovoltaik und Batteriespeicher (Visualisierung). Der genaue Standort ist noch nicht festgelegt.",
+      "bildnachweis": "[Bildnachweis offen – Machbarkeitsstudie inno2grid / PRSch]"
+    }
+  ],
+  "js": [
+    {
+      "src": "./assets/photos/juechen_sued_rahmenplan.webp",
+      "alt": "Rahmenplan des neuen Stadtteils Jüchen Süd",
+      "titel": "Stadtteilentwicklung Jüchen Süd",
+      "beschreibung": "Städtebaulich-freiraumplanerischer Rahmenplan für den neuen Stadtteil.",
+      "bildnachweis": "[Bildnachweis offen – Octagon / studio erde]"
+    }
+  ],
+  "industry": [
+    {
+      "src": "./assets/photos/elsbachtal.webp",
+      "alt": "Visualisierung: Gewerbe- und Logistikflächen im Industriegebiet Elsbachtal",
+      "titel": "Industriegebiet Elsbachtal",
+      "beschreibung": "Gewerbe- und Logistikflächen mit Photovoltaik auf den Dächern und Ladeinfrastruktur (Visualisierung).",
+      "bildnachweis": "[Bildnachweis offen]"
+    }
+  ]
+}

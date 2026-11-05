@@ -71,6 +71,9 @@ const SITE_AREAS = [
 const INACTIVE_AREA_STYLE = { color: "#8a9a93", fillColor: "#8a9a93", opacity: 0.25, fillOpacity: 0.08 };
 const AREA_NUMBER_FORMAT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
 
+// Sechsecke der Parkkarte mit Foto (Stromnetz hat keins); ids wie in assets/photos/photos.json
+const PARK_PHOTO_NODES = ["solar", "landscape", "hub", "js", "industry"];
+
 const siteAreaActive = (key) => SITE_AREAS.find((area) => area.key === key).isActive;
 
 // Marker je Teilprojekt (Klick/Enter öffnet die Fotos); Position aus Linienmitte, Flächenschwerpunkt
@@ -542,7 +545,7 @@ async function updateScenario() {
     const payload = await loadFlowPayload(entry.flow_path);
     if (seq !== viewState.updateSeq) return; // inzwischen neuere Auswahl
     renderParkKpis(document.getElementById("park-kpis"), payload);
-    renderParkMap(document.getElementById("park-stage"), payload);
+    renderParkMap(document.getElementById("park-stage"), payload, { photoNodes: PARK_PHOTO_NODES });
     document.getElementById("scenario-meta").textContent = `Szenario ${entry.scenario_id}`;
     viewState.hasRendered = true;
     setScenarioHint("");
@@ -888,6 +891,9 @@ async function init() {
   });
   setupExplainToggles();
   document.getElementById("park-legend").innerHTML = parkMapLegendHtml();
+  document.getElementById("park-stage").addEventListener("park-photo", (event) => {
+    openSitePhoto(event.detail.id, event.detail.trigger);
+  });
   document.querySelector(".sidebar").addEventListener("change", onSidebarChange);
 
   try {

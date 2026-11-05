@@ -378,12 +378,12 @@ function parkText(x, y, text, cls) {
   return `<text class="${cls}" x="${x}" y="${y}" text-anchor="middle">${parkEscape(text)}</text>`;
 }
 
-function parkNodeSvg(id, summary, parkFlows) {
+function parkNodeSvg(id, summary, parkFlows, hasPhoto = false) {
   const node = PARK_NODES[id];
   const { cx, cy, r } = node;
   const tx = node.tx ?? cx;
   const active = parkIsActive(id, summary, parkFlows);
-  const tip = parkNodeTooltip(id, summary, parkFlows);
+  const tip = parkNodeTooltip(id, summary, parkFlows) + (hasPhoto ? "\nFoto ansehen" : "");
   const hexClass = id === "grid" ? "park-hex park-hex-grid" : active ? "park-hex" : "park-hex park-hex-inactive";
 
   const parts = [`<polygon class="${hexClass}" points="${parkHexPoints(cx, cy, r)}"/>`];
@@ -438,7 +438,7 @@ function parkNodeSvg(id, summary, parkFlows) {
   parts.push(`<g class="park-detail">${detail.join("")}</g>`);
 
   return (
-    `<g class="park-node" data-node="${id}" tabindex="0" data-tip="${parkEscape(tip)}" aria-label="${parkEscape(tip)}">` +
+    `<g class="park-node${hasPhoto ? " park-node-photo" : ""}" data-node="${id}" tabindex="0"${hasPhoto ? ' role="button" data-photo="1"' : ""} data-tip="${parkEscape(tip)}" aria-label="${parkEscape(tip)}">` +
     parts.join("") +
     `</g>`
   );
@@ -495,11 +495,24 @@ function parkSetupInteraction(stage) {
     if (target) show(target);
   });
   stage.addEventListener("focusout", hide);
+  // Sechsecke mit Foto (options.photoNodes): Klick oder Enter meldet "park-photo" an die Seite
+  const requestPhoto = (node) => {
+    stage.dispatchEvent(new CustomEvent("park-photo", { bubbles: true, detail: { id: node.dataset.node, trigger: node } }));
+  };
   // Touch: Tippen zeigt den Tooltip, Tippen daneben schließt ihn
   stage.addEventListener("click", (event) => {
     const target = findTarget(event);
     if (target) show(target);
     else hide();
+    const photoNode = event.target.closest?.(".park-node[data-photo]");
+    if (photoNode) requestPhoto(photoNode);
+  });
+  stage.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const photoNode = event.target.closest?.(".park-node[data-photo]");
+    if (!photoNode) return;
+    event.preventDefault();
+    requestPhoto(photoNode);
   });
 
   // Animation nur laufen lassen, wenn die Karte sichtbar ist
@@ -538,7 +551,7 @@ function renderParkMap(stage, payload, options = {}) {
     .join("");
 
   const nodeSvg = Object.keys(PARK_NODES)
-    .map((id) => parkNodeSvg(id, summary, parkFlows))
+    .map((id) => parkNodeSvg(id, summary, parkFlows, (options.photoNodes || []).includes(id)))
     .join("");
 
   const background = options.background ?? parkMapBackground();
