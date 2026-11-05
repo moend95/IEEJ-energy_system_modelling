@@ -14,18 +14,25 @@ const UPDATE_DEBOUNCE_MS = 150;
 const GEOJSON_PATHS = {
   A44: "./geometries/a44_beide.geojson",
   A46: "./geometries/a46_beide.geojson",
-  landscape_vertical_50: "./geometries/Geometry_Vertikal_50_Prozent_20m.geojson",
-  landscape_vertical_100: "./geometries/Geometry_Vertikal_Traktorbreite_20m.geojson",
-  landscape_horizontal_50: "./geometries/Geometry_Horizontal_50_Prozent_20m.geojson",
-  landscape_horizontal_100: "./geometries/Geometry_Horizontal_Traktorbreite_20m.geojson",
+  // erzeugt mit core/auxiliary/export_landscape_geometries.py (27-m-Auslegung)
+  landscape_vertical_50: "./geometries/landscape_vertical_50.geojson",
+  landscape_vertical_100: "./geometries/landscape_vertical_100.geojson",
+  landscape_tracking_50: "./geometries/landscape_tracking_50.geojson",
+  landscape_tracking_100: "./geometries/landscape_tracking_100.geojson",
 };
 
 const LANDSCAPE_LAYER_KEYS = [
   "landscape_vertical_50",
   "landscape_vertical_100",
-  "landscape_horizontal_50",
-  "landscape_horizontal_100",
+  "landscape_tracking_50",
+  "landscape_tracking_100",
 ];
+
+// PV-Typ der Energielandschaft → Geometrie und Bezeichnung im Lageplan
+const LANDSCAPE_PV_TYPES = {
+  5: { geo: "vertical", label: "Vertikal" },
+  4: { geo: "tracking", label: "Tracking" },
+};
 
 const catalogIndex = new Map();
 const payloadCache = new Map();
@@ -445,9 +452,8 @@ function getLandscapeGeoKey(cInput) {
     return null;
   }
 
-  const pvType = Number(cInput.el_pv_type || 0);
-  const orientation = pvType === 6 ? "horizontal" : "vertical";
-  return `landscape_${orientation}_${buildState}`;
+  const pvType = LANDSCAPE_PV_TYPES[Number(cInput.el_pv_type)] || LANDSCAPE_PV_TYPES[5];
+  return `landscape_${pvType.geo}_${buildState}`;
 }
 
 function getLandscapeStyle(cInput) {
@@ -489,8 +495,8 @@ function setMapHint(cInput) {
 
   const landscapeKey = getLandscapeGeoKey(cInput);
   if (landscapeKey) {
-    const orientation = Number(cInput.el_pv_type || 0) === 6 ? "Horizontal" : "Vertikal";
-    active.push(`Energielandschaft ${Number(cInput.el_build_state)} % (${orientation})`);
+    const pvType = LANDSCAPE_PV_TYPES[Number(cInput.el_pv_type)] || LANDSCAPE_PV_TYPES[5];
+    active.push(`Energielandschaft ${Number(cInput.el_build_state)} % (${pvType.label})`);
   }
 
   mapHint.textContent = active.length

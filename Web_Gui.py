@@ -165,20 +165,12 @@ with st.container(key="Erzeugung", width=1000, height='content'):
 
         # Dynamic Input visualization via folium
         with col2_tab2:
-            pv_geojson_mapping_col2_tab2 = {
-                5: {
-                    50: "Geometry_Vertikal_50_Prozent_20m.geojson",
-                    100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
-                },
-                4: {
-                    50: "Geometry_Vertikal_50_Prozent_20m.geojson",
-                    100: "Geometry_Vertikal_Traktorbreite_20m.geojson",
-                },
-            }
+            # Geometrien aus core/auxiliary/export_landscape_geometries.py (27-m-Auslegung)
+            pv_geojson_name = {5: "vertical", 4: "tracking"}
 
             if Input.el_build_state != 0 and Input.el_build_state is not None:
-                selected_file = pv_geojson_mapping_col2_tab2[Input.el_pv_type][Input.el_build_state]
-                geojson_path = os.path.join(script_dir,"data", "inputs", "geometry", selected_file)
+                selected_file = f"landscape_{pv_geojson_name[Input.el_pv_type]}_{Input.el_build_state}.geojson"
+                geojson_path = os.path.join(script_dir, "web_frontend", "geometries", selected_file)
 
                 with open(geojson_path, "r", encoding="utf-8") as f:
                     geojson_data = json.load(f)
