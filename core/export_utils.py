@@ -295,6 +295,10 @@ def export_scenario_flows_to_json(
             "battery_charge_kwh": nonneg("geh_battery_charge_kwh"),
             "battery_discharge_kwh": nonneg("geh_battery_discharge_kwh"),
             "battery_full_cycles": nonneg("geh_battery_full_cycles"),
+            "electrolyzer_base_kw": nonneg("geh_electrolyzer_base_kw"),
+            "grid_limit_kw": nonneg("geh_grid_limit_kw"),
+            "grid_peak_kw": nonneg("geh_grid_peak_kw"),
+            "grid_limit_exceed_hours": nonneg("geh_grid_limit_exceed_hours"),
         },
         "balance": {
             "bal_energy_kwh": _safe_float(getattr(sim_output, "bal_energy_kwh", 0.0)),

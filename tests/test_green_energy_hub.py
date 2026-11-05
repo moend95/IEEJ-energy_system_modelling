@@ -181,17 +181,86 @@ def test_dispatch_kleiner_speicher_und_batterie(synthetic):
 
 
 def test_dispatch_mindestfuellstand_nutzt_netz():
-    n = 96
+    n = 96 * 4
     net = np.full(n, -1000.0)   # dauerhaftes Defizit, kein Überschuss
     demand = np.zeros(n)
     p = GEHParams.from_variant({**GEH_VARIANTS["Basis"], "soc_start": 0.0, "battery_kwh": 0.0})
     r = run_geh_dispatch(net, demand, p, DT_H)
     assert r.electrolyzer_kw[0] == pytest.approx(p.electrolyzer_kw)
     assert r.grid_import_kw[0] == pytest.approx(1000 + p.electrolyzer_kw * (1 + p.compressor_factor * p.electrolyzer_eff))
-    # oberhalb des Mindestfüllstands ohne Überschuss aus
-    above = r.h2_soc_kwh >= p.h2_min_soc * p.h2_storage_kwh
-    idx = np.argmax(above)
-    assert (r.electrolyzer_kw[idx + 1:] == 0).all()
+    # oberhalb des Mindestfüllstands ohne Überschuss: Grundlast bis zum oberen Füllstand
+    prev_soc = np.concatenate(([r.h2_soc_start_kwh], r.h2_soc_kwh[:-1]))
+    between = (prev_soc >= p.h2_min_soc * p.h2_storage_kwh) & (prev_soc < p.h2_high_soc * p.h2_storage_kwh)
+    assert between.any()
+    np.testing.assert_allclose(r.electrolyzer_kw[between], p.electrolyzer_base_kw)
+
+
+def test_dispatch_grundlast_aus_h2_nachfrage():
+    p = GEHParams.from_variant(GEH_VARIANTS["Basis"])
+    h2_kwh = GEH_VARIANTS["Basis"]["h2_demand_t_per_a"] * 1000 * 33.33
+    assert p.electrolyzer_base_kw == pytest.approx(h2_kwh / (p.electrolyzer_eff * 8760))
+    assert 850 < p.electrolyzer_base_kw < 860
+    assert p.grid_limit_kw == 3_900 and GEHParams.from_variant(GEH_VARIANTS["Erweiterung"]).grid_limit_kw == 4_000
+
+
+def test_dispatch_oberer_fuellstand_nur_ueberschuss():
+    n = 96
+    net = np.full(n, -500.0)
+    p = GEHParams.from_variant({**GEH_VARIANTS["Basis"], "soc_start": 0.95, "battery_kwh": 0.0})
+    r = run_geh_dispatch(net, np.zeros(n), p, DT_H)
+    assert (r.electrolyzer_kw == 0).all()
+
+
+def _peak_params(**kw):
+    # Ohne Elektrolyseur, damit nur die Batterie wirkt
+    return GEHParams.from_variant({**GEH_VARIANTS["Basis"], "electrolyzer_kw": 0.0, **kw})
+
+
+def test_dispatch_spitzenkappung_bis_batterie_leer():
+    n = 96
+    load = np.full(n, 4_500.0)                       # konstant 600 kW über der Grenze 3.900 kW
+    p = _peak_params(soc_start=1.0)
+    r = run_geh_dispatch(-load, np.zeros(n), p, DT_H, geh_fixed_load_kw=load)
+    eta = np.sqrt(p.battery_eff_rt)
+    steps_full = int(p.battery_kwh * eta / (600 * DT_H))   # so lange reicht die volle Batterie
+    np.testing.assert_allclose(r.battery_discharge_kw[:steps_full], 600.0)
+    np.testing.assert_allclose(r.geh_grid_kw[:steps_full], 3_900.0)
+    assert r.battery_soc_kwh[steps_full + 1] == pytest.approx(0.0, abs=1e-6)
+    np.testing.assert_allclose(r.geh_grid_kw[steps_full + 1:], 4_500.0)
+    assert r.geh_grid_peak_kw == pytest.approx(4_500.0)
+    assert r.geh_grid_limit_exceed_hours == pytest.approx((n - steps_full) * DT_H)   # ab dem Teilschritt
+
+
+def test_dispatch_spitzenkappung_auch_bei_park_ueberschuss():
+    n = 4
+    load = np.full(n, 4_400.0)
+    net = np.full(n, 2_000.0)                        # Park hat trotzdem Überschuss
+    p = _peak_params(soc_start=1.0)
+    r = run_geh_dispatch(net, np.zeros(n), p, DT_H, geh_fixed_load_kw=load)
+    np.testing.assert_allclose(r.battery_discharge_kw, 500.0)
+    np.testing.assert_allclose(r.geh_grid_kw, 3_900.0)
+    np.testing.assert_allclose(r.grid_export_kw, 2_500.0)
+
+
+def test_dispatch_nachladen_aus_dem_netz():
+    n = 8
+    load = np.full(n, 1_000.0)                       # weit unter 80 % der Grenze (3.120 kW)
+    p = _peak_params(soc_start=0.0)
+    r = run_geh_dispatch(-load, np.zeros(n), p, DT_H, geh_fixed_load_kw=load)
+    expected = min(0.8 * 3_900 - 1_000, p.battery_kw)
+    assert r.battery_charge_kw[0] == pytest.approx(expected)
+    np.testing.assert_allclose(r.geh_grid_kw[0], 1_000 + expected)
+    assert (r.battery_discharge_kw == 0).all()
+    assert r.grid_import_kw[0] == pytest.approx(1_000 + expected)
+
+
+def test_dispatch_drosselt_elektrolyseur_an_der_grenze():
+    n = 4
+    load = np.full(n, 3_500.0)                       # Grundlast würde den Hub über 3.900 kW heben
+    p = GEHParams.from_variant({**GEH_VARIANTS["Basis"], "battery_kwh": 0.0})
+    r = run_geh_dispatch(-load, np.zeros(n), p, DT_H, geh_fixed_load_kw=load)
+    np.testing.assert_allclose(r.geh_grid_kw, 3_900.0)
+    assert (r.electrolyzer_kw < p.electrolyzer_base_kw).all()
 
 
 def test_dispatch_nullkomponenten():
@@ -281,6 +350,27 @@ def test_integration_plausibilitaet(sim_erweiterung):
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("variant", ["Basis", "Erweiterung"])
+def test_integration_betriebsfuehrung_bericht(variant):
+    """Bericht zur Betriebsführung; Netzspitze Hub ist kein harter Test (Vergleich mit der Studie)."""
+    from Simulation import run_simulation
+    o = run_simulation(standard_input(variant))
+    limit = GEH_VARIANTS[variant]["grid_limit_kw"]
+    print(f"\n[{variant}] Volllaststunden {o.geh_electrolyzer_full_load_hours:.0f} h, "
+          f"Grundlast {o.geh_electrolyzer_base_kw:.0f} kW, "
+          f"H2 ungedeckt {100 * o.geh_h2_unmet_kwh / o.geh_h2_demand_kwh:.2f} %, "
+          f"Batterie {o.geh_battery_full_cycles:.0f} Vollzyklen, "
+          f"Netzspitze Hub {o.geh_grid_peak_kw:.0f} kW (Grenze {limit:.0f} kW), "
+          f"{o.geh_grid_limit_exceed_hours:.0f} h über der Grenze")
+    assert 4_500 <= o.geh_electrolyzer_full_load_hours <= 5_500
+    assert o.geh_h2_unmet_kwh < 0.01 * o.geh_h2_demand_kwh
+    # Batterie-Vollzyklen nur berichtet: die Studie nennt > 500, die synthetischen Ladeprofile
+    # bleiben aber ohne Elektrolyseur unter der Netzgrenze (offener Punkt)
+    assert o.geh_grid_limit_kw == limit
+    np.testing.assert_allclose(o.res_df["Netzlast_GEH [kW]"].max(), o.geh_grid_peak_kw)
+
+
+@pytest.mark.slow
 def test_integration_keine(sim_keine):
     df = sim_keine.res_df
     for column in GEH_COLUMNS:
@@ -350,7 +440,10 @@ def test_integration_dispatch_invarianten(sim_erweiterung):
         - sum(df[c].to_numpy() for c in GEH_PARK_LOAD_COLUMNS if c in df.columns)
     demand = build_geh_load_profiles(Simulator().weather_df.index, GEH_VARIANTS["Erweiterung"])["h2_demand_kwh"].to_numpy()
     p = GEHParams.from_variant(GEH_VARIANTS["Erweiterung"])
-    r = run_geh_dispatch(net, demand, p, DT_H)
+    fixed = df[["Last_GEH_MCS [kW]", "Last_GEH_CCS [kW]", "Last_GEH_HPC [kW]", "Last_GEH_AC [kW]",
+                "Last_GEH_Gebaeude [kW]"]].sum(axis=1).to_numpy()
+    r = run_geh_dispatch(net, demand, p, DT_H, geh_fixed_load_kw=fixed,
+                         geh_pv_kw=df["Erzeugung_GEH_PV [kW]"].to_numpy())
     _check_invariants(net, demand, p, r)
     np.testing.assert_allclose(r.electrolyzer_kw, df["Last_GEH_Elektrolyseur [kW]"])
     np.testing.assert_allclose(r.balance_after_kw, df["Bilanz [kW]"], atol=1e-6)

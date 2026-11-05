@@ -44,6 +44,10 @@ class GuiInput:
     geh_electrolyzer_power_kw: Optional[float] = None      # Nennleistung Elektrolyseur [kW]
     geh_electrolyzer_efficiency: Optional[float] = None    # System-Wirkungsgrad (LHV-bezogen, 0–1)
     geh_storage_capacity_kwh: Optional[float] = None       # H2-Speicherkapazität [kWh_H2]
+    geh_grid_limit_kw: Optional[float] = None              # Netzgrenze des Hubs für die Spitzenkappung [kW]
+    geh_electrolyzer_base_kw: Optional[float] = None       # Grundlast Elektrolyseur [kW] (None = aus H2-Nachfrage)
+    geh_h2_high_soc: Optional[float] = None                # Oberer Füllstand H2-Speicher [0–1]
+    geh_battery_recharge_margin: Optional[float] = None    # Nachladen aus dem Netz unter diesem Anteil der Grenze [0–1]
 
     # Battery storage
     bs_efficiency: Optional[float] = None               # Roundtrip efficience [0–1]
@@ -107,6 +111,10 @@ class SimOutput:
     geh_battery_discharge_kwh: float | None = None   # Batterie-Entladung [kWh/a]
     geh_battery_full_cycles: float | None = None     # Batterie-Vollzyklen [1/a]
     geh_battery_soc_df: pd.DataFrame = field(default_factory=pd.DataFrame)  # SOC-Zeitreihe Batterie
+    geh_electrolyzer_base_kw: float | None = None    # Grundlast Elektrolyseur [kW]
+    geh_grid_limit_kw: float | None = None           # Netzgrenze des Hubs [kW]
+    geh_grid_peak_kw: float | None = None            # Netzspitze des Hubs [kW] (Zeitreihe: res_df "Netzlast_GEH [kW]")
+    geh_grid_limit_exceed_hours: float | None = None # Stunden über der Netzgrenze des Hubs [h/a]
 
     # Jüchen Süd – Bedarfe und Wärmeversorgung
     js_household_kwh: float | None = None            # Nutzerstrom [kWh/a]

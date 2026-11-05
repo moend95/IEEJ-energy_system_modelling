@@ -40,6 +40,8 @@ GEH_PV_KWP_PARKHAUSDACH: float = 500.0      # ANNAHME, nicht aus Studie (Basis =
 GEH_BATTERY_EFF_RT: float = 0.90            # ANNAHME, nicht aus Studie
 GEH_H2_MIN_SOC: float = 0.30                # ANNAHME, nicht aus Studie
 GEH_SOC_START: float = 0.50                 # ANNAHME, nicht aus Studie (H2-Speicher und Batterie)
+GEH_H2_HIGH_SOC: float = 0.90               # ANNAHME, nicht aus Studie: darüber Elektrolyseur nur mit Überschuss
+GEH_BATTERY_RECHARGE_MARGIN: float = 0.80   # ANNAHME, nicht aus Studie: Nachladen aus dem Netz unter 80 % der Grenze
 
 # H2-Nachfrage abgeleitet: 1.500 kW × 5.000 h × 0,70 / 33,33 kWh/kg ≈ 157,5 t/a
 GEH_H2_DEMAND_T_PER_A: float = 157.5
@@ -57,6 +59,10 @@ _GEH_COMMON: dict = {
     "electrolyzer_kw": 1_500.0, "electrolyzer_eff": 0.70,
     "h2_storage_kwh": 40_000.0, "h2_demand_t_per_a": GEH_H2_DEMAND_T_PER_A,
     "h2_min_soc": GEH_H2_MIN_SOC, "soc_start": GEH_SOC_START,
+    "h2_high_soc": GEH_H2_HIGH_SOC,
+    # Betriebsführung: Grundlast Elektrolyseur (None = aus der H2-Nachfrage), Nachladen der Batterie
+    "electrolyzer_base_kw": None,
+    "battery_recharge_margin": GEH_BATTERY_RECHARGE_MARGIN,
 }
 
 GEH_VARIANTS: dict[str, dict] = {
@@ -64,11 +70,13 @@ GEH_VARIANTS: dict[str, dict] = {
         **_GEH_COMMON,
         "ac_kwh": 0.0,                                   # Parkhaus entfällt
         "pv_kwp": 1_245.0 - GEH_PV_KWP_PARKHAUSDACH,     # 745 kWp
+        "grid_limit_kw": 3_900.0,                        # Netzanschluss-Spitze (Studie)
     },
     "Erweiterung": {
         **_GEH_COMMON,
         "ac_kwh": 560_000.0,
         "pv_kwp": 1_245.0,
+        "grid_limit_kw": 4_000.0,                        # Netzanschluss-Spitze (Studie)
     },
 }
 
@@ -159,6 +167,10 @@ _GEH_OVERRIDES: dict[str, str] = {
     "geh_electrolyzer_power_kw": "electrolyzer_kw",
     "geh_electrolyzer_efficiency": "electrolyzer_eff",
     "geh_storage_capacity_kwh": "h2_storage_kwh",
+    "geh_grid_limit_kw": "grid_limit_kw",
+    "geh_electrolyzer_base_kw": "electrolyzer_base_kw",
+    "geh_h2_high_soc": "h2_high_soc",
+    "geh_battery_recharge_margin": "battery_recharge_margin",
 }
 
 
@@ -195,6 +207,10 @@ class GEHParams:
     battery_eff_rt: float
     battery_soc_start: float   # 0..1
     compressor_factor: float = COMPRESSOR_FACTOR
+    h2_high_soc: float = 1.0               # 0..1, darüber Elektrolyseur nur mit Überschuss
+    electrolyzer_base_kw: float = 0.0      # Grundlast Elektrolyseur [kW]
+    grid_limit_kw: float = 0.0             # Netzgrenze des Hubs [kW], 0 = keine Grenze
+    battery_recharge_margin: float = 0.0   # Anteil der Grenze, bis zu dem aus dem Netz nachgeladen wird
 
     @classmethod
     def from_variant(cls, variant: dict | None) -> "GEHParams":
@@ -205,6 +221,12 @@ class GEHParams:
                 h2_min_soc=0.0, h2_soc_start=0.0, battery_kwh=0.0, battery_kw=0.0,
                 battery_eff_rt=1.0, battery_soc_start=0.0,
             )
+        eff = float(variant["electrolyzer_eff"])
+        base_kw = variant.get("electrolyzer_base_kw")
+        if base_kw is None:
+            # Grundlast so, dass der Elektrolyseur im Jahresmittel genau die H2-Nachfrage erzeugt
+            h2_demand_kwh = float(variant["h2_demand_t_per_a"]) * 1000.0 * LHV_H2_KWH_PER_KG
+            base_kw = h2_demand_kwh / (eff * 8760.0) if eff > 0 else 0.0
         return cls(
             electrolyzer_kw=float(variant["electrolyzer_kw"]),
             electrolyzer_eff=float(variant["electrolyzer_eff"]),
@@ -215,6 +237,10 @@ class GEHParams:
             battery_kw=float(variant["battery_kw"]),
             battery_eff_rt=float(variant["battery_eff_rt"]),
             battery_soc_start=float(variant["soc_start"]),
+            h2_high_soc=float(variant.get("h2_high_soc", 1.0)),
+            electrolyzer_base_kw=min(float(base_kw), float(variant["electrolyzer_kw"])),
+            grid_limit_kw=float(variant.get("grid_limit_kw") or 0.0),
+            battery_recharge_margin=float(variant.get("battery_recharge_margin") or 0.0),
         )
 
 
@@ -237,6 +263,7 @@ class GEHDispatchResult:
     grid_import_kw: np.ndarray = field(default_factory=_zeros)
     grid_export_kw: np.ndarray = field(default_factory=_zeros)
     balance_after_kw: np.ndarray = field(default_factory=_zeros)
+    geh_grid_kw: np.ndarray = field(default_factory=_zeros)         # Netzlast des Hubs (bilanziell)
 
     # Startwerte (für Bilanzprüfungen)
     h2_soc_start_kwh: float = 0.0
@@ -255,7 +282,10 @@ class GEHDispatchResult:
     battery_full_cycles: float = 0.0
     grid_import_kwh: float = 0.0
     grid_export_kwh: float = 0.0
-    grid_max_import_kw: float = 0.0
+    grid_max_import_kw: float = 0.0          # Park gesamt
+    geh_grid_peak_kw: float = 0.0            # Netzspitze des Hubs
+    geh_grid_limit_exceed_hours: float = 0.0
+    geh_electrolyzer_base_kw: float = 0.0
 
 
 def run_geh_dispatch(
@@ -263,25 +293,36 @@ def run_geh_dispatch(
     h2_demand_kwh: np.ndarray,
     p: GEHParams,
     dt_h: float = 0.25,
+    geh_fixed_load_kw: np.ndarray | None = None,
+    geh_pv_kw: np.ndarray | None = None,
 ) -> GEHDispatchResult:
     """
     Regelbasierte Betriebsführung des Green Energy Hubs je Zeitschritt.
 
     Reihenfolge je Zeitschritt:
-      1. Elektrolyseur: nur Überschuss; unter Mindestfüllstand volle Leistung
-         (Versorgungssicherung, notfalls mit Netz-/Batteriestrom); begrenzt durch
-         den freien Platz im H2-Speicher
-      2. H2-Speicher: Produktion rein, Tankstellennachfrage raus
-      3. Batterie: nimmt Rest-Überschuss auf, deckt Defizite
-      4. Netz: verbleibender Überschuss → Einspeisung, Defizit → Bezug
+      1. Elektrolyseur: unter Mindestfüllstand volle Leistung (Versorgungssicherung),
+         bis zum oberen Füllstand Grundlast oder Überschuss, darüber nur Überschuss;
+         begrenzt durch den freien Platz im H2-Speicher
+      2. Elektrolyseur drosseln, wenn der Hub über seiner Netzgrenze liegt
+         (nicht unter Mindestfüllstand; der Überschuss-Anteil bleibt)
+      3. H2-Speicher: Produktion rein, Tankstellennachfrage raus
+      4. Batterie: kappt Hub-Spitzen über der Grenze, lädt sonst Park-Überschuss
+         (ohne den Hub über die Grenze zu heben) und in ruhigen Zeiten aus dem Netz
+         nach; ohne Netzgrenze deckt sie stattdessen Park-Defizite
+      5. Netz: verbleibender Überschuss → Einspeisung, Defizit → Bezug
 
     Args:
-        net_kw:        Park-Bilanz vor Flexibilität [kW], positiv = Überschuss
-        h2_demand_kwh: H2-Nachfrage Tankstelle je Zeitschritt [kWh_H2]
-        p:             Anlagenparameter
-        dt_h:          Zeitschrittgröße [h]
+        net_kw:            Park-Bilanz vor Flexibilität [kW], positiv = Überschuss
+                           (enthält Hub-Lasten und Hub-PV bereits)
+        h2_demand_kwh:     H2-Nachfrage Tankstelle je Zeitschritt [kWh_H2]
+        p:                 Anlagenparameter
+        dt_h:              Zeitschrittgröße [h]
+        geh_fixed_load_kw: feste Hub-Lasten (Ladecluster + Gebäude) [kW], None = 0
+        geh_pv_kw:         PV am Hub [kW], None = 0
     """
     n = len(net_kw)
+    fixed = np.zeros(n) if geh_fixed_load_kw is None else np.asarray(geh_fixed_load_kw, dtype=float)
+    pv = np.zeros(n) if geh_pv_kw is None else np.asarray(geh_pv_kw, dtype=float)
     el_arr = np.zeros(n)
     comp_arr = np.zeros(n)
     soc_h2_arr = np.zeros(n)
@@ -292,55 +333,77 @@ def run_geh_dispatch(
     import_arr = np.zeros(n)
     export_arr = np.zeros(n)
     balance_arr = np.zeros(n)
+    hub_grid_arr = np.zeros(n)
 
     eta_c = np.sqrt(p.battery_eff_rt)
     eta_d = eta_c
     soc_h2 = p.h2_soc_start * p.h2_storage_kwh
     soc_b = p.battery_soc_start * p.battery_kwh
     h2_min_kwh = p.h2_min_soc * p.h2_storage_kwh
+    h2_high_kwh = p.h2_high_soc * p.h2_storage_kwh
     el_active = p.electrolyzer_kw > 0.0 and p.electrolyzer_eff > 0.0
     battery_active = p.battery_kwh > 0.0 and p.battery_kw > 0.0
+    limit = p.grid_limit_kw
+    limit_active = limit > 0.0
+    recharge_level = p.battery_recharge_margin * limit
+    el_factor = 1.0 + p.compressor_factor * p.electrolyzer_eff   # Elektrolyseur + Kompressor je kW Elektrolyseur
     unmet = 0.0
 
     for t in range(n):
         demand_t = float(h2_demand_kwh[t])
         net_t = float(net_kw[t])
+        hub_base = float(fixed[t]) - float(pv[t])          # Hub-Netzlast ohne Flexibilität
+        surplus = max(net_t, 0.0)
 
-        # 1) Elektrolyseur
+        # 1) Elektrolyseur – Sollwert
         p_el_max = 0.0
         if el_active:
             free_h2 = p.h2_storage_kwh - soc_h2 + demand_t   # so viel H2 passt noch rein (inkl. Abgabe)
             p_el_max = min(p.electrolyzer_kw, max(free_h2, 0.0) / (p.electrolyzer_eff * dt_h))
         if soc_h2 < h2_min_kwh:
             p_el = p_el_max                                  # Versorgungssicherung
+        elif soc_h2 < h2_high_kwh:
+            p_el = min(p_el_max, max(p.electrolyzer_base_kw, surplus))
         else:
-            p_el = min(p_el_max, max(net_t, 0.0))            # nur Überschuss
+            p_el = min(p_el_max, surplus)                    # nur Überschuss
+
+        # 2) Drosseln, wenn der Hub über der Grenze liegt (Überschuss-Anteil bleibt)
+        hub_net = hub_base + p_el * el_factor
+        if limit_active and hub_net > limit and soc_h2 >= h2_min_kwh:
+            p_el = max(p_el - (hub_net - limit) / el_factor, min(surplus, p_el))
+            hub_net = hub_base + p_el * el_factor
         p_comp = p.compressor_factor * p_el * p.electrolyzer_eff
         net2 = net_t - p_el - p_comp
 
-        # 2) H2-Speicher
+        # 3) H2-Speicher
         prod = p_el * p.electrolyzer_eff * dt_h
         avail = soc_h2 + prod
         delivered = min(demand_t, avail)
         unmet += demand_t - delivered
         soc_h2 = min(avail - delivered, p.h2_storage_kwh)
 
-        # 3) Batterie
+        # 4) Batterie
         ch = 0.0
         dis = 0.0
-        if net2 > 0.0:
-            if battery_active:
-                ch = min(net2, p.battery_kw, (p.battery_kwh - soc_b) / (eta_c * dt_h))
-            soc_b += ch * eta_c * dt_h
-            net3 = net2 - ch
-        else:
-            if battery_active:
-                dis = min(-net2, p.battery_kw, soc_b * eta_d / dt_h)
-            soc_b -= dis / eta_d * dt_h
-            net3 = net2 + dis
+        if battery_active:
+            room_kw = (p.battery_kwh - soc_b) / (eta_c * dt_h)
+            content_kw = soc_b * eta_d / dt_h
+            if limit_active and hub_net > limit:
+                dis = min(hub_net - limit, p.battery_kw, content_kw)          # Spitzenkappung (auch bei Park-Überschuss)
+            elif net2 > 0.0:
+                # Park-Überschuss laden; mit Netzgrenze nur so weit, dass der Hub unter der Grenze bleibt
+                headroom = max(limit - hub_net, 0.0) if limit_active else net2
+                ch = min(net2, p.battery_kw, room_kw, headroom)
+            elif not limit_active:
+                dis = min(-net2, p.battery_kw, content_kw)  # ohne Netzgrenze: Park-Defizit decken
+            elif hub_net < recharge_level:
+                ch = min(recharge_level - hub_net, p.battery_kw, room_kw)     # aus dem Netz nachladen
+        ch = max(ch, 0.0)
+        soc_b += (ch * eta_c - dis / eta_d) * dt_h
         soc_b = min(max(soc_b, 0.0), p.battery_kwh)          # Numerische Absicherung
+        net3 = net2 - ch + dis
 
-        # 4) Netz
+        # 5) Netz
         el_arr[t] = p_el
         comp_arr[t] = p_comp
         soc_h2_arr[t] = soc_h2
@@ -351,6 +414,7 @@ def run_geh_dispatch(
         export_arr[t] = max(net3, 0.0)
         import_arr[t] = max(-net3, 0.0)
         balance_arr[t] = net3
+        hub_grid_arr[t] = hub_net + ch - dis
 
     r = GEHDispatchResult(
         electrolyzer_kw=el_arr,
@@ -363,6 +427,7 @@ def run_geh_dispatch(
         grid_import_kw=import_arr,
         grid_export_kw=export_arr,
         balance_after_kw=balance_arr,
+        geh_grid_kw=hub_grid_arr,
         h2_soc_start_kwh=p.h2_soc_start * p.h2_storage_kwh,
         battery_soc_start_kwh=p.battery_soc_start * p.battery_kwh,
     )
@@ -379,4 +444,7 @@ def run_geh_dispatch(
     r.grid_import_kwh = float(import_arr.sum() * dt_h)
     r.grid_export_kwh = float(export_arr.sum() * dt_h)
     r.grid_max_import_kw = float(import_arr.max()) if n else 0.0
+    r.geh_grid_peak_kw = float(hub_grid_arr.max()) if n else 0.0
+    r.geh_grid_limit_exceed_hours = float((hub_grid_arr > limit + 1e-6).sum() * dt_h) if limit_active else 0.0
+    r.geh_electrolyzer_base_kw = p.electrolyzer_base_kw
     return r

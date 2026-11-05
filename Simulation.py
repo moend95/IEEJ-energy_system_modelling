@@ -318,7 +318,10 @@ class Simulator:
                 net_kw -= out.res_df[column].fillna(0.0).to_numpy()
 
         params = GEHParams.from_variant(resolve_geh_variant(inp))
-        r = run_geh_dispatch(net_kw, self.geh_h2_demand_kwh, params, dt_h=DT_H)
+        geh_fixed_load_kw = out.res_df[list(GEH_LOAD_COLUMNS.values())].fillna(0.0).sum(axis=1).to_numpy()
+        geh_pv_kw = out.res_df["Erzeugung_GEH_PV [kW]"].fillna(0.0).to_numpy()
+        r = run_geh_dispatch(net_kw, self.geh_h2_demand_kwh, params, dt_h=DT_H,
+                             geh_fixed_load_kw=geh_fixed_load_kw, geh_pv_kw=geh_pv_kw)
 
         out.res_df["Last_GEH_Elektrolyseur [kW]"] = r.electrolyzer_kw
         out.res_df["Last_GEH_Kompressor [kW]"] = r.compressor_kw
@@ -344,6 +347,11 @@ class Simulator:
         out.geh_battery_full_cycles = r.battery_full_cycles
         out.geh_storage_soc_df = pd.DataFrame({"soc_kwh": r.h2_soc_kwh}, index=out.res_df.index)
         out.geh_battery_soc_df = pd.DataFrame({"soc_kwh": r.battery_soc_kwh}, index=out.res_df.index)
+        out.res_df["Netzlast_GEH [kW]"] = r.geh_grid_kw
+        out.geh_electrolyzer_base_kw = r.geh_electrolyzer_base_kw
+        out.geh_grid_limit_kw = params.grid_limit_kw
+        out.geh_grid_peak_kw = r.geh_grid_peak_kw
+        out.geh_grid_limit_exceed_hours = r.geh_grid_limit_exceed_hours
 
         out.grid_import_kwh = r.grid_import_kwh
         out.grid_export_kwh = r.grid_export_kwh
