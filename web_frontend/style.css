@@ -561,6 +561,10 @@ body {
 .swatch.a44 { background: #2563eb; }
 .swatch.a46 { background: var(--orange); }
 .swatch.landscape { background: #16a34a; }
+.swatch.geh { background: rgba(13, 72, 109, 0.14); border: 2px dashed #0d486d; }
+.swatch.js { background: rgba(35, 161, 176, 0.45); border: 2px solid #23a1b0; }
+.swatch.industry { background: rgba(217, 119, 6, 0.45); border: 2px solid #b45309; }
+.swatch.inactive { background: rgba(138, 154, 147, 0.12); border: 2px solid rgba(138, 154, 147, 0.4); }
 
 /* ---------------- Breit: Erzeugung und Verbrauch nebeneinander ---------------- */
 @container page (min-width: 1400px) {

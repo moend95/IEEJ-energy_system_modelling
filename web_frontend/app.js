@@ -36,7 +36,44 @@ const GEOJSON_PATHS = {
   landscape_vertical_100: "./geometries/landscape_vertical_100.geojson",
   landscape_tracking_50: "./geometries/landscape_tracking_50.geojson",
   landscape_tracking_100: "./geometries/landscape_tracking_100.geojson",
+  // Flächen der Verbraucher-Teilprojekte (Polygon mit id, name, quelle, flaeche_ha, marker_lat, marker_lon)
+  geh_area: "./geometries/geh_standort.geojson",
+  js_area: "./geometries/juechen_sued.geojson",
+  industry_area: "./geometries/elsbachtal.geojson",
 };
+
+// Verbraucher-Flächen im Lageplan; inaktive Teilprojekte werden blass dargestellt
+const SITE_AREAS = [
+  {
+    key: "geh_area",
+    label: "Green Energy Hub (Suchraum)",
+    isActive: (cInput) => cInput.geh_variant !== "Keine",
+    // Bewusst größer als die spätere Anlage: gestrichelt, ohne Flächenangabe
+    tooltip: () => "Suchraum Green Energy Hub",
+    style: { color: "#0d486d", fillColor: "#0d486d", weight: 2.2, opacity: 0.9, fillOpacity: 0.14, dashArray: "7 5" },
+  },
+  {
+    key: "js_area",
+    label: "Jüchen Süd",
+    isActive: (cInput) => cInput.js_concept !== "Aus",
+    style: { color: "#23a1b0", fillColor: "#23a1b0", weight: 2.2, opacity: 0.9, fillOpacity: 0.3 },
+  },
+  {
+    key: "industry_area",
+    label: "Elsbachtal",
+    isActive: () => true,
+    style: { color: "#b45309", fillColor: "#d97706", weight: 2.2, opacity: 0.9, fillOpacity: 0.3 },
+  },
+];
+
+const INACTIVE_AREA_STYLE = { color: "#8a9a93", fillColor: "#8a9a93", opacity: 0.25, fillOpacity: 0.08 };
+const AREA_NUMBER_FORMAT = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 1 });
+
+function siteAreaTooltip(area, feature) {
+  if (area.tooltip) return area.tooltip(feature);
+  const p = feature?.properties || {};
+  return Number.isFinite(Number(p.flaeche_ha)) ? `${p.name} · ${AREA_NUMBER_FORMAT.format(p.flaeche_ha)} ha` : p.name;
+}
 
 const LANDSCAPE_LAYER_KEYS = [
   "landscape_vertical_50",
@@ -63,6 +100,7 @@ const mapState = {
   map: null,
   geojsonCache: {},
   activeLayers: {},
+  didFit: false,
   defaultView: { center: [51.0628, 6.49554], zoom: 12 },
 };
 
@@ -545,6 +583,7 @@ function setMapHint(cInput) {
     const pvType = LANDSCAPE_PV_TYPES[Number(cInput.el_pv_type)] || LANDSCAPE_PV_TYPES[5];
     active.push(`Energielandschaft ${Number(cInput.el_build_state)} % (${pvType.label})`);
   }
+  SITE_AREAS.filter((area) => area.isActive(cInput)).forEach((area) => active.push(area.label));
 
   mapHint.textContent = active.length
     ? `Hervorgehoben: ${active.join(", ")}`
@@ -588,7 +627,7 @@ async function fetchGeoJsonCached(key) {
   return data;
 }
 
-async function activateGeoLayer(key, style) {
+async function activateGeoLayer(key, style, tooltip = null) {
   if (!mapState.map) return null;
   const data = await fetchGeoJsonCached(key);
 
@@ -600,7 +639,10 @@ async function activateGeoLayer(key, style) {
     return mapState.activeLayers[key];
   }
 
-  const layer = L.geoJSON(data, { style });
+  const layer = L.geoJSON(data, {
+    style,
+    onEachFeature: tooltip ? (feature, featureLayer) => featureLayer.bindTooltip(tooltip(feature), { sticky: true }) : undefined,
+  });
   layer.addTo(mapState.map);
   mapState.activeLayers[key] = layer;
   return layer;
@@ -614,50 +656,56 @@ function deactivateGeoLayer(key) {
   }
 }
 
+// Beim ersten Öffnen auf alle Teilprojekte zoomen (unabhängig davon, welche aktiv sind)
+async function fitSitePlanOnce() {
+  if (mapState.didFit) return;
+  const keys = ["A44", "A46", "landscape_vertical_100", ...SITE_AREAS.map((area) => area.key)];
+  const datasets = await Promise.all(keys.map((key) => fetchGeoJsonCached(key)));
+  const bounds = L.featureGroup(datasets.map((data) => L.geoJSON(data))).getBounds();
+  if (bounds.isValid()) mapState.map.fitBounds(bounds, { padding: [24, 24] });
+  mapState.didFit = true;
+}
+
 async function updateMapHighlights(cInput) {
   if (!mapState.map) return;
 
-  const activeLayers = [];
   setMapHint(cInput);
 
   try {
     if (cInput.h_highways.includes("A44")) {
-      const layer = await activateGeoLayer("A44", {
+      await activateGeoLayer("A44", {
         color: "#2563EB",
         weight: 5,
         opacity: 0.95,
       });
-      if (layer) activeLayers.push(layer);
     } else {
       deactivateGeoLayer("A44");
     }
 
     if (cInput.h_highways.includes("A46")) {
-      const layer = await activateGeoLayer("A46", {
+      await activateGeoLayer("A46", {
         color: "#EA580C",
         weight: 5,
         opacity: 0.95,
       });
-      if (layer) activeLayers.push(layer);
     } else {
       deactivateGeoLayer("A46");
     }
 
     const landscapeKey = getLandscapeGeoKey(cInput);
     if (landscapeKey) {
-      const layer = await activateGeoLayer(landscapeKey, getLandscapeStyle(cInput));
-      if (layer) activeLayers.push(layer);
+      await activateGeoLayer(landscapeKey, getLandscapeStyle(cInput));
       deactivateLandscapeLayers(landscapeKey);
     } else {
       deactivateLandscapeLayers();
     }
 
-    if (activeLayers.length > 0) {
-      const group = L.featureGroup(activeLayers);
-      mapState.map.fitBounds(group.getBounds(), { padding: [24, 24], maxZoom: 13 });
-    } else {
-      mapState.map.setView(mapState.defaultView.center, mapState.defaultView.zoom);
+    for (const area of SITE_AREAS) {
+      const style = area.isActive(cInput) ? area.style : { ...area.style, ...INACTIVE_AREA_STYLE };
+      await activateGeoLayer(area.key, style, (feature) => siteAreaTooltip(area, feature));
     }
+
+    await fitSitePlanOnce();
   } catch (err) {
     setMapHint({ h_highways: [], el_build_state: 0 });
     document.getElementById("map-active-hint").textContent = `Lageplan konnte nicht aktualisiert werden (${err.message}).`;
