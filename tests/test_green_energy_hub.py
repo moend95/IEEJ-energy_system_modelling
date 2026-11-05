@@ -350,22 +350,24 @@ def test_integration_plausibilitaet(sim_erweiterung):
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize("charging_model", ["profile", "sessions"])
 @pytest.mark.parametrize("variant", ["Basis", "Erweiterung"])
-def test_integration_betriebsfuehrung_bericht(variant):
-    """Bericht zur Betriebsführung; Netzspitze Hub ist kein harter Test (Vergleich mit der Studie)."""
+def test_integration_betriebsfuehrung_bericht(variant, charging_model):
+    """Bericht „profile“ vs. „sessions“; hart geprüft werden nur H2-Deckung und Volllaststunden."""
+    from dataclasses import replace
     from Simulation import run_simulation
-    o = run_simulation(standard_input(variant))
+    o = run_simulation(replace(standard_input(variant), geh_charging_model=charging_model))
     limit = GEH_VARIANTS[variant]["grid_limit_kw"]
-    print(f"\n[{variant}] Volllaststunden {o.geh_electrolyzer_full_load_hours:.0f} h, "
-          f"Grundlast {o.geh_electrolyzer_base_kw:.0f} kW, "
-          f"H2 ungedeckt {100 * o.geh_h2_unmet_kwh / o.geh_h2_demand_kwh:.2f} %, "
-          f"Batterie {o.geh_battery_full_cycles:.0f} Vollzyklen, "
+    print(f"\n[{variant}, {charging_model}] Hub-Last ohne Flexibilität {o.geh_fixed_load_peak_kw:.0f} kW, "
+          f"Batterie {o.geh_battery_full_cycles:.1f} Vollzyklen, "
           f"Netzspitze Hub {o.geh_grid_peak_kw:.0f} kW (Grenze {limit:.0f} kW), "
-          f"{o.geh_grid_limit_exceed_hours:.0f} h über der Grenze")
+          f"{o.geh_grid_limit_exceed_hours:.1f} h über der Grenze, "
+          f"Netzbezug Park {o.grid_import_kwh / 1e6:.2f} GWh, Autarkie {100 * o.autarky:.1f} %, "
+          f"Volllaststunden {o.geh_electrolyzer_full_load_hours:.0f} h, "
+          f"H2 ungedeckt {100 * o.geh_h2_unmet_kwh / o.geh_h2_demand_kwh:.2f} %")
     assert 4_500 <= o.geh_electrolyzer_full_load_hours <= 5_500
     assert o.geh_h2_unmet_kwh < 0.01 * o.geh_h2_demand_kwh
-    # Batterie-Vollzyklen nur berichtet: die Studie nennt > 500, die synthetischen Ladeprofile
-    # bleiben aber ohne Elektrolyseur unter der Netzgrenze (offener Punkt)
+    assert o.geh_charging_model == charging_model
     assert o.geh_grid_limit_kw == limit
     np.testing.assert_allclose(o.res_df["Netzlast_GEH [kW]"].max(), o.geh_grid_peak_kw)
 
