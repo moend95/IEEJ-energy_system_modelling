@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parkkarte – Designvorschau</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="./style.css">
+  <style>
+    .preview-page { max-width: 900px; margin: 0 auto; padding: 20px 16px 40px; }
+    .preview-page h1 { font-size: 1.3rem; margin: 0 0 12px; }
+    .preview-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; }
+    .preview-controls select { flex: 1 1 100%; min-width: 0; font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-strong); max-width: 100%; }
+    .preview-status { color: var(--sub); font-size: 0.8rem; overflow-wrap: anywhere; }
+    #park-kpis { margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <main class="preview-page">
+    <h1>Parkkarte – Designvorschau</h1>
+    <div class="preview-controls">
+      <label for="preview-scenario">Szenario</label>
+      <select id="preview-scenario">
+        <option value="s_auto_0001">s_auto_0001 – Standard: GEH Basis, Jüchen Süd dezentral</option>
+        <option value="s_auto_1253">s_auto_1253 – Mittel: alle Module, GEH Erweiterung, ca. 41 % Autarkie</option>
+        <option value="s_auto_1296">s_auto_1296 – GEH „Keine“, Jüchen Süd „Aus“</option>
+      </select>
+      <span id="preview-status" class="preview-status" aria-live="polite"></span>
+    </div>
+
+    <section aria-label="Kennzahlen">
+      <div id="park-kpis" class="park-kpi-grid"></div>
+    </section>
+
+    <section aria-label="Parkkarte">
+      <div id="park-stage"></div>
+      <div id="park-legend"></div>
+    </section>
+  </main>
+
+  <script src="./park_map.js"></script>
+  <script>
+    const statusEl = document.getElementById("preview-status");
+    const select = document.getElementById("preview-scenario");
+    let catalog = [];
+
+    async function showScenario(id) {
+      const entry = catalog.find((e) => e.scenario_id === id);
+      if (!entry) {
+        statusEl.textContent = `${id} nicht im Katalog.`;
+        return;
+      }
+      const res = await fetch(entry.flow_path);
+      const payload = await res.json();
+      renderParkKpis(document.getElementById("park-kpis"), payload);
+      renderParkMap(document.getElementById("park-stage"), payload);
+      statusEl.textContent = entry.flow_path;
+    }
+
+    async function init() {
+      document.getElementById("park-legend").innerHTML = parkMapLegendHtml();
+      catalog = await (await fetch("./catalog.json")).json();
+      const requested = new URLSearchParams(location.search).get("s");
+      if (requested) select.value = requested;
+      select.addEventListener("change", () => showScenario(select.value));
+      await showScenario(select.value);
+    }
+
+    init().catch((err) => {
+      statusEl.textContent = `Fehler: ${err}`;
+    });
+  </script>
+</body>
+</html>
