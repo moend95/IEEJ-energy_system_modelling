@@ -282,10 +282,15 @@ class Simulator:
             out.res_df["Erzeugung_GEH_PV [kW]"] = 0.0
             self.geh_h2_demand_kwh = np.zeros(len(out.res_df))
         else:
-            profiles = build_geh_load_profiles(weather_index, variant)
+            charging_model = str(variant.get("charging_model") or "sessions")
+            profiles = build_geh_load_profiles(weather_index, variant, charging_model=charging_model)
             for profile_column, column in GEH_LOAD_COLUMNS.items():
                 out.res_df[column] = profiles[profile_column].values
             self.geh_h2_demand_kwh = profiles["h2_demand_kwh"].to_numpy()
+            sessions = profiles.attrs.get("sessions", {})
+            out.geh_charging_model = charging_model
+            out.geh_mcs_sessions = sessions.get("mcs", {}).get("sessions")
+            out.geh_hpc_sessions = sessions.get("hpc", {}).get("sessions")
 
             pv_kw = simulate_geh_pv(self.weather_df, float(variant["pv_kwp"]), weather_index)
             out.res_df["Erzeugung_GEH_PV [kW]"] = pv_kw.values
@@ -297,6 +302,9 @@ class Simulator:
         out.geh_charging_hpc_kwh = float(out.res_df["Last_GEH_HPC [kW]"].sum() * DT_H)
         out.geh_charging_ac_kwh = float(out.res_df["Last_GEH_AC [kW]"].sum() * DT_H)
         out.geh_building_kwh = float(out.res_df["Last_GEH_Gebaeude [kW]"].sum() * DT_H)
+        out.geh_mcs_peak_kw = float(out.res_df["Last_GEH_MCS [kW]"].max())
+        out.geh_hpc_peak_kw = float(out.res_df["Last_GEH_HPC [kW]"].max())
+        out.geh_fixed_load_peak_kw = float(out.res_df[list(GEH_LOAD_COLUMNS.values())].sum(axis=1).max())
         out.geh_h2_demand_kwh = float(self.geh_h2_demand_kwh.sum())
 
         return out

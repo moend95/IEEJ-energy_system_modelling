@@ -27,7 +27,7 @@ PRECOMPUTED_DIR = WEB_FRONTEND_DIR / "precomputed_v2"
 LEGACY_PRECOMPUTED_DIR = PROJECT_ROOT / "data" / "outputs" / "precomputed"
 CATALOG_NAME = "catalog.json"   # liegt im Ausgabeordner, damit alte Daten bis zum Laufende nutzbar bleiben
 
-MODEL_VERSION = "2026-11-geh2-el27"
+MODEL_VERSION = "2026-11-geh3-sessions-el27"
 SCHEMA_VERSION = "1.2.0"
 INDUSTRY_MODES = ("leave-one-out", "all-subsets")
 

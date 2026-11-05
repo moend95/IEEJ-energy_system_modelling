@@ -63,6 +63,8 @@ _GEH_COMMON: dict = {
     # Betriebsführung: Grundlast Elektrolyseur (None = aus der H2-Nachfrage), Nachladen der Batterie
     "electrolyzer_base_kw": None,
     "battery_recharge_margin": GEH_BATTERY_RECHARGE_MARGIN,
+    # Lademodell: "sessions" = MCS/HPC als einzelne Ladevorgänge, "profile" = glatte Profile
+    "charging_model": "sessions",
 }
 
 GEH_VARIANTS: dict[str, dict] = {
@@ -173,6 +175,11 @@ _GEH_OVERRIDES: dict[str, str] = {
     "geh_battery_recharge_margin": "battery_recharge_margin",
 }
 
+# GuiInput-Felder mit Textwerten (nicht in float umwandeln)
+_GEH_TEXT_OVERRIDES: dict[str, str] = {
+    "geh_charging_model": "charging_model",
+}
+
 
 def resolve_geh_variant(inp: GuiInput) -> dict | None:
     """
@@ -186,6 +193,10 @@ def resolve_geh_variant(inp: GuiInput) -> dict | None:
         value = getattr(inp, inp_field, None)
         if value is not None:
             variant[key] = float(value)
+    for inp_field, key in _GEH_TEXT_OVERRIDES.items():
+        value = getattr(inp, inp_field, None)
+        if value is not None:
+            variant[key] = str(value)
     return variant
 
 

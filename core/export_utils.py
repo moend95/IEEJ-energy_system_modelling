@@ -299,6 +299,12 @@ def export_scenario_flows_to_json(
             "grid_limit_kw": nonneg("geh_grid_limit_kw"),
             "grid_peak_kw": nonneg("geh_grid_peak_kw"),
             "grid_limit_exceed_hours": nonneg("geh_grid_limit_exceed_hours"),
+            "charging_model": getattr(sim_output, "geh_charging_model", None),
+            "mcs_sessions": nonneg("geh_mcs_sessions"),
+            "hpc_sessions": nonneg("geh_hpc_sessions"),
+            "mcs_peak_kw": nonneg("geh_mcs_peak_kw"),
+            "hpc_peak_kw": nonneg("geh_hpc_peak_kw"),
+            "geh_fixed_load_peak_kw": nonneg("geh_fixed_load_peak_kw"),
         },
         "balance": {
             "bal_energy_kwh": _safe_float(getattr(sim_output, "bal_energy_kwh", 0.0)),

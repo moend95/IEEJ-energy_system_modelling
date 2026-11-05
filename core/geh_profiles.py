@@ -6,6 +6,9 @@ und die H2-Tankstellennachfrage aus Tagesform × Tagesfaktor × Rauschen,
 skaliert auf die Jahresenergie der Machbarkeitsstudie und begrenzt auf die
 Leistungsgrenze des Clusters.
 
+Im Lademodell "sessions" (Standard) kommen MCS und HPC stattdessen aus einzelnen
+Ladevorgängen (core/geh_sessions.py); "profile" erzeugt die glatten Profile.
+
 Einstiegsfunktion: build_geh_load_profiles()
 """
 
@@ -14,7 +17,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from core.geh_sessions import SESSION_CLUSTERS, simulate_charging_sessions
 from core.module_green_energy_hub import LHV_H2_KWH_PER_KG
+
+CHARGING_MODELS: tuple[str, ...] = ("sessions", "profile")
 
 DT_H: float = 0.25
 NOISE_STD: float = 0.10          # Standardabweichung Rauschfaktor
@@ -128,19 +134,25 @@ def build_geh_load_profiles(
     index: pd.DatetimeIndex,
     variant: dict,
     seed: int = 42,
+    charging_model: str = "sessions",
 ) -> pd.DataFrame:
     """
     Erzeugt die synthetischen GEH-Lastprofile.
 
     Args:
-        index:   Zeitindex (15 min); tz-naive Zeitstempel gelten als UTC
-        variant: Parameter-Dictionary einer Variante aus GEH_VARIANTS
-        seed:    Startwert des Zufallsgenerators (reproduzierbar)
+        index:          Zeitindex (15 min); tz-naive Zeitstempel gelten als UTC
+        variant:        Parameter-Dictionary einer Variante aus GEH_VARIANTS
+        seed:           Startwert des Zufallsgenerators (reproduzierbar)
+        charging_model: "sessions" = MCS und HPC als einzelne Ladevorgänge,
+                        "profile" = glatte Profile für alle Cluster
 
     Returns:
         DataFrame mit mcs_kw, ccs_kw, hpc_kw, ac_kw, building_kw [kW]
-        und h2_demand_kwh [kWh_H2 je Zeitschritt]
+        und h2_demand_kwh [kWh_H2 je Zeitschritt]; bei "sessions" stehen die
+        Statistiken der Ladevorgänge in result.attrs["sessions"]
     """
+    if charging_model not in CHARGING_MODELS:
+        raise ValueError(f"Unbekanntes Lademodell '{charging_model}', erwartet {CHARGING_MODELS}")
     local = _local_time(pd.DatetimeIndex(index))
     hours = local.hour.to_numpy()
     weekday = local.weekday.to_numpy()
@@ -160,13 +172,30 @@ def build_geh_load_profiles(
         ("h2_demand_kw", SHAPE_H2, DAY_FACTORS_MCS, True, h2_annual_kwh, None),
     ]
 
+    # Spalte → Cluster im Ladevorgangsmodell
+    session_columns = {"mcs_kw": "mcs", "hpc_kw": "hpc"} if charging_model == "sessions" else {}
+
     result = pd.DataFrame(index=index)
+    session_stats: dict[str, dict] = {}
     for column, shape, day_factors, sunday_ban, annual_kwh, limit_kw in specs:
         base = _base_shape(hours, day_type, shape, day_factors, sunday_ban)
+        # Rauschen immer ziehen, damit die übrigen Profile in beiden Lademodellen gleich bleiben
         noisy = base * _noise(rng, n)
-        profile_kw = _scale_to_energy(noisy, float(annual_kwh or 0.0), DT_H)
-        profile_kw = _apply_power_limit(profile_kw, limit_kw, float(annual_kwh or 0.0), DT_H)
+        annual_kwh = float(annual_kwh or 0.0)
+        if column in session_columns:
+            name = session_columns[column]
+            cluster = dict(SESSION_CLUSTERS[name])
+            if limit_kw is not None:
+                cluster["limit_kw"] = float(limit_kw)
+            sim = simulate_charging_sessions(index, cluster, base, annual_kwh, seed=seed)
+            result[column] = sim.kw
+            session_stats[name] = sim.stats()
+            continue
+        profile_kw = _scale_to_energy(noisy, annual_kwh, DT_H)
+        profile_kw = _apply_power_limit(profile_kw, limit_kw, annual_kwh, DT_H)
         result[column] = profile_kw
 
     result["h2_demand_kwh"] = result.pop("h2_demand_kw") * DT_H
+    if session_stats:
+        result.attrs["sessions"] = session_stats
     return result
