@@ -41,6 +41,10 @@ Die Höhe von 1400 px im `style` ist nur der Startwert, bis die erste Nachricht 
 - Weil der iframe mit dem Inhalt wächst, scrollt die WordPress-Seite. Die Auswahlspalten bleiben im eingebetteten Modus deshalb nicht stehen, sondern scrollen mit.
 - Ohne `?embed=1` verhält sich die Seite wie eigenständig aufgerufen (mit Header und festen Auswahlspalten).
 
+## Daten
+
+Die Seite liest den Katalog `precomputed_v2/catalog.json` (Modellstand `2026-11-geh3-sessions-el27`: Lkw-MCS und Pkw-HPC als einzelne Ladevorgänge, Energielandschaft mit 27-m-Auslegung). Er entsteht am Ende von `python generate_all_scenarios.py --resume`; zusammen mit `web_frontend/` werden also auch `precomputed_v2/` und die Geometrien hochgeladen. Für einen Test vor dem vollen Lauf: `index.html?embed=1&catalog=./precomputed_test/catalog.json`.
+
 ## Prüfen
 
 1. Seite mit `?embed=1` direkt öffnen: Der Header fehlt, der Rand ist schmal.

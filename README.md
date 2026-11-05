@@ -76,6 +76,20 @@ This demo page visualizes precomputed scenario JSON files from `data/outputs/pre
 streamlit run Web_Gui_Demo.py
 ```
 
+## Static Web Frontend (precomputed scenarios)
+
+`web_frontend/` is a static website (park map, KPIs, site plan) that only combines precomputed scenarios. Generate them with:
+
+```bash
+python generate_all_scenarios.py --count          # number of scenarios (currently 2,160)
+python generate_all_scenarios.py --limit 10 --output-dir web_frontend/precomputed_test   # trial run
+python generate_all_scenarios.py --resume         # full run into web_frontend/precomputed_v2/
+```
+
+The catalog (`catalog.json`) is written into the output folder at the end of a run; the frontend reads `web_frontend/precomputed_v2/catalog.json` (override for trial runs: `index.html?catalog=./precomputed_test/catalog.json`). The output folders are not tracked in Git. Embedding into WordPress via iframe is described in `docs/einbettung.md`.
+
+Site-plan geometries of the energy landscape are generated once with `python -m core.auxiliary.export_landscape_geometries`.
+
 ## Run the Sensitivity Analysis
 
 ```bash
@@ -107,6 +121,8 @@ Simulation-generated files and intermediate results are written to `data/outputs
 - `core/module_battery_storage.py` – battery storage simulation
 - `core/module_green_energy_hub.py` – Green Energy Hub variants, PV at the hub, and rule-based dispatch (electrolyzer, H2 storage, battery, grid)
 - `core/geh_profiles.py` – synthetic load profiles for the Green Energy Hub charging clusters, building, and H2 station
+- `core/geh_sessions.py` – individual charging sessions for truck MCS and car HPC (Poisson arrivals, FIFO queue, load management at the cluster limit); default charging model `"sessions"`, smooth profiles remain available as `"profile"`
+- `generate_all_scenarios.py` – scenario generator for the static web frontend
 - `core/module_juechen_sued.py` – Jüchen Süd supply concepts (warm network, cold network, decentralised) from the Fraunhofer IEG energy concept, heat pump COP model, and heat dispatch
 - `core/js_profiles.py` – synthetic space heating, hot water, cooling, household electricity, and e-mobility profiles for Jüchen Süd
 - `core/functions_plot.py` – helper plots for load and scenario visualization

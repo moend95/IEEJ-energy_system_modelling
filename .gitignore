@@ -27,5 +27,6 @@ data/outputs/geh_sessions/
 data/outputs/a46_segment/
 data/outputs/highway/*.csv
 data/outputs/energy_landscape/*.csv
+data/outputs/energy_landscape/P_02_Agri_PV_Reihen.geojson
 
 

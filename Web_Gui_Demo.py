@@ -15,6 +15,12 @@ from core.functions_web_support import (
     format_energy,
     format_power,
 )
+from core.module_energy_landscape import (
+    LANDSCAPE_PV_TYPE_OPTIONS,
+    LANDSCAPE_TRACTOR_LENGTH_M,
+    LANDSCAPE_TRACTOR_TURN_RADIUS_M,
+    LANDSCAPE_TRACTOR_WIDTH_M,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -25,9 +31,6 @@ PV_NAME_TO_ID = {
     "Laermschutzwand": 1,
     "Dach": 2,
     "Boeschung": 3,
-    "Horizontal mit Single-Axis-Tracking (aufgestaendert, Nord-Sued)": 4,
-    "Vertikal (Zaun, Nord-Sued)": 5,
-    "Horizontal (aufgestaendert, Ost-West)": 6,
 }
 
 INDUSTRY_OPTIONS = {
@@ -569,32 +572,15 @@ def _render_selector_form() -> dict[str, Any]:
                 )
                 el_build_state = 0 if el_build_state is None else int(el_build_state)
 
-                el_pv_name = st.selectbox(
+                el_pv_type = st.selectbox(
                     "PV-Typ",
-                    [
-                        "Vertikal (Zaun, Nord-Sued)",
-                        "Horizontal (aufgestaendert, Ost-West)",
-                        "Horizontal mit Single-Axis-Tracking (aufgestaendert, Nord-Sued)",
-                    ],
+                    list(LANDSCAPE_PV_TYPE_OPTIONS),
+                    format_func=lambda pv_type: LANDSCAPE_PV_TYPE_OPTIONS[pv_type],
                     index=0,
                 )
-                el_tractor_width = st.segmented_control(
-                    "Traktorbreite",
-                    options=[9.0, 12.0, 15.0],
-                    default=12.0,
-                    format_func=lambda x: f"{x:.0f}m",
-                )
-                el_tractor_length = st.segmented_control(
-                    "Traktorlaenge",
-                    options=[12.0, 15.0, 18.0],
-                    default=15.0,
-                    format_func=lambda x: f"{x:.0f}m",
-                )
-                el_tractor_turn_radius = st.segmented_control(
-                    "Traktor-Wenderadius",
-                    options=[6.0, 9.0, 12.0],
-                    default=9.0,
-                    format_func=lambda x: f"{x:.0f}m",
+                st.caption(
+                    f"Reihenabstände für Landmaschinen mit {LANDSCAPE_TRACTOR_WIDTH_M:.0f} m Arbeitsbreite "
+                    f"(Länge {LANDSCAPE_TRACTOR_LENGTH_M:.0f} m, Wenderadius {LANDSCAPE_TRACTOR_TURN_RADIUS_M} m)."
                 )
             with col2:
                 if el_build_state == 0:
@@ -704,10 +690,10 @@ def _render_selector_form() -> dict[str, Any]:
         "h_highways": h_highways,
         "h_pv_types": [PV_NAME_TO_ID[label] for label in h_pv_labels],
         "el_build_state": el_build_state,
-        "el_pv_type": PV_NAME_TO_ID[el_pv_name],
-        "el_tractor_width": float(el_tractor_width if el_tractor_width is not None else 12.0),
-        "el_tractor_length": float(el_tractor_length if el_tractor_length is not None else 15.0),
-        "el_tractor_turn_radius": float(el_tractor_turn_radius if el_tractor_turn_radius is not None else 9.0),
+        "el_pv_type": int(el_pv_type),
+        "el_tractor_width": LANDSCAPE_TRACTOR_WIDTH_M,
+        "el_tractor_length": LANDSCAPE_TRACTOR_LENGTH_M,
+        "el_tractor_turn_radius": LANDSCAPE_TRACTOR_TURN_RADIUS_M,
         "i_heat_cooling_electric": bool(i_heat_cooling_electric),
         "i_companies": selected_companies,
         "geh_variant": geh_variant,

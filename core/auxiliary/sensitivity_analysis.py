@@ -1,5 +1,10 @@
 #Übergabefertig kommentiert Felix
 from core.io_types import GuiInput
+from core.module_energy_landscape import (
+    LANDSCAPE_TRACTOR_LENGTH_M,
+    LANDSCAPE_TRACTOR_TURN_RADIUS_M,
+    LANDSCAPE_TRACTOR_WIDTH_M,
+)
 from Simulation import run_simulation
 
 from itertools import product
@@ -107,21 +112,17 @@ H_CONFIGS = {
 # ---------------- Energy landscape ----------------
 EL_CONFIGS = {
     0: {},
+    # Traktor fest (LANDSCAPE_TRACTOR_* in core/module_energy_landscape.py)
     1: {
         "el_build_state": 50,
-        "el_pv_type": 5,
-        "tractor_width": 24.0,
-        "tractor_length": 15.0,
-        "tractor_turn_radius": 9.0
+        "el_pv_type": 5
     },
     2: {
         "el_build_state": 50,
-        "tractor_width": 12.0,
-        "el_pv_type": 6
+        "el_pv_type": 4
     },
     3: {
         "el_build_state": 100,
-        "tractor_width": 12.0,
         "el_pv_type": 4
     }
 }
@@ -205,9 +206,10 @@ def build_test_input(h_case=1, el_case=1, i_case=1, geh_case=1, b_case=1):
     inp.el_build_state = cfg.get("el_build_state", None)
     inp.el_pv_type = cfg.get("el_pv_type", None)
 
-    inp.el_tractor_width = cfg.get("tractor_width", None)
-    inp.el_tractor_length = cfg.get("tractor_length", None)
-    inp.el_tractor_turn_radius = cfg.get("tractor_turn_radius", None)
+    if inp.el_build_state is not None:
+        inp.el_tractor_width = LANDSCAPE_TRACTOR_WIDTH_M
+        inp.el_tractor_length = LANDSCAPE_TRACTOR_LENGTH_M
+        inp.el_tractor_turn_radius = LANDSCAPE_TRACTOR_TURN_RADIUS_M
 
     inp.i_heat_cooling_electric = cfg.get("is_heat_cooling_electric", False)
     inp.i_companies = cfg.get("companies", [])
