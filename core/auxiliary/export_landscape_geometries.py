@@ -6,6 +6,10 @@ Landmaschinen-Auslegung (LANDSCAPE_TRACTOR_*) über core/module_energy_landscape
 und schreibt sie nach web_frontend/geometries/landscape_<vertical|tracking>_<50|100>.geojson.
 Koordinaten werden auf 6 Nachkommastellen gerundet (≈ 0,1 m), damit jede Datei < 1 MB bleibt.
 
+Für Teilausbau (50 %) werden – nur für die Karte, die Simulation bleibt unverändert –
+zusammenhängend von Westen so viele Reihen genommen, bis mindestens der Anteil an
+der gesamten Reihenlänge erreicht ist (statt der ersten Hälfte nach Anzahl).
+
 Aufruf (aus dem Projektordner):
     python -m core.auxiliary.export_landscape_geometries
 """
@@ -43,12 +47,33 @@ def round_coords(value):
     return value
 
 
+def _west_x(feature: dict) -> float:
+    """Westlichste Länge einer Reihe (LineString oder MultiLineString)."""
+    coords = feature["geometry"]["coordinates"]
+    if feature["geometry"]["type"] == "MultiLineString":
+        coords = [pt for line in coords for pt in line]
+    return min(pt[0] for pt in coords)
+
+
+def select_from_west(features: list[dict], share: float) -> tuple[list[dict], float]:
+    """Reihen von Westen her, bis ≥ share der gesamten Reihenlänge erreicht ist; liefert Auswahl und Anteil."""
+    total = sum(f["properties"].get("length_m", 0.0) for f in features)
+    selected, length = [], 0.0
+    for feature in sorted(features, key=_west_x):
+        if total > 0 and length >= share * total:
+            break
+        selected.append(feature)
+        length += feature["properties"].get("length_m", 0.0)
+    return selected, (length / total if total > 0 else 0.0)
+
+
 def export_one(name: str, orientation: str, build_state: int, tmp_dir: Path) -> Path:
+    # Immer den Vollausbau erzeugen, Teilausbau wird anschließend für die Karte ausgewählt
     result = build_landscape(
         interactive=False,
         output_dir=str(tmp_dir),
         pv_ausrichtung=orientation,
-        ausbau_status=build_state,
+        ausbau_status=100,
         tractor_width_m=LANDSCAPE_TRACTOR_WIDTH_M,
         tractor_length_m=LANDSCAPE_TRACTOR_LENGTH_M,
         tractor_turn_radius_m=LANDSCAPE_TRACTOR_TURN_RADIUS_M,
@@ -57,6 +82,7 @@ def export_one(name: str, orientation: str, build_state: int, tmp_dir: Path) -> 
         raise RuntimeError(f"{name}_{build_state}: {result.get('error')}")
 
     data = json.loads(Path(result["metadata"]["output_file"]).read_text(encoding="utf-8"))
+    data["features"], achieved = select_from_west(data.get("features", []), build_state / 100.0)
     for feature in data.get("features", []):
         geometry = feature.get("geometry") or {}
         geometry["coordinates"] = round_coords(geometry.get("coordinates"))
@@ -66,8 +92,9 @@ def export_one(name: str, orientation: str, build_state: int, tmp_dir: Path) -> 
     size = target.stat().st_size
     if size >= MAX_BYTES:
         raise RuntimeError(f"{target.name} ist {size} Bytes groß (Grenze {MAX_BYTES})")
-    meta = result["metadata"]
-    print(f"{target.name}: {len(data['features'])} Reihen, {meta['total_rows_length_m']:.0f} m, {size / 1000:.0f} kB")
+    length = sum(f["properties"].get("length_m", 0.0) for f in data["features"])
+    print(f"{target.name}: {len(data['features'])} Reihen, {length:.0f} m "
+          f"({100 * achieved:.1f} % der Reihenlänge), {size / 1000:.0f} kB")
     return target
 
 
