@@ -21,6 +21,7 @@ web_frontend/precomputed_v2/
 web_frontend/precomputed_test/
 web_frontend/precomputed_legacy_schema_1_0/
 data/outputs/precomputed/
+data/outputs/geh_sessions/
 
 # Sonstige Output-Daten
 data/outputs/a46_segment/
