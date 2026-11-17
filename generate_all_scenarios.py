@@ -174,23 +174,19 @@ def build_timeseries_csv_frame(sim_output: Any) -> pd.DataFrame:
             ]
         )
 
+    def column(name: str) -> pd.Series:
+        # Fehlende Spalte (z. B. Industriegebiet „Aus“) → Nullreihe
+        if name not in res_df.columns:
+            return pd.Series(0.0, index=res_df.index)
+        return pd.to_numeric(res_df[name], errors="coerce").fillna(0.0)
+
     ts_df = pd.DataFrame(index=res_df.index)
-    ts_df["generation_solar_kw"] = pd.to_numeric(
-        res_df.get("Erzeugung_Solarautobahn [kW]", 0.0), errors="coerce"
-    ).fillna(0.0)
-    ts_df["generation_landscape_kw"] = pd.to_numeric(
-        res_df.get("Erzeugung_Energielandschaft [kW]", 0.0), errors="coerce"
-    ).fillna(0.0)
-    ts_df["demand_industry_kw"] = pd.to_numeric(
-        res_df.get("Last_Industrie [kW]", 0.0), errors="coerce"
-    ).fillna(0.0)
-    ts_df["demand_hub_kw"] = pd.to_numeric(
-        res_df.get("Last_Green_Energy_Hub [kW]", 0.0), errors="coerce"
-    ).fillna(0.0)
-    ts_df["demand_js_kw"] = pd.to_numeric(
-        res_df.get("Last_Juechen_Sued [kW]", 0.0), errors="coerce"
-    ).fillna(0.0)
-    ts_df["balance_kw"] = pd.to_numeric(res_df.get("Bilanz [kW]", 0.0), errors="coerce").fillna(0.0)
+    ts_df["generation_solar_kw"] = column("Erzeugung_Solarautobahn [kW]")
+    ts_df["generation_landscape_kw"] = column("Erzeugung_Energielandschaft [kW]")
+    ts_df["demand_industry_kw"] = column("Last_Industrie [kW]")
+    ts_df["demand_hub_kw"] = column("Last_Green_Energy_Hub [kW]")
+    ts_df["demand_js_kw"] = column("Last_Juechen_Sued [kW]")
+    ts_df["balance_kw"] = column("Bilanz [kW]")
 
     ts_df = ts_df.reset_index().rename(columns={"index": "timestamp"})
     if "timestamp" not in ts_df.columns:
@@ -472,6 +468,8 @@ def generate_scenarios(
         except Exception as exc:
             failed += 1
             print(f"[warn] scenario failed {scenario_id}: {exc}")
+            # Halbfertige Ordner nicht im Katalog landen lassen
+            shutil.rmtree(scenario_dir, ignore_errors=True)
 
         durations.append(time.perf_counter() - started)
         mean_s = sum(durations) / len(durations)
