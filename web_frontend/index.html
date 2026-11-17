@@ -99,24 +99,14 @@
 
                   <div id="panel-industry" class="sub-panel" role="tabpanel" aria-labelledby="tab-industry">
                     <fieldset class="opt-group">
-                      <legend>Unternehmensauswahl Elsbachtal</legend>
-                      <label class="opt"><input type="radio" name="i_mode" value="basis" checked><span class="opt-text">Basis-Variante Elsbachtal</span></label>
-                      <label class="opt"><input type="radio" name="i_mode" value="custom"><span class="opt-text">Unternehmen selbst zusammenstellen</span></label>
+                      <legend>Industriegebiet Elsbachtal</legend>
+                      <label class="opt"><input type="radio" name="i_mode" value="aus"><span class="opt-text">Aus</span></label>
+                      <label class="opt"><input type="radio" name="i_mode" value="basis" checked><span class="opt-text">Basis-Variante</span></label>
                     </fieldset>
-                    <p id="note-industry-basis" class="opt-note">Je ein Unternehmen jedes Typs.</p>
-                    <fieldset id="i-custom" class="opt-group" hidden>
-                      <legend>Unternehmen</legend>
-                      <div class="opt-grid">
-                        <label class="opt"><input type="checkbox" name="i_company" value="0" checked><span class="opt-text">Entsorgung</span></label>
-                        <label class="opt"><input type="checkbox" name="i_company" value="1" checked><span class="opt-text">Stahl</span></label>
-                        <label class="opt"><input type="checkbox" name="i_company" value="2" checked><span class="opt-text">Logistik und Lagerung</span></label>
-                        <label class="opt"><input type="checkbox" name="i_company" value="3" checked><span class="opt-text">Schrott- und Metallhandel</span></label>
-                        <label class="opt"><input type="checkbox" name="i_company" value="5" checked><span class="opt-text">Büro</span></label>
-                      </div>
-                    </fieldset>
-                    <p id="note-industry-none" class="opt-note" hidden>Ohne Unternehmen ist das Industriegebiet nicht aktiv.</p>
+                    <p id="note-industry-basis" class="opt-note">Je ein Unternehmen jedes Typs, mit angenommenen Verbräuchen.</p>
                     <button type="button" class="explain-toggle" aria-expanded="false" aria-controls="explain-industry">Erläuterung<span class="explain-icon" aria-hidden="true"></span></button>
                     <div id="explain-industry" class="explain-body" hidden>
+                      <p class="opt-note">Das Industriegebiet befindet sich in einem frühen Planungsstadium; welche Unternehmen sich ansiedeln, steht noch nicht fest. Der Einfachheit halber wird deshalb nur eine Basis-Variante mit Annahmen abgebildet: je ein Unternehmen der folgenden Typen.</p>
                       <ul class="opt-explain">
                         <li><strong>Entsorgung:</strong> 5½-Tage-Woche, kein Schichtbetrieb, 7,1 GWh/a, angelehnt an Schönmackers Umweltdienste.</li>
                         <li><strong>Stahl:</strong> 5-Tage-Woche, 3-Schicht-Betrieb, 4,5 GWh/a, angelehnt an TecPro.</li>

@@ -3,7 +3,7 @@ import json
 import os
 import shutil
 import time
-from itertools import combinations as subsets, product
+from itertools import product
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -27,9 +27,11 @@ PRECOMPUTED_DIR = WEB_FRONTEND_DIR / "precomputed_v2"
 LEGACY_PRECOMPUTED_DIR = PROJECT_ROOT / "data" / "outputs" / "precomputed"
 CATALOG_NAME = "catalog.json"   # liegt im Ausgabeordner, damit alte Daten bis zum Laufende nutzbar bleiben
 
+# Nicht mehr benötigte Szenarien (z. B. frühere Industrie-Zusammenstellungen) werden hierhin verschoben
+ARCHIVE_DIR = PROJECT_ROOT / "data" / "outputs" / "precomputed_archiv"
+
 MODEL_VERSION = "2026-11-geh3-sessions-el27"
 SCHEMA_VERSION = "1.2.0"
-INDUSTRY_MODES = ("leave-one-out", "all-subsets")
 
 
 def sort_unique_strings(values: list[Any]) -> list[str]:
@@ -80,21 +82,12 @@ def canonical_key(raw_input: dict[str, Any]) -> str:
     return json.dumps(canonicalize_input(raw_input), sort_keys=True, ensure_ascii=True)
 
 
-def build_industry_profiles(mode: str = "leave-one-out") -> list[list[int]]:
+def build_industry_profiles() -> list[list[int]]:
     """
-    Industrieprofile, Basis-Variante Elsbachtal immer zuerst (UI-Standard).
-      leave-one-out: zusätzlich die Basis ohne jeweils einen Unternehmenstyp (6 Profile)
-      all-subsets:   alle nicht leeren Teilmengen der Basis-Unternehmen (31 Profile)
+    Industrieprofile wie in der Web-App: Basis-Variante Elsbachtal (UI-Standard, zuerst) und „Aus“
+    (kein Unternehmen). Eigene Zusammenstellungen gibt es wegen des frühen Planungsstands nicht.
     """
-    basis = list(ELSBACHTAL_BASIS_COMPANIES)
-    if mode == "leave-one-out":
-        return [basis] + [[c for c in basis if c != removed] for removed in basis]
-    if mode == "all-subsets":
-        out = [basis]
-        for size in range(len(basis) - 1, 0, -1):
-            out += [list(s) for s in subsets(basis, size)]
-        return out
-    raise ValueError(f"Unbekannter Industriemodus '{mode}', erwartet {INDUSTRY_MODES}")
+    return [list(ELSBACHTAL_BASIS_COMPANIES), []]
 
 
 def landscape_stage(build_state: int, pv_type: int) -> dict[str, Any]:
@@ -107,7 +100,7 @@ def landscape_stage(build_state: int, pv_type: int) -> dict[str, Any]:
     }
 
 
-def build_permutation_space(industry_mode: str = "leave-one-out") -> list[GuiInput]:
+def build_permutation_space() -> list[GuiInput]:
     # Core axis 1: solar combinations (only UI-selectable pv_types: 0=Windschutzwand, 3=Böschung)
     solar_combinations = [
         {"h_highways": ["A46"], "h_pv_types": [0]},
@@ -127,8 +120,8 @@ def build_permutation_space(industry_mode: str = "leave-one-out") -> list[GuiInp
         landscape_stage(100, 4),
     ]
 
-    # Core axis 3: industry profiles
-    industry_profiles = build_industry_profiles(industry_mode)
+    # Core axis 3: industry profiles (Basis-Variante Elsbachtal und „Aus“)
+    industry_profiles = build_industry_profiles()
 
     # Core axis 4: battery (kein Speicher — Batterie wird in der Web-App nicht unterstützt)
     battery_sizes = [
@@ -344,9 +337,9 @@ def format_duration(seconds: float) -> str:
     return f"{hours:d}:{minutes:02d}:{secs:02d}"
 
 
-def unique_candidates(industry_mode: str) -> tuple[list[GuiInput], int]:
+def unique_candidates() -> tuple[list[GuiInput], int]:
     """Kandidaten ohne Duplikate (gleicher kanonischer Schlüssel) und Gesamtzahl vor dem Entfernen."""
-    all_candidates = build_permutation_space(industry_mode)
+    all_candidates = build_permutation_space()
     seen_keys: set[str] = set()
     unique: list[GuiInput] = []
     for candidate in all_candidates:
@@ -357,19 +350,89 @@ def unique_candidates(industry_mode: str) -> tuple[list[GuiInput], int]:
     return unique, len(all_candidates)
 
 
+def scenario_complete(scenario_dir: Path) -> bool:
+    return (scenario_dir / "flow_data.json").exists() and (scenario_dir / "timeseries.csv.gz").exists()
+
+
+def set_flow_scenario_id(scenario_dir: Path, scenario_id: str) -> None:
+    flow_path = scenario_dir / "flow_data.json"
+    with flow_path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    metadata = payload.setdefault("metadata", {})
+    if metadata.get("scenario_id") == scenario_id:
+        return
+    metadata["scenario_id"] = scenario_id
+    with flow_path.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+
+def reorganize_existing(output_dir: Path, planned: list[GuiInput], archive_dir: Path) -> dict[str, int]:
+    """
+    Vorhandene, vollständige Szenarien anhand des kanonischen Schlüssels wiederverwenden.
+    Passende Ordner bekommen die ID ihrer Position im aktuellen Szenarioraum; Ordner, die
+    nicht mehr gebraucht werden, wandern nach `archive_dir` (nichts wird gelöscht).
+    """
+    wanted = {canonical_key(asdict(c)): f"s_auto_{i + 1:04d}" for i, c in enumerate(planned)}
+    reused = renamed = archived = 0
+    staged: list[tuple[Path, str]] = []
+
+    for scenario_dir in sorted(p for p in output_dir.iterdir() if p.is_dir()):
+        if not scenario_complete(scenario_dir):
+            continue
+        with (scenario_dir / "flow_data.json").open("r", encoding="utf-8") as f:
+            key = canonical_key(json.load(f).get("input") or {})
+        target = wanted.pop(key, None)   # pop: bei Doppelten nur den ersten Ordner verwenden
+        if target is None:
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            dest = archive_dir / scenario_dir.name
+            suffix = 1
+            while dest.exists():
+                dest = archive_dir / f"{scenario_dir.name}_{suffix}"
+                suffix += 1
+            shutil.move(str(scenario_dir), str(dest))
+            archived += 1
+        elif scenario_dir.name == target:
+            reused += 1
+        else:
+            tmp = scenario_dir.with_name(f"{scenario_dir.name}__umbenennen")
+            scenario_dir.rename(tmp)
+            staged.append((tmp, target))
+
+    # Zweiter Schritt, damit sich alte und neue IDs nicht in die Quere kommen
+    for tmp, target in staged:
+        dest = output_dir / target
+        if dest.exists():   # unvollständiger Rest eines abgebrochenen Laufs
+            shutil.rmtree(dest)
+        tmp.rename(dest)
+        set_flow_scenario_id(dest, target)
+        renamed += 1
+
+    return {"reused": reused + renamed, "renamed": renamed, "archived": archived}
+
+
 def generate_scenarios(
     output_dir: Path,
     limit: int = 0,
     overwrite: bool = True,
     resume: bool = False,
-    industry_mode: str = "leave-one-out",
+    archive_dir: Path = ARCHIVE_DIR,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    candidates, total_candidates = unique_candidates(industry_mode)
+    candidates, total_candidates = unique_candidates()
     planned = candidates[:limit] if limit > 0 else candidates
     print(f"Szenarien: {len(candidates)} eindeutig ({total_candidates} Kandidaten), dieser Lauf: {len(planned)}")
     print(f"Ausgabe: {output_dir}")
+
+    if resume:
+        # Vorhandene Ergebnisse übernehmen und Katalog sofort aktualisieren, damit die Website
+        # während des Laufs nur auf vorhandene Ordner zeigt
+        reorg = reorganize_existing(output_dir, candidates, archive_dir)
+        print(
+            f"Übernommen: {reorg['reused']} (davon umbenannt {reorg['renamed']}), "
+            f"archiviert nach {archive_dir}: {reorg['archived']}"
+        )
+        write_catalog(build_catalog_from_precomputed(output_dir), output_dir)
 
     generated = 0
     skipped_existing = 0
@@ -381,7 +444,7 @@ def generate_scenarios(
         scenario_dir = output_dir / scenario_id
 
         # Fortsetzen: vollständig geschriebene Szenarien (flow_data.json + timeseries.csv.gz) überspringen
-        if resume and (scenario_dir / "flow_data.json").exists() and (scenario_dir / "timeseries.csv.gz").exists():
+        if resume and scenario_complete(scenario_dir):
             skipped_existing += 1
             continue
 
@@ -452,12 +515,6 @@ def parse_args() -> argparse.Namespace:
         help=f"Ausgabeordner (Standard: {PRECOMPUTED_DIR.relative_to(PROJECT_ROOT).as_posix()}); muss unter web_frontend/ liegen, damit das Frontend die Pfade findet.",
     )
     parser.add_argument(
-        "--industry",
-        choices=INDUSTRY_MODES,
-        default="leave-one-out",
-        help="Industrieprofile: Basis + je eines weggelassen (Standard) oder alle nicht leeren Teilmengen.",
-    )
-    parser.add_argument(
         "--overwrite",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -495,8 +552,8 @@ def main() -> None:
     output_dir = args.output_dir.resolve()
 
     if args.count:
-        candidates, total = unique_candidates(args.industry)
-        industry = len(build_industry_profiles(args.industry))
+        candidates, total = unique_candidates()
+        industry = len(build_industry_profiles())
         print(f"6 Solar × 5 Landschaft × {industry} Industrie × 3 GEH × 4 Jüchen Süd = {total} Kandidaten, {len(candidates)} eindeutig")
         return
 
@@ -517,7 +574,6 @@ def main() -> None:
         limit=max(0, int(args.limit)),
         overwrite=bool(args.overwrite),
         resume=bool(args.resume),
-        industry_mode=args.industry,
     )
     print("\nFertig.")
     for key, value in stats.items():

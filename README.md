@@ -81,10 +81,12 @@ streamlit run Web_Gui_Demo.py
 `web_frontend/` is a static website (park map, KPIs, site plan) that only combines precomputed scenarios. Generate them with:
 
 ```bash
-python generate_all_scenarios.py --count          # number of scenarios (currently 2,160)
+python generate_all_scenarios.py --count          # number of scenarios (currently 720)
 python generate_all_scenarios.py --limit 10 --output-dir web_frontend/precomputed_test   # trial run
 python generate_all_scenarios.py --resume         # full run into web_frontend/precomputed_v2/
 ```
+
+The industrial area Elsbachtal is only offered as the base variant (one company of each type) or switched off. With `--resume`, existing scenarios are matched by their canonical key and reused (renumbered if necessary); scenarios that are no longer part of the scenario space are moved to `data/outputs/precomputed_archiv/`, nothing is deleted.
 
 The catalog (`catalog.json`) is written into the output folder at the end of a run; the frontend reads `web_frontend/precomputed_v2/catalog.json` (override for trial runs: `index.html?catalog=./precomputed_test/catalog.json`). The output folders are not tracked in Git. Embedding into WordPress via iframe is described in `docs/einbettung.md`.
 

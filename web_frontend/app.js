@@ -63,7 +63,7 @@ const SITE_AREAS = [
   {
     key: "industry_area",
     label: "Elsbachtal",
-    isActive: () => true,
+    isActive: (cInput) => cInput.i_companies.length > 0,
     style: { color: "#b45309", fillColor: "#d97706", weight: 2.2, opacity: 0.9, fillOpacity: 0.3 },
   },
 ];
@@ -198,15 +198,13 @@ function getRadioValue(name, fallback) {
   return document.querySelector(`input[name="${name}"]:checked`)?.value ?? fallback;
 }
 
-function isIndustryCustomMode() {
-  return getRadioValue("i_mode", "basis") === "custom";
+// Industriegebiet: nur Basis-Variante oder aus (keine eigene Zusammenstellung)
+function industryCompaniesFor(mode) {
+  return mode === "aus" ? [] : [...ELSBACHTAL_BASIS_COMPANIES];
 }
 
 function getIndustryCompanyValues() {
-  if (!isIndustryCustomMode()) {
-    return [...ELSBACHTAL_BASIS_COMPANIES];
-  }
-  return getCheckedValues("i_company").map((v) => Number.parseInt(v, 10));
+  return industryCompaniesFor(getRadioValue("i_mode", "basis"));
 }
 
 function collectRawInput() {
@@ -222,10 +220,7 @@ function collectRawInput() {
 }
 
 function syncSidebarDisplay(cInput) {
-  const custom = isIndustryCustomMode();
-  document.getElementById("i-custom").hidden = !custom;
-  document.getElementById("note-industry-basis").hidden = custom;
-  document.getElementById("note-industry-none").hidden = !custom || cInput.i_companies.length > 0;
+  document.getElementById("note-industry-basis").hidden = cInput.i_companies.length === 0;
   document.getElementById("note-solar").hidden = cInput.h_highways.length > 0 && cInput.h_pv_types.length > 0;
 }
 
@@ -352,7 +347,6 @@ const INPUT_FIELDS = {
   el_build_state: "el_build_state",
   el_pv_type: "el_pv_type",
   i_mode: "i_companies",
-  i_company: "i_companies",
   geh_variant: "geh_variant",
   js_concept: "js_concept",
 };
@@ -411,14 +405,7 @@ function findClosestKey(cInput, field) {
 function inputWithOption(input) {
   const raw = collectRawInput();
   if (input.name === "i_mode") {
-    raw.i_companies = input.value === "basis"
-      ? [...ELSBACHTAL_BASIS_COMPANIES]
-      : getCheckedValues("i_company").map((v) => Number.parseInt(v, 10));
-  } else if (input.name === "i_company") {
-    const values = new Set(getCheckedValues("i_company"));
-    if (values.has(input.value)) values.delete(input.value);
-    else values.add(input.value);
-    raw.i_companies = Array.from(values);
+    raw.i_companies = industryCompaniesFor(input.value);
   } else if (input.type === "checkbox") {
     const values = new Set(raw[input.name]);
     if (values.has(input.value)) values.delete(input.value);
