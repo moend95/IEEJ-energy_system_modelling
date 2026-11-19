@@ -1,0 +1,312 @@
+{
+  "metadata": {
+    "scenario_id": "s_auto_0718",
+    "schema_version": "1.2.0",
+    "created_at": "2026-11-17T20:38:03.370171+00:00",
+    "time_step_minutes": 15,
+    "timeseries_mode": "none",
+    "timeseries_mode_detail": "separate_csv_gzip",
+    "model_version": "2026-11-geh3-sessions-el27"
+  },
+  "input": {
+    "h_highways": [
+      "A44",
+      "A46"
+    ],
+    "h_pv_types": [
+      0,
+      3
+    ],
+    "el_build_state": 100,
+    "el_pv_type": 4,
+    "el_tractor_width": 27.0,
+    "el_tractor_length": 15.0,
+    "el_tractor_turn_radius": 20.25,
+    "i_heat_cooling_electric": true,
+    "i_companies": [],
+    "geh_variant": "Keine",
+    "geh_pv_kwp": null,
+    "geh_battery_kwh": null,
+    "geh_battery_kw": null,
+    "geh_h2_demand_t_per_a": null,
+    "geh_h2_min_soc": null,
+    "geh_electrolyzer_power_kw": null,
+    "geh_electrolyzer_efficiency": null,
+    "geh_storage_capacity_kwh": null,
+    "geh_grid_limit_kw": null,
+    "geh_electrolyzer_base_kw": null,
+    "geh_h2_high_soc": null,
+    "geh_battery_recharge_margin": null,
+    "geh_charging_model": null,
+    "bs_efficiency": null,
+    "bs_energy_kwh": null,
+    "bs_c_rate": null,
+    "js_concept": "Warmes Netz",
+    "js_hp_kw": null,
+    "js_heater_kw": null,
+    "js_tank_kwh": null
+  },
+  "annual_summary": {
+    "generation": {
+      "solar_highway_kwh": 6699087.332079427,
+      "energy_landscape_kwh": 11732028.99106218,
+      "green_energy_hub_pv_kwh": 0.0,
+      "total_generation_kwh": 18431116.323141605
+    },
+    "demand": {
+      "industry_kwh": 0.0,
+      "green_energy_hub_kwh": 0.0,
+      "juechen_sued_kwh": 9844896.319949536,
+      "total_demand_kwh": 9844896.319949536
+    },
+    "juechen_sued": {
+      "concept": "Warmes Netz",
+      "household_kwh": 3622457.0135746603,
+      "emob_kwh": 3267746.153846153,
+      "space_heat_kwh": 4670315.789473684,
+      "dhw_kwh": 2958648.6486486485,
+      "cooling_kwh": 197380.09049773758,
+      "heat_pump_el_kwh": 2010704.2463633446,
+      "heater_el_kwh": 887594.5945945947,
+      "cooling_el_kwh": 56394.31157078217,
+      "heat_unmet_kwh": 0.0,
+      "heat_pump_scop": 3.726028306153589
+    },
+    "green_energy_hub": {
+      "variant": "Keine",
+      "charging_mcs_kwh": 0.0,
+      "charging_ccs_kwh": 0.0,
+      "charging_hpc_kwh": 0.0,
+      "charging_ac_kwh": 0.0,
+      "building_kwh": 0.0,
+      "pv_kwh": 0.0,
+      "pv_max_power_kw": 0.0,
+      "electrolyzer_kwh": 0.0,
+      "electrolyzer_full_load_hours": 0.0,
+      "compressor_demand_kwh": 0.0,
+      "h2_production_kwh": 0.0,
+      "h2_demand_kwh": 0.0,
+      "h2_delivered_kwh": 0.0,
+      "h2_unmet_kwh": 0.0,
+      "battery_charge_kwh": 0.0,
+      "battery_discharge_kwh": 0.0,
+      "battery_full_cycles": 0.0,
+      "electrolyzer_base_kw": 0.0,
+      "grid_limit_kw": 0.0,
+      "grid_peak_kw": 0.0,
+      "grid_limit_exceed_hours": 0.0,
+      "charging_model": null,
+      "mcs_sessions": 0.0,
+      "hpc_sessions": 0.0,
+      "mcs_peak_kw": 0.0,
+      "hpc_peak_kw": 0.0,
+      "geh_fixed_load_peak_kw": 0.0
+    },
+    "balance": {
+      "bal_energy_kwh": 8586220.003192069,
+      "coverage_rate": 1.0,
+      "ee_self_consumption": 0.2760454329866111,
+      "autarky": 0.5167982800934464
+    },
+    "battery": {
+      "charge_kwh": 0.0,
+      "discharge_kwh": 0.0,
+      "final_soc_kwh": 0.0,
+      "final_soc_percent": 0.0
+    },
+    "grid": {
+      "import_kwh": 6269367.930562688,
+      "export_kwh": 13343290.837293385,
+      "max_import_kw": 2326.546106161672,
+      "max_export_kw": 16685.882116109624
+    }
+  },
+  "flow_nodes": [
+    {
+      "id": "solar",
+      "label": "Solarautobahn",
+      "x": 0.1,
+      "y": 0.48,
+      "type": "generation"
+    },
+    {
+      "id": "landscape",
+      "label": "Energielandschaft",
+      "x": 0.1,
+      "y": 0.18,
+      "type": "generation"
+    },
+    {
+      "id": "system",
+      "label": "System",
+      "x": 0.54,
+      "y": 0.33,
+      "type": "junction"
+    },
+    {
+      "id": "industry",
+      "label": "Industriegebiet",
+      "x": 0.98,
+      "y": 0.59,
+      "type": "consumption"
+    },
+    {
+      "id": "js",
+      "label": "Juechen Sued",
+      "x": 0.98,
+      "y": 0.33,
+      "type": "consumption"
+    },
+    {
+      "id": "hub",
+      "label": "Green Energy Hub",
+      "x": 0.98,
+      "y": 0.07,
+      "type": "consumption"
+    },
+    {
+      "id": "grid",
+      "label": "Stromnetz",
+      "x": 0.5,
+      "y": 0.65,
+      "type": "external"
+    },
+    {
+      "id": "battery",
+      "label": "Batterie",
+      "x": 0.5,
+      "y": 0.03,
+      "type": "storage"
+    }
+  ],
+  "flow_edges": [
+    {
+      "id": "solar_to_system",
+      "source": "solar",
+      "target": "system",
+      "flow_type": "generation",
+      "annual_kwh": 6699087.332079427,
+      "peak_kw": 6973.651989068677,
+      "color": "#10B35A",
+      "direction": "right",
+      "thickness_norm": 0.502057,
+      "stroke_px": 5.012
+    },
+    {
+      "id": "landscape_to_system",
+      "source": "landscape",
+      "target": "system",
+      "flow_type": "generation",
+      "annual_kwh": 11732028.99106218,
+      "peak_kw": 11318.284852379407,
+      "color": "#10B35A",
+      "direction": "right",
+      "thickness_norm": 0.879246,
+      "stroke_px": 7.275
+    },
+    {
+      "id": "system_to_industry",
+      "source": "system",
+      "target": "industry",
+      "flow_type": "consumption",
+      "annual_kwh": 0.0,
+      "peak_kw": 0.0,
+      "color": "#10B35A",
+      "direction": "right",
+      "thickness_norm": 0.0,
+      "stroke_px": 2.0
+    },
+    {
+      "id": "system_to_js",
+      "source": "system",
+      "target": "js",
+      "flow_type": "consumption",
+      "annual_kwh": 9844896.319949536,
+      "peak_kw": 2347.385328585949,
+      "color": "#10B35A",
+      "direction": "right",
+      "thickness_norm": 0.737816,
+      "stroke_px": 6.427
+    },
+    {
+      "id": "hub_pv_to_system",
+      "source": "hub",
+      "target": "system",
+      "flow_type": "generation",
+      "annual_kwh": 0.0,
+      "peak_kw": 0.0,
+      "color": "#10B35A",
+      "direction": "left",
+      "thickness_norm": 0.0,
+      "stroke_px": 2.0
+    },
+    {
+      "id": "system_to_hub",
+      "source": "system",
+      "target": "hub",
+      "flow_type": "consumption",
+      "annual_kwh": 0.0,
+      "peak_kw": 0.0,
+      "color": "#10B35A",
+      "direction": "right",
+      "thickness_norm": 0.0,
+      "stroke_px": 2.0
+    },
+    {
+      "id": "system_to_battery",
+      "source": "system",
+      "target": "battery",
+      "flow_type": "charge",
+      "annual_kwh": 0.0,
+      "peak_kw": 0.0,
+      "color": "#1DA1F2",
+      "direction": "down",
+      "thickness_norm": 0.0,
+      "stroke_px": 2.0
+    },
+    {
+      "id": "battery_to_system",
+      "source": "battery",
+      "target": "system",
+      "flow_type": "discharge",
+      "annual_kwh": 0.0,
+      "peak_kw": 0.0,
+      "color": "#1DA1F2",
+      "direction": "up",
+      "thickness_norm": 0.0,
+      "stroke_px": 2.0
+    },
+    {
+      "id": "system_to_grid",
+      "source": "system",
+      "target": "grid",
+      "flow_type": "export",
+      "annual_kwh": 13343290.837293385,
+      "peak_kw": 16685.882116109624,
+      "color": "#10B35A",
+      "direction": "up",
+      "thickness_norm": 1.0,
+      "stroke_px": 8.0
+    },
+    {
+      "id": "grid_to_system",
+      "source": "grid",
+      "target": "system",
+      "flow_type": "import",
+      "annual_kwh": 6269367.930562688,
+      "peak_kw": 2326.546106161672,
+      "color": "#B9B9B9",
+      "direction": "down",
+      "thickness_norm": 0.469852,
+      "stroke_px": 4.819
+    }
+  ],
+  "timeseries": [],
+  "timeseries_ref": null,
+  "timeseries_csv_ref": {
+    "path": "timeseries.csv.gz",
+    "compressed": true,
+    "format": "csv",
+    "records": 35040
+  }
+}

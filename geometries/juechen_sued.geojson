@@ -1,0 +1,63 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "juechen_sued",
+    "name": "Stadtteilentwicklung Jüchen Süd",
+    "quelle": "Rahmenplan Octagon / studio erde (nachgezeichnet)",
+    "flaeche_ha": 36.7,
+    "marker_lat": 51.09183,
+    "marker_lon": 6.501012
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       6.4958089,
+       51.0957518
+      ],
+      [
+       6.4972289,
+       51.0909718
+      ],
+      [
+       6.4982228,
+       51.0901334
+      ],
+      [
+       6.4998131,
+       51.0897945
+      ],
+      [
+       6.5017158,
+       51.0900086
+      ],
+      [
+       6.5032777,
+       51.0904545
+      ],
+      [
+       6.5041581,
+       51.0909361
+      ],
+      [
+       6.5051236,
+       51.0918636
+      ],
+      [
+       6.5037605,
+       51.0965543
+      ],
+      [
+       6.4958089,
+       51.0957518
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

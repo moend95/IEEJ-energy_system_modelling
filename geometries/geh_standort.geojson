@@ -1,0 +1,55 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "geh_standort",
+    "name": "Green Energy Hub – Autohof der Zukunft",
+    "quelle": "Standort L/XL lt. Machbarkeitsstudie (nachgezeichnet)",
+    "flaeche_ha": 13.1,
+    "marker_lat": 51.032563,
+    "marker_lon": 6.465169
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       6.4605492,
+       51.0300623
+      ],
+      [
+       6.4672553,
+       51.0321397
+      ],
+      [
+       6.4677864,
+       51.0327869
+      ],
+      [
+       6.4677532,
+       51.033288
+      ],
+      [
+       6.4673715,
+       51.0338204
+      ],
+      [
+       6.4664917,
+       51.034144
+      ],
+      [
+       6.4589723,
+       51.0317013
+      ],
+      [
+       6.4605492,
+       51.0300623
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,51 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "elsbachtal",
+    "name": "Industriegebiet Elsbachtal",
+    "quelle": "Flächenplan Plangebiet (nachgezeichnet)",
+    "flaeche_ha": 41.7,
+    "marker_lat": 51.094763,
+    "marker_lon": 6.538301
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       6.5312312,
+       51.0988725
+      ],
+      [
+       6.5368595,
+       51.0993189
+      ],
+      [
+       6.5461004,
+       51.0924334
+      ],
+      [
+       6.5416806,
+       51.089979
+      ],
+      [
+       6.5367117,
+       51.0938607
+      ],
+      [
+       6.5372255,
+       51.0941126
+      ],
+      [
+       6.5312312,
+       51.0988725
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}
