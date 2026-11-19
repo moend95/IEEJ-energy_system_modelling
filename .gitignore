@@ -31,3 +31,6 @@ data/outputs/energy_landscape/*.csv
 data/outputs/energy_landscape/P_02_Agri_PV_Reihen.geojson
 
 
+
+# Schlanke Website-Kopie (Worktree des Branches gh-pages)
+deploy/
